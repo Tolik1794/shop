@@ -1,0 +1,30 @@
+{% if max_pages > 1 %}
+    {% set current_route = app.request.get('_route') %}
+    <nav aria-label="...">
+        <ul class="pagination pagination-sm ">
+            {# `«` arrow #}
+            <li class="page-item {{ page == 1 ? 'disabled' }}">
+                <a class="page-link" href="{{ path(current_route, {page: page-1 < 1 ? 1 : page-1}) }}">«</a>
+            </li>
+
+            {# Render each page number #}
+            {% for i in 1..max_pages %}
+                {% set show = true %}
+                {% if ((page - i) > 2 or (page - i) < -2) and i != 1 and i != max_pages %}
+                    {% set show = false %}
+                {% endif %}
+                {% if show %}
+                    <li class="page-item {{ page == i ? 'active' }}">
+                        <a class="page-link" href="{{ path(current_route, {page: i}) }}">{{ i }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {# `»` arrow #}
+            <li class="page-item {{ page == max_pages ? 'disabled' }}">
+                <a class="page-link"
+                   href="{{ path(current_route, {page: page+1 <= max_pages ? page+1 : page}) }}">»</a>
+            </li>
+        </ul>
+    </nav>
+{% endif %}

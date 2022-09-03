@@ -1,0 +1,12 @@
+<div class="row mb-2">
+    <div class="col-md d-flex justify-content-start counter">{{ pagination.getTotalItemCount }} записи</div>
+    <div class="col-md navigation d-flex justify-content-center justify-content-md-end">
+        <div class="full-pagination">
+            {{ knp_pagination_render(pagination) }}
+        </div>
+        <div class="mobile-pagination">
+            {% do pagination.setPageRange(3) %}
+            {{ knp_pagination_render(pagination) }}
+        </div>
+    </div>
+</div>

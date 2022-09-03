@@ -10,9 +10,13 @@
         "doctrine/doctrine-bundle": "^2.7",
         "doctrine/doctrine-migrations-bundle": "^3.2",
         "doctrine/orm": "^2.13",
+        "knplabs/knp-menu-bundle": "^3.2",
+        "knplabs/knp-paginator-bundle": "^5.8",
+        "liip/imagine-bundle": "^2.1",
         "sensio/framework-extra-bundle": "^6.2",
         "symfony/console": "6.1.*",
         "symfony/dotenv": "6.1.*",
+        "symfony/expression-language": "6.1.*",
         "symfony/flex": "^1.17|^2",
         "symfony/form": "6.1.*",
         "symfony/framework-bundle": "6.1.*",
@@ -28,6 +32,8 @@
         "symfonycasts/verify-email-bundle": "^1.11"
     },
     "require-dev": {
+        "doctrine/doctrine-fixtures-bundle": "^3.4",
+        "fakerphp/faker": "^1.20",
         "symfony/maker-bundle": "^1.45",
         "symfony/stopwatch": "6.1.*",
         "symfony/web-profiler-bundle": "6.1.*"

@@ -44,16 +44,24 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\ManyToMany(targetEntity: Store::class, inversedBy: 'managers')]
     private Collection $manageSores;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $avatar = null;
+
     public function __construct()
     {
         $this->stores = new ArrayCollection();
         $this->manageSores = new ArrayCollection();
     }
 
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
+	public function __toString(): string
+         	{
+         		return $this->email;
+         	}
+
+	public function getId(): ?int
+             {
+                 return $this->id;
+             }
 
     public function getEmail(): ?string
     {
@@ -210,6 +218,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function removeManageSore(Store $manageSore): self
     {
         $this->manageSores->removeElement($manageSore);
+
+        return $this;
+    }
+
+    public function getAvatar(): ?string
+    {
+        return $this->avatar;
+    }
+
+    public function setAvatar(?string $avatar): self
+    {
+        $this->avatar = $avatar;
 
         return $this;
     }

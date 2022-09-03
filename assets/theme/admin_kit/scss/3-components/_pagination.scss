@@ -1,0 +1,17 @@
+.full-pagination {
+  @include media-breakpoint-down(md) {
+    display: none;
+  }
+}
+
+.mobile-pagination {
+  @include media-breakpoint-up(md) {
+    display: none;
+  }
+}
+
+.counter {
+  @include media-breakpoint-down(md) {
+    margin: -10px auto 20px;
+  }
+}
