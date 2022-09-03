@@ -1,0 +1,135 @@
+{% extends 'admin/layout.html.twig' %}
+{# {% set route_query = app.request.query.all %} #}
+
+{% block title %}Hello MainController!{% endblock %}
+
+{% block main_content %}
+    <main class="content" {{ stimulus_controller('reload-card') }}>
+        <div class="container-fluid p-0">
+            <div class="row">
+                <div class="col-xl-4">
+                    <div class="sticky-top tab">
+                        <ul class="nav nav-tabs" role="tablist">
+                            <li class="nav-item" role="presentation"><a class="nav-link active" href="#tab-1"
+                                                                        data-bs-toggle="tab" role="tab"
+                                                                        id="first-tab" aria-selected="true">Store</a></li>
+                            <li class="nav-item" role="presentation"><a class="nav-link" href="#tab-2"
+                                                                        data-bs-toggle="tab" role="tab"
+                                                                        aria-selected="false" tabindex="-1">Filter</a>
+                            </li>
+                        </ul>
+                        <div class="tab-content">
+                            <div class="tab-pane active" id="tab-1" role="tabpanel">
+                                {{ render(controller(
+                                    'App\\Controller\\Admin\\StoreController::show',
+                                    { 'store_id': first_entity.id, 'request': app.request }
+                                )) }}
+
+                            </div>
+                            <div class="tab-pane" id="tab-2" role="tabpanel">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">Private info</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        {{ form_start(filter_form) }}
+                                        {{ form_errors(filter_form) }}
+
+                                        {% for name, widget in filter_form %}
+                                            <div class="mb-2">
+                                                {% set widget_type = widget.vars.block_prefixes|first %}
+                                                {% if widget_type != 'button' %}
+                                                    {% if name != '_token' %}
+                                                        <div class="font-weight-bold">
+                                                            {{ form_label(widget, null, {label_attr: {class: 'form-label'}}) }}
+                                                        </div>
+                                                    {% endif %}
+
+                                                    {{ form_widget(widget, {attr:{class: 'form-control'}}) }}
+
+                                                    <small>{{ form_help(widget) }}</small>
+
+                                                    <div class="form-error">
+                                                        {{ form_errors(widget) }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        {% endfor %}
+
+                                        <div class="row ">
+                                            <div class="form-control-lg">
+                                                <button type="submit" class="btn btn-primary btn mb-1 me-2">Фильтровать</button>
+                                                <a href="{{ path('admin_store_index') }}" class="btn btn-text mb-1">Отмена</a>
+                                            </div>
+                                        </div>
+
+                                        {{ form_end(filter_form, {'render_rest': false}) }}
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-8">
+                    <div class="card">
+                        <div class="card-header pb-0">
+                            <div class="card-actions float-end">
+                                <div class="dropdown position-relative">
+                                    <a href="#" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false"
+                                       class="">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                             stroke-linecap="round" stroke-linejoin="round"
+                                             class="feather feather-more-horizontal align-middle">
+                                            <circle cx="12" cy="12" r="1"></circle>
+                                            <circle cx="19" cy="12" r="1"></circle>
+                                            <circle cx="5" cy="12" r="1"></circle>
+                                        </svg>
+                                    </a>
+
+                                    <div class="dropdown-menu dropdown-menu-end">
+                                        <a class="dropdown-item" href="{{ path('admin_store_new') }}">New</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <h5 class="card-title mb-0">Stores</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-hover" style="width:100%">
+                                <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Phone</th>
+                                    <th>Status</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for entity in pagination %}
+                                    <tr
+                                            id="{{ entity.id }}"
+                                            class="{{ entity.id == first_entity.id ? 'table-active' : '' }}"
+                                            data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
+                                            data-link="{{ path('admin_store_show', {store_id: entity.id}) }}"
+                                            onclick="document.getElementById('first-tab').click()"
+                                    >
+                                        <td>{{ entity.name }}</td>
+                                        <td>{{ entity.phone }}</td>
+                                        <td>
+                                            <span class="badge {{ entity.status|active_status_class }}">{{ entity.status.value|capitalize }}</span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+
+                            {{ include('admin/components/pagination.html.twig', {pagination: pagination}) }}
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+{% endblock %}
