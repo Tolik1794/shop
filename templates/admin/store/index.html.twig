@@ -7,15 +7,22 @@
     <main class="content" {{ stimulus_controller('reload-card') }}>
         <div class="container-fluid p-0">
             <div class="row">
-                <div class="col-xl-4">
-                    <div class="sticky-top tab">
+                <div class="col-xxl-4 col-xl-5 col-lg-6 col-md-6">
+                    <div class="sticky-top tab tab-vertical">
                         <ul class="nav nav-tabs" role="tablist">
-                            <li class="nav-item" role="presentation"><a class="nav-link active" href="#tab-1"
-                                                                        data-bs-toggle="tab" role="tab"
-                                                                        id="first-tab" aria-selected="true">Store</a></li>
-                            <li class="nav-item" role="presentation"><a class="nav-link" href="#tab-2"
-                                                                        data-bs-toggle="tab" role="tab"
-                                                                        aria-selected="false" tabindex="-1">Filter</a>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link active" href="#tab-1"
+                                   data-bs-toggle="tab" role="tab"
+                                   id="first-tab" aria-selected="true">
+                                    <i class="fa-solid fa-file-contract"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link" href="#tab-2"
+                                   data-bs-toggle="tab" role="tab"
+                                   aria-selected="false" tabindex="-1">
+                                    <i class="fa-solid fa-magnifying-glass"></i> {% if app.request.get('store_filter') %}<span style="color: red">*</span>{% endif %}
+                                </a>
                             </li>
                         </ul>
                         <div class="tab-content">
@@ -58,7 +65,9 @@
 
                                         <div class="row ">
                                             <div class="form-control-lg">
-                                                <button type="submit" class="btn btn-primary btn mb-1 me-2">Фильтровать</button>
+                                                <button type="submit" class="btn btn-primary btn mb-1 me-2">
+                                                    Фильтровать
+                                                </button>
                                                 <a href="{{ path('admin_store_index') }}" class="btn btn-text mb-1">Отмена</a>
                                             </div>
                                         </div>
@@ -71,7 +80,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-xl-8">
+                <div class="col-xxl-8 col-xl-7 col-lg-6 col-md-6">
                     <div class="card">
                         <div class="card-header pb-0">
                             <div class="card-actions float-end">

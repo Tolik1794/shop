@@ -14,3 +14,11 @@
     padding: $content-padding-desktop;  
   }
 }
+
+.cut-text {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  width: auto;
+  height: 1.2em;
+  white-space: nowrap;
+}

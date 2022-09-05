@@ -1,3 +1,25 @@
 .tab .nav-tabs .nav-link.active {
   background-color: $card-cap-bg;
 }
+
+.tab-vertical .nav-tabs {
+  @include media-breakpoint-up(md) {
+    flex-direction: column;
+    float: left;
+  }
+}
+
+.tab-vertical .nav-tabs .nav-link {
+  border-bottom-left-radius: 0.2rem;
+  border-bottom-right-radius: 0;
+  border-top-left-radius: 0.2rem;
+  border-top-right-radius: 0;
+}
+
+.tab .nav-tabs .nav-link {
+  border-color: transparent;
+}
+
+.tab .nav-tabs {
+  border-bottom: none;
+}

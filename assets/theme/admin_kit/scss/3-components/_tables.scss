@@ -11,3 +11,7 @@
 .table > tbody > tr > td {
 	vertical-align: middle;
 }
+
+.table tr td {
+	word-break: break-all;
+}

@@ -16,6 +16,7 @@ global.$ = global.jQuery = require('jquery');
 
 // import js files
 import '../theme/admin_kit/js/app';
+import '../js/font-awesome'
 import 'jquery'
 
 // start the Stimulus application
