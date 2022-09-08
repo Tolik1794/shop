@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Tools\ControllerTools;
+namespace App\Tools;
 
 use Knp\Component\Pager\Pagination\PaginationInterface;
 use Psr\Container\ContainerInterface;
@@ -35,7 +35,10 @@ trait ControllerHelperTrait
 			);
 		}
 
-		return $this->redirectToRoute($route, $referer->query->all() + $request->get('_route_params') + $parameters);
+		return $this->redirectToRoute(
+			route: $route,
+			parameters: $referer->query->all() + $request->get('_route_params') + $parameters
+		);
 	}
 
 	public function redirectToFirstPage(): RedirectResponse
@@ -62,11 +65,6 @@ trait ControllerHelperTrait
 			route: $request->get('_route'),
 			parameters: $params + $request->get('_route_params')
 		);
-	}
-
-	public function getRouteName(): ?string
-	{
-		return ControllerReflection::getInstance(static::class)->getRouteName();
 	}
 
 	public function getCurrentRequest(): ?Request

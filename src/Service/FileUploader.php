@@ -14,7 +14,7 @@ class FileUploader
 
 	public function __construct(
 		private readonly SluggerInterface $slugger,
-		ParameterBagInterface   $parameterBag,
+		ParameterBagInterface             $parameterBag,
 	)
 	{
 		$this->imageDirectory = $parameterBag->get('image_directory');

@@ -10,11 +10,9 @@ use Faker\Factory;
 
 class AppFixtures extends Fixture
 {
-    public function load(ObjectManager $manager): void
-    {
+	public function load(ObjectManager $manager): void
+	{
 		$faker = Factory::create();
-
-
 
 		for ($i = 0; $i <= 50; $i++) {
 			$store = new Store();
@@ -23,12 +21,11 @@ class AppFixtures extends Fixture
 				->setName($faker->company())
 				->setPhone($faker->phoneNumber())
 				->setSlug($faker->slug())
-				->setStatus(ActiveStatusEnum::INACTIVE)
-				;
+				->setStatus(ActiveStatusEnum::INACTIVE);
 
 			$manager->persist($store);
 		}
 
-        $manager->flush();
-    }
+		$manager->flush();
+	}
 }

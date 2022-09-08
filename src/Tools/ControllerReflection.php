@@ -1,8 +1,7 @@
 <?php
 
-namespace App\Tools\ControllerTools;
+namespace App\Tools;
 
-use App\Tools\LazyLoadTrait;
 use ReflectionClass;
 use Symfony\Component\Routing\Annotation\Route;
 

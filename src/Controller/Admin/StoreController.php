@@ -7,7 +7,7 @@ use App\Form\Admin\FilterType\StoreFilterType;
 use App\Form\Admin\Type\StoreType;
 use App\Manager\StoreManager;
 use App\Service\FilterFormHandler;
-use App\Tools\ControllerTools\ControllerHelperTrait;
+use App\Tools\ControllerHelperTrait;
 use Knp\Component\Pager\PaginatorInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Entity;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;

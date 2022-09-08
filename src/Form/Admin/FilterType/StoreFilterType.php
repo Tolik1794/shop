@@ -25,8 +25,7 @@ class StoreFilterType extends AbstractType
 				},
 				'mapped' => false
 			])
-			->setMethod('GET')
-		;
+			->setMethod('GET');
 	}
 
 	public function configureOptions(OptionsResolver $resolver): void
