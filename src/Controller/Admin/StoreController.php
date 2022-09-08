@@ -8,9 +8,6 @@ use App\Form\Admin\Type\StoreType;
 use App\Manager\StoreManager;
 use App\Service\FilterFormHandler;
 use App\Tools\ControllerTools\ControllerHelperTrait;
-use App\Tools\UrlTool;
-use Doctrine\ORM\Mapping\Reflection\ReflectionPropertiesGetter;
-use Knp\Component\Pager\Pagination\PaginationInterface;
 use Knp\Component\Pager\PaginatorInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Entity;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
@@ -38,7 +35,7 @@ class StoreController extends AbstractController
 		$filterForm = $this->createForm(StoreFilterType::class);
 		$filterForm->handleRequest($request);
 
-		if ($filterForm->isSubmitted() && $filterForm->isSubmitted()) {
+		if ($filterForm->isSubmitted() && $filterForm->isValid()) {
 			$filterTypeHandler->handleFilterForm($filterForm, $queryBuilder);
 		}
 

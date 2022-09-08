@@ -1,0 +1,34 @@
+<div class="sticky-top tab tab-vertical">
+    <ul class="nav nav-tabs" role="tablist">
+        {% for key, name in tab_head %}
+            <li class="nav-item" role="presentation">
+                {% if key == 0 %}
+                    <a class="nav-link active" href="#tab-1"
+                       data-bs-toggle="tab" role="tab"
+                       id="first-tab" aria-selected="true">
+                        {{ name|raw }}
+                    </a>
+                {% else %}
+                    <a class="nav-link" href="#tab-{{ key + 1 }}"
+                       data-bs-toggle="tab" role="tab"
+                       aria-selected="false" tabindex="-1">
+                        {{ name|raw }}
+                    </a>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+    <div class="tab-content">
+        {% for key, value in  tab_body %}
+            {% if key == 0 %}
+                <div class="tab-pane active" id="tab-1" role="tabpanel">
+                    {{ value|raw }}
+                </div>
+            {% else %}
+                <div class="tab-pane" id="tab-{{ key + 1 }}" role="tabpanel">
+                    {{ value|raw }}
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>

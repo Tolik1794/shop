@@ -1,0 +1,27 @@
+<div class="card">
+    <div class="card-header pb-0">
+        <div class="card-actions float-end">
+            <div class="dropdown position-relative">
+                <a href="#" data-bs-toggle="dropdown" data-bs-display="static"
+                   aria-expanded="false">
+                    {{ include('admin/components/btn/_three_dot.html.twig') }}
+                </a>
+                {{ table_actions }}
+            </div>
+        </div>
+        <h5 class="card-title mb-0">Stores</h5>
+    </div>
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+            {{ table_head }}
+            </thead>
+            <tbody>
+            {{ table_body }}
+            </tbody>
+        </table>
+
+        {{ include('admin/components/pagination.html.twig', {pagination: pagination}) }}
+
+    </div>
+</div>
