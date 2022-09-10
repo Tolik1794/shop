@@ -3,9 +3,7 @@
 {% block title %}Store list{% endblock %}
 
 {% set table_actions %}
-    <div class="dropdown-menu dropdown-menu-end">
-        <a class="dropdown-item" href="{{ path('admin_store_new') }}">New</a>
-    </div>
+    <a class="dropdown-item" href="{{ path('admin_store_new') }}">New</a>
 {% endset %}
 
 {% set table_head %}
@@ -50,13 +48,13 @@
                                 'App\\Controller\\Admin\\StoreController::show',
                                 { 'store_id': first_entity.id, 'request': app.request }
                             )),
-                            include('admin/components/card/_filter_card.html.twig', {filter_form: filter_form})
+                            include('admin/components/card/_filter_card.html.twig', {form: filter_form})
                         ]
                     }) }}
                 </div>
                 <div class="col-xxl-8 col-xl-7 col-lg-6 col-md-6">
                     {{ include('admin/components/card/_table_card.html.twig', {
-                        table_actions: table_actions,
+                        actions: table_actions,
                         table_head: table_head,
                         table_body: table_body
                     }) }}

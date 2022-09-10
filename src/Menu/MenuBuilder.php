@@ -21,15 +21,19 @@ final class MenuBuilder
 			],
 		]);
 
-		$menu->addChild('Home', [
+		$menu->addChild('Stores', [
 			'route' => 'admin_store_index',
 		]);
 
+		$menu->addChild('Managers', [
+			'route' => 'admin_user_index'
+		]);
+
 		foreach ($menu as $item) {
-			$item->setAttribute('class', 'dropdown-item');
-			$item->setLinkAttribute('data-bs-toggle', 'collapse');
-			$item->setLinkAttribute('class', 'sidebar-link collapsed');
-			$item->setLinkAttribute('aria-expanded', 'false');
+//			$item->setAttribute('class', 'dropdown-item');
+//			$item->setLinkAttribute('data-bs-toggle', 'collapse');
+			$item->setLinkAttribute('class', 'sidebar-link');
+//			$item->setLinkAttribute('aria-expanded', 'false');
 		}
 
 		return $menu;
@@ -43,7 +47,9 @@ final class MenuBuilder
 			],
 		]);
 
-		$menu->addChild('Profile');
+		$menu->addChild('Profile', [
+			'route' => 'admin_user_profile'
+		]);
 
 		$menu->addChild('')
 			->setLabel('<div class="dropdown-divider"></div>')
@@ -54,7 +60,7 @@ final class MenuBuilder
 		]);
 
 		foreach ($menu as $item) {
-			$item->setAttribute('class', 'dropdown-item');
+//			$item->setAttribute('class', 'dropdown-item');
 		}
 
 		return $menu;

@@ -15,222 +15,329 @@ use Symfony\Component\Security\Core\User\UserInterface;
 #[UniqueEntity(fields: ['email'], message: 'There is already an account with this email')]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
-    #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+	#[ORM\Id]
+	#[ORM\GeneratedValue]
+	#[ORM\Column]
+	private ?int $id = null;
 
-    #[ORM\Column(length: 180, unique: true)]
-    private ?string $email = null;
+	#[ORM\Column(length: 180, unique: true)]
+	private ?string $email = null;
+//
+//	#[ORM\Column]
+//	private array $roles = [];
 
-    #[ORM\Column]
-    private array $roles = [];
+	/**
+	 * @var string The hashed password
+	 */
+	#[ORM\Column]
+	private string $password;
 
-    /**
-     * @var string The hashed password
-     */
-    #[ORM\Column]
-    private string $password;
+	#[ORM\Column(type: 'boolean')]
+	private bool $isVerified = false;
 
-    #[ORM\Column(type: 'boolean')]
-    private bool $isVerified = false;
+	#[ORM\ManyToMany(targetEntity: Store::class, mappedBy: 'managers')]
+	private Collection $stores;
 
-    #[ORM\ManyToMany(targetEntity: Store::class, mappedBy: 'users')]
-    private Collection $stores;
+	#[ORM\ManyToOne(targetEntity: Store::class, inversedBy: 'users')]
+	private ?Store $store = null;
 
-    #[ORM\ManyToOne(inversedBy: 'users')]
-    private ?Store $store = null;
+	#[ORM\ManyToMany(targetEntity: Store::class, inversedBy: 'managers')]
+	private Collection $managerStores;
 
-    #[ORM\ManyToMany(targetEntity: Store::class, inversedBy: 'managers')]
-    private Collection $manageSores;
+	#[ORM\Column(length: 255, nullable: true)]
+	private ?string $avatar = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $avatar = null;
+	#[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'children')]
+	private ?self $parent = null;
 
-    public function __construct()
-    {
-        $this->stores = new ArrayCollection();
-        $this->manageSores = new ArrayCollection();
-    }
+	#[ORM\OneToMany(mappedBy: 'parent', targetEntity: self::class)]
+	private Collection $children;
+
+	#[ORM\ManyToMany(targetEntity: Role::class, inversedBy: 'users')]
+	private Collection $roles;
+
+	#[ORM\ManyToMany(targetEntity: Permission::class, inversedBy: 'users')]
+	private Collection $permissions;
+
+	public function __construct()
+	{
+		$this->stores = new ArrayCollection();
+		$this->managerStores = new ArrayCollection();
+		$this->children = new ArrayCollection();
+		$this->roles = new ArrayCollection();
+		$this->permissions = new ArrayCollection();
+	}
 
 	public function __toString(): string
-         	{
-         		return $this->email;
-         	}
+	{
+		return $this->email;
+	}
 
 	public function getId(): ?int
-             {
-                 return $this->id;
-             }
+	{
+		return $this->id;
+	}
 
-    public function getEmail(): ?string
-    {
-        return $this->email;
-    }
+	public function getEmail(): ?string
+	{
+		return $this->email;
+	}
 
-    public function setEmail(string $email): self
-    {
-        $this->email = $email;
+	public function setEmail(string $email): self
+	{
+		$this->email = $email;
 
-        return $this;
-    }
+		return $this;
+	}
 
-    /**
-     * A visual identifier that represents this user.
-     *
-     * @see UserInterface
-     */
-    public function getUserIdentifier(): string
-    {
-        return (string) $this->email;
-    }
+	/**
+	 * A visual identifier that represents this user.
+	 *
+	 * @see UserInterface
+	 */
+	public function getUserIdentifier(): string
+	{
+		return (string)$this->email;
+	}
 
-    /**
-     * @deprecated since Symfony 5.3, use getUserIdentifier instead
-     */
-    public function getUsername(): string
-    {
-        return (string) $this->email;
-    }
+	/**
+	 * @deprecated since Symfony 5.3, use getUserIdentifier instead
+	 */
+	public function getUsername(): string
+	{
+		return (string)$this->email;
+	}
 
-    /**
-     * @see UserInterface
-     */
-    public function getRoles(): array
-    {
-        $roles = $this->roles;
-        // guarantee every user at least has ROLE_USER
-        $roles[] = 'ROLE_USER';
+//	/**
+//	 * @see UserInterface
+//	 */
+//	public function getRoles(): array
+//	{
+//		$roles = $this->roles;
+//		// guarantee every user at least has ROLE_USER
+//		$roles[] = 'ROLE_USER';
+//
+//		return array_unique($roles);
+//	}
+//
+//	public function setRoles(array $roles): self
+//	{
+//		$this->roles = $roles;
+//
+//		return $this;
+//	}
 
-        return array_unique($roles);
-    }
+	/**
+	 * @see PasswordAuthenticatedUserInterface
+	 */
+	public function getPassword(): string
+	{
+		return $this->password;
+	}
 
-    public function setRoles(array $roles): self
-    {
-        $this->roles = $roles;
+	public function setPassword(string $password): self
+	{
+		$this->password = $password;
 
-        return $this;
-    }
+		return $this;
+	}
 
-    /**
-     * @see PasswordAuthenticatedUserInterface
-     */
-    public function getPassword(): string
-    {
-        return $this->password;
-    }
+	/**
+	 * Returning a salt is only needed, if you are not using a modern
+	 * hashing algorithm (e.g. bcrypt or sodium) in your security.yaml.
+	 *
+	 * @see UserInterface
+	 */
+	public function getSalt(): ?string
+	{
+		return null;
+	}
 
-    public function setPassword(string $password): self
-    {
-        $this->password = $password;
+	/**
+	 * @see UserInterface
+	 */
+	public function eraseCredentials()
+	{
+		// If you store any temporary, sensitive data on the user, clear it here
+		// $this->plainPassword = null;
+	}
 
-        return $this;
-    }
+	public function isVerified(): bool
+	{
+		return $this->isVerified;
+	}
 
-    /**
-     * Returning a salt is only needed, if you are not using a modern
-     * hashing algorithm (e.g. bcrypt or sodium) in your security.yaml.
-     *
-     * @see UserInterface
-     */
-    public function getSalt(): ?string
-    {
-        return null;
-    }
+	public function setIsVerified(bool $isVerified): self
+	{
+		$this->isVerified = $isVerified;
 
-    /**
-     * @see UserInterface
-     */
-    public function eraseCredentials()
-    {
-        // If you store any temporary, sensitive data on the user, clear it here
-        // $this->plainPassword = null;
-    }
+		return $this;
+	}
 
-    public function isVerified(): bool
-    {
-        return $this->isVerified;
-    }
+	/**
+	 * @return Collection<int, Store>
+	 */
+	public function getStores(): Collection
+	{
+		return $this->stores;
+	}
 
-    public function setIsVerified(bool $isVerified): self
-    {
-        $this->isVerified = $isVerified;
+	public function addStore(Store $store): self
+	{
+		if (!$this->stores->contains($store)) {
+			$this->stores->add($store);
+			$store->addUser($this);
+		}
 
-        return $this;
-    }
+		return $this;
+	}
 
-    /**
-     * @return Collection<int, Store>
-     */
-    public function getStores(): Collection
-    {
-        return $this->stores;
-    }
+	public function removeStore(Store $store): self
+	{
+		if ($this->stores->removeElement($store)) {
+			$store->removeUser($this);
+		}
 
-    public function addStore(Store $store): self
-    {
-        if (!$this->stores->contains($store)) {
-            $this->stores->add($store);
-            $store->addUser($this);
-        }
+		return $this;
+	}
 
-        return $this;
-    }
+	public function getStore(): ?Store
+	{
+		return $this->store;
+	}
 
-    public function removeStore(Store $store): self
-    {
-        if ($this->stores->removeElement($store)) {
-            $store->removeUser($this);
-        }
+	public function setStore(?Store $store): self
+	{
+		$this->store = $store;
 
-        return $this;
-    }
+		return $this;
+	}
 
-    public function getStore(): ?Store
-    {
-        return $this->store;
-    }
+	/**
+	 * @return Collection<int, Store>
+	 */
+	public function getManagerStores(): Collection
+	{
+		return $this->managerStores;
+	}
 
-    public function setStore(?Store $store): self
-    {
-        $this->store = $store;
+	public function addManagerStore(Store $managerStore): self
+	{
+		if (!$this->managerStores->contains($managerStore)) {
+			$this->managerStores->add($managerStore);
+		}
 
-        return $this;
-    }
+		return $this;
+	}
 
-    /**
-     * @return Collection<int, Store>
-     */
-    public function getManageSores(): Collection
-    {
-        return $this->manageSores;
-    }
+	public function removeManagerStore(Store $managerStore): self
+	{
+		$this->managerStores->removeElement($managerStore);
 
-    public function addManageSore(Store $manageSore): self
-    {
-        if (!$this->manageSores->contains($manageSore)) {
-            $this->manageSores->add($manageSore);
-        }
+		return $this;
+	}
 
-        return $this;
-    }
+	public function getAvatar(): ?string
+	{
+		return $this->avatar;
+	}
 
-    public function removeManageSore(Store $manageSore): self
-    {
-        $this->manageSores->removeElement($manageSore);
+	public function setAvatar(?string $avatar): self
+	{
+		$this->avatar = $avatar;
 
-        return $this;
-    }
+		return $this;
+	}
 
-    public function getAvatar(): ?string
-    {
-        return $this->avatar;
-    }
+	public function getParent(): ?self
+	{
+		return $this->parent;
+	}
 
-    public function setAvatar(?string $avatar): self
-    {
-        $this->avatar = $avatar;
+	public function setParent(?self $parent): self
+	{
+		$this->parent = $parent;
 
-        return $this;
-    }
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, self>
+	 */
+	public function getChildren(): Collection
+	{
+		return $this->children;
+	}
+
+	public function addChild(self $child): self
+	{
+		if (!$this->children->contains($child)) {
+			$this->children->add($child);
+			$child->setParent($this);
+		}
+
+		return $this;
+	}
+
+	public function removeChild(self $child): self
+	{
+		if ($this->children->removeElement($child)) {
+			// set the owning side to null (unless already changed)
+			if ($child->getParent() === $this) {
+				$child->setParent(null);
+			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return array<int, Role>
+	 */
+	public function getRoles(): array
+	{
+		return $this->roles->map(function (Role $role) {
+			return $role->getKey();
+		})->toArray() + ['ROLE_USER'];
+	}
+
+	public function addRole(Role $role): self
+	{
+		if (!$this->roles->contains($role)) {
+			$this->roles->add($role);
+		}
+
+		return $this;
+	}
+
+	public function removeRole(Role $role): self
+	{
+		$this->roles->removeElement($role);
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, Permission>
+	 */
+	public function getPermissions(): Collection
+	{
+		return $this->permissions;
+	}
+
+	public function addPermission(Permission $permission): self
+	{
+		if (!$this->permissions->contains($permission)) {
+			$this->permissions->add($permission);
+		}
+
+		return $this;
+	}
+
+	public function removePermission(Permission $permission): self
+	{
+		$this->permissions->removeElement($permission);
+
+		return $this;
+	}
 }

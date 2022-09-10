@@ -1,0 +1,51 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Hello MainController!{% endblock %}
+
+{% block main_content %}
+    <main class="content">
+        <div class="container-fluid p-0">
+            <div class="row">
+                <div class="col-xxl-4 col-xl-5 col-lg-6 col-md-6">
+                    {{ include('admin/components/card/_tab_card.html.twig', {
+                        tab_head: [
+                            include('admin/components/tab_icon/_show.html.twig')
+                        ],
+                        tab_body: [
+                            render(controller(
+                                'App\\Controller\\Admin\\UserController::info',
+                                { 'user_id': entity.id }
+                            ))
+                        ]
+                    }) }}
+                </div>
+                <div class="col-xxl-8 col-xl-7 col-lg-6 col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Private info</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if avatar %}
+                                <img class="article-img"
+                                     src="{{ avatar|trim_full_path|imagine_filter('squared_thumbnail_small') }}">
+                            {% endif %}
+                            {{ form_start(form) }}
+                            {{ form_errors(form) }}
+
+                            {{ include('admin/components/_form_widgets.html.twig', {form: form}) }}
+
+                            <div class="row">
+                                <div class="form-control-lg">
+                                    <button type="submit" class="btn btn-primary btn mb-1 me-2">Сохранить</button>
+                                    <a href="{{ path('admin_user_profile') }}" class="btn btn-text mb-1">Отмена</a>
+                                </div>
+                            </div>
+
+                            {{ form_end(form, {'render_rest': false}) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+{% endblock %}

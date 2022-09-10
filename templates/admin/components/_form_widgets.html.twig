@@ -1,4 +1,6 @@
-{% for name, widget in filter_form %}
+
+
+{% for name, widget in form %}
     <div class="mb-2">
         {% set widget_type = widget.vars.block_prefixes|first %}
         {% if widget_type != 'button' %}
