@@ -3,7 +3,9 @@
 {% block title %}Store list{% endblock %}
 
 {% set table_actions %}
-    <a class="dropdown-item" href="{{ path('admin_store_new') }}">New</a>
+    {% if is_granted('ROLE_SUPER_ADMIN') %}
+        <a class="dropdown-item" href="{{ path('admin_store_new') }}">New</a>
+    {% endif %}
 {% endset %}
 
 {% set table_head %}
@@ -18,6 +20,7 @@
     {% for entity in pagination %}
         <tr
                 id="{{ entity.id }}"
+                data-id-column="store_id"
                 class="{{ entity.id == first_entity.id ? 'table-active' : '' }}"
                 data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
                 data-link="{{ path('admin_store_show', {store_id: entity.id}) }}"
@@ -36,25 +39,26 @@
     <main class="content" {{ stimulus_controller('reload-card') }}>
         <div class="container-fluid p-0">
             <div class="row">
-                <div class="col-xxl-4 col-xl-5 col-lg-6 col-md-6">
+                <div class="col-xxl-4 col-xl-5 col-lg-6">
                     {{ include('admin/components/card/_tab_card.html.twig', {
                         tab_head: [
                             include('admin/components/tab_icon/_show.html.twig'),
                             include('admin/components/tab_icon/_filter.html.twig')
                                 ~ (app.request.get(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
                         ],
-                        tab_body: [
+                        tab_body: first_entity ? [
                             render(controller(
                                 'App\\Controller\\Admin\\StoreController::show',
                                 { 'store_id': first_entity.id, 'request': app.request }
                             )),
                             include('admin/components/card/_filter_card.html.twig', {form: filter_form})
-                        ]
+                        ] : []
                     }) }}
                 </div>
-                <div class="col-xxl-8 col-xl-7 col-lg-6 col-md-6">
+                <div class="col-xxl-8 col-xl-7 col-lg-6">
                     {{ include('admin/components/card/_table_card.html.twig', {
                         actions: table_actions,
+                        table_title: 'Stores',
                         table_head: table_head,
                         table_body: table_body
                     }) }}

@@ -29,3 +29,6 @@ services:
             - { name: knp_menu.menu_builder, method: userAdminMenu, alias: userAdmin }
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+    App\EventSubscriber\RequestSubscriber:
+        tags:
+            - { name: kernel.event_listener, event: kernel.request }

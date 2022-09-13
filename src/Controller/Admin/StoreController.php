@@ -6,6 +6,7 @@ use App\Entity\Store;
 use App\Form\Admin\FilterType\StoreFilterType;
 use App\Form\Admin\Type\StoreType;
 use App\Manager\StoreManager;
+use App\Security\Voter\StoreVoter;
 use App\Service\FilterFormHandler;
 use App\Tools\ControllerHelperTrait;
 use Knp\Component\Pager\PaginatorInterface;
@@ -16,7 +17,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
-#[Route('/admin/store', name: 'admin_store_'), IsGranted('ROLE_ADMIN')]
+#[Route('/admin/store', name: 'admin_store_'), IsGranted('ROLE_STORE_MANAGER')]
 class StoreController extends AbstractController
 {
 	use ControllerHelperTrait;
@@ -30,7 +31,7 @@ class StoreController extends AbstractController
 	{
 		$queryBuilder = $this->storeManager
 			->getRepository()
-			->createQueryBuilder('store');
+			->findAvailableStoresQB($this->getUser());
 
 		$filterForm = $this->createForm(StoreFilterType::class);
 		$filterForm->handleRequest($request);
@@ -65,6 +66,7 @@ class StoreController extends AbstractController
 		]);
 	}
 
+	#[isGranted('ROLE_SUPER_ADMIN')]
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
 	public function new(Request $request): Response
 	{
@@ -94,6 +96,7 @@ class StoreController extends AbstractController
 	#[Entity('store', expr: 'repository.find(store_id)')]
 	public function edit(Request $request, Store $store): Response
 	{
+		$this->denyAccessUnlessGranted(StoreVoter::EDIT, $store);
 		$form = $this->createForm(StoreType::class, $store, ['method' => 'POST']);
 		$form->handleRequest($request);
 

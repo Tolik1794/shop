@@ -6,3 +6,10 @@ app_logout:
   methods: GET
 _liip_imagine:
   resource: "@LiipImagineBundle/Resources/config/routing.yaml"
+
+homepage:
+  path: /
+  controller: Symfony\Bundle\FrameworkBundle\Controller\RedirectController::urlRedirectAction
+  defaults:
+    path: /admin/store
+    permanent: true

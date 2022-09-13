@@ -3,11 +3,15 @@
 namespace App\Repository;
 
 use App\Entity\User;
+use App\Enum\RoleEnum;
+use App\Manager\UserManager;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\PasswordUpgraderInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
  * @extends ServiceEntityRepository<User>
@@ -19,65 +23,56 @@ use Symfony\Component\Security\Core\User\PasswordUpgraderInterface;
  */
 class UserRepository extends ServiceEntityRepository implements PasswordUpgraderInterface
 {
-    public function __construct(ManagerRegistry $registry)
-    {
-        parent::__construct($registry, User::class);
-    }
+	public function __construct(ManagerRegistry $registry, private readonly UserManager $userManager)
+	{
+		parent::__construct($registry, User::class);
+	}
 
-    public function add(User $entity, bool $flush = false): void
-    {
-        $this->getEntityManager()->persist($entity);
+	public function add(User $entity, bool $flush = false): void
+	{
+		$this->getEntityManager()->persist($entity);
 
-        if ($flush) {
-            $this->getEntityManager()->flush();
-        }
-    }
+		if ($flush) {
+			$this->getEntityManager()->flush();
+		}
+	}
 
-    public function remove(User $entity, bool $flush = false): void
-    {
-        $this->getEntityManager()->remove($entity);
+	public function remove(User $entity, bool $flush = false): void
+	{
+		$this->getEntityManager()->remove($entity);
 
-        if ($flush) {
-            $this->getEntityManager()->flush();
-        }
-    }
+		if ($flush) {
+			$this->getEntityManager()->flush();
+		}
+	}
 
-    /**
-     * Used to upgrade (rehash) the user's password automatically over time.
-     */
-    public function upgradePassword(PasswordAuthenticatedUserInterface $user, string $newHashedPassword): void
-    {
-        if (!$user instanceof User) {
-            throw new UnsupportedUserException(sprintf('Instances of "%s" are not supported.', \get_class($user)));
-        }
+	/**
+	 * Used to upgrade (rehash) the user's password automatically over time.
+	 */
+	public function upgradePassword(PasswordAuthenticatedUserInterface $user, string $newHashedPassword): void
+	{
+		if (!$user instanceof User) {
+			throw new UnsupportedUserException(sprintf('Instances of "%s" are not supported.', \get_class($user)));
+		}
 
-        $user->setPassword($newHashedPassword);
+		$user->setPassword($newHashedPassword);
 
-        $this->add($user, true);
-    }
+		$this->add($user, true);
+	}
 
-//    /**
-//     * @return User[] Returns an array of User objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('u')
-//            ->andWhere('u.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('u.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
+	public function findUsersToShowQB(User|UserInterface $user): QueryBuilder
+	{
+		$qb = $this->createQueryBuilder('user')
+			->addSelect('roles')
+			->innerJoin('user.roles', 'roles');
 
-//    public function findOneBySomeField($value): ?User
-//    {
-//        return $this->createQueryBuilder('u')
-//            ->andWhere('u.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
+		if ($this->userManager->hasRole(RoleEnum::ROLE_SUPER_ADMIN, $user)) return $qb;
+
+		$director = $this->userManager->hasRole(RoleEnum::ROLE_STORE_ADMIN, $user) ? $user : $user->getParent();
+
+		$qb->where('user.parent = :user')
+			->setParameter('user', $director);
+
+		return $qb;
+	}
 }

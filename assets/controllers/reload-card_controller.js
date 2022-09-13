@@ -14,12 +14,18 @@ export default class extends Controller {
 
         div.innerHTML = card
 
-        this.cardTarget.replaceWith(div.firstChild)
+        this.cardTarget.replaceWith(div.firstElementChild)
     }
 
     async tableActivate(event) {
         let eventTarget = event.currentTarget,
             tableActive = document.getElementsByClassName('table-active')
+
+        var urlParams = new URLSearchParams(window.location.search)
+
+        urlParams.set(eventTarget.dataset.idColumn, eventTarget.id.toString())
+
+        history.pushState({}, '', window.location.href.split('?')[0] + '?' + urlParams.toString());
 
         if (tableActive[0]) tableActive[0].classList.remove('table-active')
 

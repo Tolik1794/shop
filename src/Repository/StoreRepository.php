@@ -3,8 +3,14 @@
 namespace App\Repository;
 
 use App\Entity\Store;
+use App\Entity\User;
+use App\Enum\RoleEnum;
+use App\Manager\UserManager;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
  * @extends ServiceEntityRepository<Store>
@@ -16,7 +22,7 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class StoreRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly UserManager $userManager)
     {
         parent::__construct($registry, Store::class);
     }
@@ -39,28 +45,20 @@ class StoreRepository extends ServiceEntityRepository
         }
     }
 
-//    /**
-//     * @return Store[] Returns an array of Store objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('s')
-//            ->andWhere('s.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('s.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
+	public function findAvailableStoresQB(User|UserInterface $user): QueryBuilder
+	{
+		$qb = $this->createQueryBuilder('store')
+			->leftJoin('store.managers', 'managers');
 
-//    public function findOneBySomeField($value): ?Store
-//    {
-//        return $this->createQueryBuilder('s')
-//            ->andWhere('s.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
+		if ($this->userManager->hasRole(RoleEnum::ROLE_SUPER_ADMIN, $user)) return $qb;
+		elseif ($this->userManager->hasRole(RoleEnum::ROLE_ADMIN, $user)) $manager = $user;
+		elseif ($this->userManager->hasRole(RoleEnum::ROLE_STORE_ADMIN, $user)) $manager = $user;
+		elseif ($user->getManagerStores()->count() > 0) $manager = $user;
+		else $manager = $user->getParent();
+
+		$qb->where('managers = :manager')
+			->setParameter('manager', $manager);
+
+		return $qb;
+	}
 }

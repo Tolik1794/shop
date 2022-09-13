@@ -1,5 +1,18 @@
+{% set actions %}
+    {% if entity.id == app.user.id %}
+        <a class="dropdown-item" href="{{ path('admin_user_profile', query_params) }}">Edit</a>
+    {% elseif is_granted('POST_EDIT', entity) %}
+        <a class="dropdown-item" href="{{ path('admin_user_edit', query_params|merge({user_id: entity.id})) }}">
+            Edit
+        </a>
+    {% endif %}
+{% endset %}
+
 <div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
     <div class="card-header">
+        {% if actions|trim %}
+            {{ include('admin/components/card/_actions.html.twig', {actions: actions}) }}
+        {% endif %}
         <h5 class="card-title mb-0">{{ entity.email }}</h5>
     </div>
     <div class="card-body">
@@ -20,16 +33,26 @@
             <tbody>
             {% if entity.parent %}
                 <tr>
-                    <th>Boss email</th>
+                    <th>Director email</th>
                     <td>{{ entity.parent.email }}</td>
                 </tr>
             {% endif %}
-            {% if entity.nickname %}
-                <tr>
-                    <th>Nickname</th>
-                    <td>{{ entity.nickname }}</td>
-                </tr>
-            {% endif %}
+            <tr>
+                <th>Nickname</th>
+                <td>{{ entity.nickname }}</td>
+            </tr>
+            <tr>
+                <th>First name</th>
+                <td>{{ entity.firstName }}</td>
+            </tr>
+            <tr>
+                <th>Last name</th>
+                <td>{{ entity.lastName }}</td>
+            </tr>
+            <tr>
+                <th>Date of birth</th>
+                <td>{{ entity.dateOfBirth ? entity.dateOfBirth|date : '' }}</td>
+            </tr>
             <tr>
                 <th>Roles</th>
                 <td>{{ entity.roles|join(', ') }}</td>

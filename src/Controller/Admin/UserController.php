@@ -3,8 +3,14 @@
 namespace App\Controller\Admin;
 
 use App\Entity\User;
+use App\Form\Admin\FilterType\UserFilterType;
+use App\Form\Admin\Type\ProfileType;
 use App\Form\Admin\Type\UserType;
 use App\Manager\UserManager;
+use App\Security\Voter\UserVoter;
+use App\Service\FilterFormHandler;
+use App\Tools\ControllerHelperTrait;
+use Knp\Component\Pager\PaginatorInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Entity;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -12,9 +18,11 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
-#[Route('/admin/user', name: 'admin_user_'), IsGranted('ROLE_ADMIN')]
+#[Route('/admin/user', name: 'admin_user_'), IsGranted('ROLE_STORE_MANAGER')]
 class UserController extends AbstractController
 {
+	use ControllerHelperTrait;
+
 	public function __construct(private readonly UserManager $userManager)
 	{
 	}
@@ -24,11 +32,12 @@ class UserController extends AbstractController
 	{
 		/** @var User $user */
 		$user = $this->getUser();
-		$form = $this->createForm(UserType::class, $user, ['method' => 'POST']);
+		$form = $this->createForm(ProfileType::class, $user, ['method' => 'POST']);
 		$form->handleRequest($request);
 
 		if ($form->isSubmitted() && $form->isValid()) {
 			if ($avatar = $form->get('avatar')->getData()) $this->userManager->updateAvatar($user, $avatar);
+			if ($password = $form->get('password')->getData()) $this->userManager->updatePassword($user, $password);
 			$this->userManager->save($user);
 
 			return $this->redirectToRoute('admin_user_profile');
@@ -42,9 +51,9 @@ class UserController extends AbstractController
 	}
 
 	#[Route('/{user_id}/info', name: 'info', methods: ['GET'])]
-	#[Entity('user', expr: 'repository.find(user_id)')]
-	public function info(User $user)
+	public function info(): Response
 	{
+		$user = $this->getUser();
 		return $this->renderForm('admin/user/info.html.twig', [
 			'entity' => $user,
 			'avatar' => $this->userManager->getAvatar($user)?->getPathname()
@@ -52,10 +61,42 @@ class UserController extends AbstractController
 	}
 
 	#[Route('/', name: 'index')]
-	public function index(): Response
+	public function index(PaginatorInterface $paginator, Request $request, FilterFormHandler $filterTypeHandler): Response
 	{
+		$queryBuilder = $this->userManager
+			->getRepository()
+			->findUsersToShowQB($this->getUser());
+
+		$filterForm = $this->createForm(UserFilterType::class);
+		$filterForm->handleRequest($request);
+
+		if ($filterForm->isSubmitted() && $filterForm->isValid()) {
+			$filterTypeHandler->handleFilterForm($filterForm, $queryBuilder);
+		}
+
+		$page = $request->query->getInt('page', 1);
+
+		if ($page < 1) return $this->redirectToFirstPage();
+
+		$pagination = $paginator->paginate($queryBuilder, $page, options: [
+			'defaultSortFieldName' => ['user.nickname'],
+			'defaultSortDirection' => 'desc',
+		]);
+
+		if ($pagination->count() === 0 && $pagination->getTotalItemCount() > 0) {
+			return $this->redirectToLastPage($pagination);
+		}
+
+		if ($entityId = $request->get('user_id')) {
+			$entity = $this->userManager->getRepository()->find($entityId);
+		} else {
+			$entity = $pagination->current();
+		}
+
 		return $this->render('admin/user/index.html.twig', [
-			'controller_name' => 'UserController',
+			'pagination' => $pagination,
+			'first_entity' => $entity,
+			'filter_form' => $filterForm->createView()
 		]);
 	}
 
@@ -63,6 +104,7 @@ class UserController extends AbstractController
 	#[Entity('user', expr: 'repository.find(user_id)')]
 	public function edit(Request $request, User $user): Response
 	{
+		$this->denyAccessUnlessGranted(UserVoter::EDIT, $user);
 		$form = $this->createForm(UserType::class, $user, ['method' => 'POST']);
 		$form->handleRequest($request);
 
@@ -70,13 +112,25 @@ class UserController extends AbstractController
 			if ($avatar = $form->get('avatar')->getData()) $this->userManager->updateAvatar($user, $avatar);
 			$this->userManager->save($user);
 
-			return $this->redirectToRoute('admin_user_edit');
+			return $this->redirectToRoute('admin_user_edit', $request->get('_route_params'));
 		}
 
-		return $this->renderForm('profile_form.html.twig', [
+		return $this->renderForm('admin/user/form.html.twig', [
 			'entity' => $user,
 			'form' => $form,
 			'avatar' => $this->userManager->getAvatar($user)?->getPathname()
+		]);
+	}
+
+	#[Route('/{user_id}/show', name: 'show', methods: ['GET'])]
+	#[Entity('user', expr: 'repository.find(user_id)')]
+	public function show(Request $request, User $user): Response
+	{
+		$this->denyAccessUnlessGranted(UserVoter::VIEW, $user);
+		return $this->renderForm('admin/user/show.html.twig', [
+			'entity' => $user,
+			'avatar' => $this->userManager->getAvatar($user)?->getPathname(),
+			'query_params' => $request->query->all()
 		]);
 	}
 }

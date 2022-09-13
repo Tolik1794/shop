@@ -22,10 +22,7 @@ class Store
 	#[ORM\Column(length: 255)]
 	private ?string $slug = null;
 
-	#[ORM\OneToMany(mappedBy: 'store', targetEntity: User::class)]
-	private Collection $users;
-
-	#[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'manageSores')]
+	#[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'managerStores')]
 	private Collection $managers;
 
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Warehouse::class)]
@@ -54,7 +51,6 @@ class Store
 
 	public function __construct()
 	{
-		$this->users = new ArrayCollection();
 		$this->managers = new ArrayCollection();
 		$this->warehouses = new ArrayCollection();
 		$this->orders = new ArrayCollection();
@@ -99,36 +95,6 @@ class Store
 	/**
 	 * @return Collection<int, User>
 	 */
-	public function getUsers(): Collection
-	{
-		return $this->users;
-	}
-
-	public function addUser(User $user): self
-	{
-		if (!$this->users->contains($user)) {
-			$this->users->add($user);
-			$user->setStore($this);
-		}
-
-		return $this;
-	}
-
-	public function removeUser(User $user): self
-	{
-		if ($this->users->removeElement($user)) {
-			// set the owning side to null (unless already changed)
-			if ($user->getStore() === $this) {
-				$user->setStore(null);
-			}
-		}
-
-		return $this;
-	}
-
-	/**
-	 * @return Collection<int, User>
-	 */
 	public function getManagers(): Collection
 	{
 		return $this->managers;
@@ -138,7 +104,7 @@ class Store
 	{
 		if (!$this->managers->contains($manager)) {
 			$this->managers->add($manager);
-			$manager->addManageSore($this);
+			$manager->addManagerStore($this);
 		}
 
 		return $this;
@@ -147,7 +113,7 @@ class Store
 	public function removeManager(User $manager): self
 	{
 		if ($this->managers->removeElement($manager)) {
-			$manager->removeManageSore($this);
+			$manager->removeManagerStore($this);
 		}
 
 		return $this;

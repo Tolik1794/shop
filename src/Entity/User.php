@@ -3,9 +3,12 @@
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use DateTimeInterface;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Gedmo\Mapping\Annotation\Blameable;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -13,6 +16,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\Table(name: '`user`')]
 #[UniqueEntity(fields: ['email'], message: 'There is already an account with this email')]
+#[UniqueEntity(fields: ['nickname'], message: 'There is already an account with this nickname')]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
 	#[ORM\Id]
@@ -22,9 +26,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
 	#[ORM\Column(length: 180, unique: true)]
 	private ?string $email = null;
-//
-//	#[ORM\Column]
-//	private array $roles = [];
 
 	/**
 	 * @var string The hashed password
@@ -32,21 +33,28 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 	#[ORM\Column]
 	private string $password;
 
+	#[ORM\Column(length: 255, nullable: true)]
+	private ?string $avatar = null;
+
+	#[ORM\Column(length: 255, nullable: true)]
+	private ?string $firstName = null;
+
+	#[ORM\Column(length: 255, nullable: true)]
+	private ?string $lastName = null;
+
+	#[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+	private ?DateTimeInterface $dateOfBirth = null;
+
+	#[ORM\Column(length: 255, unique: true, nullable: true)]
+	private ?string $nickname = null;
+
 	#[ORM\Column(type: 'boolean')]
 	private bool $isVerified = false;
-
-	#[ORM\ManyToMany(targetEntity: Store::class, mappedBy: 'managers')]
-	private Collection $stores;
-
-	#[ORM\ManyToOne(targetEntity: Store::class, inversedBy: 'users')]
-	private ?Store $store = null;
 
 	#[ORM\ManyToMany(targetEntity: Store::class, inversedBy: 'managers')]
 	private Collection $managerStores;
 
-	#[ORM\Column(length: 255, nullable: true)]
-	private ?string $avatar = null;
-
+	#[Blameable(on: 'create')]
 	#[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'children')]
 	private ?self $parent = null;
 
@@ -61,7 +69,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
 	public function __construct()
 	{
-		$this->stores = new ArrayCollection();
 		$this->managerStores = new ArrayCollection();
 		$this->children = new ArrayCollection();
 		$this->roles = new ArrayCollection();
@@ -78,6 +85,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 		return $this->id;
 	}
 
+	public function getUserIdentifier(): string
+	{
+		return (string) $this->id;
+	}
+
 	public function getEmail(): ?string
 	{
 		return $this->email;
@@ -91,41 +103,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 	}
 
 	/**
-	 * A visual identifier that represents this user.
-	 *
-	 * @see UserInterface
-	 */
-	public function getUserIdentifier(): string
-	{
-		return (string)$this->email;
-	}
-
-	/**
 	 * @deprecated since Symfony 5.3, use getUserIdentifier instead
 	 */
 	public function getUsername(): string
 	{
 		return (string)$this->email;
 	}
-
-//	/**
-//	 * @see UserInterface
-//	 */
-//	public function getRoles(): array
-//	{
-//		$roles = $this->roles;
-//		// guarantee every user at least has ROLE_USER
-//		$roles[] = 'ROLE_USER';
-//
-//		return array_unique($roles);
-//	}
-//
-//	public function setRoles(array $roles): self
-//	{
-//		$this->roles = $roles;
-//
-//		return $this;
-//	}
 
 	/**
 	 * @see PasswordAuthenticatedUserInterface
@@ -170,45 +153,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 	public function setIsVerified(bool $isVerified): self
 	{
 		$this->isVerified = $isVerified;
-
-		return $this;
-	}
-
-	/**
-	 * @return Collection<int, Store>
-	 */
-	public function getStores(): Collection
-	{
-		return $this->stores;
-	}
-
-	public function addStore(Store $store): self
-	{
-		if (!$this->stores->contains($store)) {
-			$this->stores->add($store);
-			$store->addUser($this);
-		}
-
-		return $this;
-	}
-
-	public function removeStore(Store $store): self
-	{
-		if ($this->stores->removeElement($store)) {
-			$store->removeUser($this);
-		}
-
-		return $this;
-	}
-
-	public function getStore(): ?Store
-	{
-		return $this->store;
-	}
-
-	public function setStore(?Store $store): self
-	{
-		$this->store = $store;
 
 		return $this;
 	}
@@ -297,8 +241,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 	public function getRoles(): array
 	{
 		return $this->roles->map(function (Role $role) {
-			return $role->getKey();
-		})->toArray() + ['ROLE_USER'];
+				return $role->getKey();
+			})->toArray() + ['ROLE_USER'];
 	}
 
 	public function addRole(Role $role): self
@@ -337,6 +281,54 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 	public function removePermission(Permission $permission): self
 	{
 		$this->permissions->removeElement($permission);
+
+		return $this;
+	}
+
+	public function getFirstName(): ?string
+	{
+		return $this->firstName;
+	}
+
+	public function setFirstName(?string $firstName): self
+	{
+		$this->firstName = $firstName;
+
+		return $this;
+	}
+
+	public function getLastName(): ?string
+	{
+		return $this->lastName;
+	}
+
+	public function setLastName(?string $lastName): self
+	{
+		$this->lastName = $lastName;
+
+		return $this;
+	}
+
+	public function getDateOfBirth(): ?DateTimeInterface
+	{
+		return $this->dateOfBirth;
+	}
+
+	public function setDateOfBirth(?DateTimeInterface $dateOfBirth): self
+	{
+		$this->dateOfBirth = $dateOfBirth;
+
+		return $this;
+	}
+
+	public function getNickname(): ?string
+	{
+		return $this->nickname;
+	}
+
+	public function setNickname(?string $nickname): self
+	{
+		$this->nickname = $nickname;
 
 		return $this;
 	}

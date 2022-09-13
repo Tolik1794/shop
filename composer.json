@@ -14,6 +14,7 @@
         "knplabs/knp-paginator-bundle": "^5.8",
         "liip/imagine-bundle": "^2.1",
         "sensio/framework-extra-bundle": "^6.2",
+        "stof/doctrine-extensions-bundle": "^1.7",
         "symfony/console": "6.1.*",
         "symfony/dotenv": "6.1.*",
         "symfony/expression-language": "6.1.*",

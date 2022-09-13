@@ -1,7 +1,9 @@
 <div class="card">
     <div class="card-header pb-0">
-        {{ include('admin/components/card/_actions.html.twig', {actions: actions}) }}
-        <h5 class="card-title mb-0">Stores</h5>
+        {% if actions|trim %}
+            {{ include('admin/components/card/_actions.html.twig', {actions: actions}) }}
+        {% endif %}
+        <h5 class="card-title mb-0">{{ table_title }}</h5>
     </div>
     <div class="card-body">
         <table class="table table-hover">
