@@ -3,16 +3,12 @@
 namespace App\Tools;
 
 use Knp\Component\Pager\Pagination\PaginationInterface;
-use Psr\Container\ContainerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 
-trait ControllerHelperTrait
+abstract class AbstractAdvancedController extends AbstractController
 {
-	abstract function redirectToRoute(string $route, array $parameters = [], int $status = 302): RedirectResponse;
-
-	abstract function setContainer(ContainerInterface $container): ?ContainerInterface;
-
 	public function stayOrRedirect(
 		string $route,
 		array  $parameters = [],

@@ -1,5 +1,3 @@
-
-
 {% for name, widget in form %}
     <div class="mb-2">
         {% set widget_type = widget.vars.block_prefixes|first %}
@@ -10,7 +8,7 @@
                 </div>
             {% endif %}
 
-            {{ form_widget(widget, {attr:{class: 'form-control'}}) }}
+            {{ form_widget(widget) }}
 
             <small>{{ form_help(widget) }}</small>
 

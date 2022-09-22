@@ -8,20 +8,17 @@ use App\Form\Admin\Type\StoreType;
 use App\Manager\StoreManager;
 use App\Security\Voter\StoreVoter;
 use App\Service\FilterFormHandler;
-use App\Tools\ControllerHelperTrait;
+use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Entity;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/admin/store', name: 'admin_store_'), IsGranted('ROLE_STORE_MANAGER')]
-class StoreController extends AbstractController
+class StoreController extends AbstractAdvancedController
 {
-	use ControllerHelperTrait;
-
 	public function __construct(private readonly StoreManager $storeManager)
 	{
 	}

@@ -9,20 +9,17 @@ use App\Form\Admin\Type\UserType;
 use App\Manager\UserManager;
 use App\Security\Voter\UserVoter;
 use App\Service\FilterFormHandler;
-use App\Tools\ControllerHelperTrait;
+use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\Entity;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/admin/user', name: 'admin_user_'), IsGranted('ROLE_STORE_MANAGER')]
-class UserController extends AbstractController
+class UserController extends AbstractAdvancedController
 {
-	use ControllerHelperTrait;
-
 	public function __construct(private readonly UserManager $userManager)
 	{
 	}
@@ -87,11 +84,9 @@ class UserController extends AbstractController
 			return $this->redirectToLastPage($pagination);
 		}
 
-		if ($entityId = $request->get('user_id')) {
-			$entity = $this->userManager->getRepository()->find($entityId);
-		} else {
-			$entity = $pagination->current();
-		}
+		$entity = ($entityId = $request->get('user_id'))
+			? $this->userManager->getRepository()->find($entityId)
+			: $pagination->current();
 
 		return $this->render('admin/user/index.html.twig', [
 			'pagination' => $pagination,
@@ -105,14 +100,21 @@ class UserController extends AbstractController
 	public function edit(Request $request, User $user): Response
 	{
 		$this->denyAccessUnlessGranted(UserVoter::EDIT, $user);
-		$form = $this->createForm(UserType::class, $user, ['method' => 'POST']);
+		$form = $this->createForm(UserType::class, $user, [
+			'method' => 'POST',
+			'attr' => [
+				'data-controller' => 'select-two',
+				'data-select-two-target' => 'form'
+			]
+		]);
+
 		$form->handleRequest($request);
 
 		if ($form->isSubmitted() && $form->isValid()) {
 			if ($avatar = $form->get('avatar')->getData()) $this->userManager->updateAvatar($user, $avatar);
 			$this->userManager->save($user);
 
-			return $this->redirectToRoute('admin_user_edit', $request->get('_route_params'));
+			return $this->stayOrRedirect('admin_user_index');
 		}
 
 		return $this->renderForm('admin/user/form.html.twig', [

@@ -12,37 +12,25 @@
                     </div>
                     <div class="card-body">
                         {% if avatar %}
-                            <img class="article-img" src="{{ avatar|trim_full_path|imagine_filter('squared_thumbnail_small') }}">
+                            <img class="article-img"
+                                 src="{{ avatar|trim_full_path|imagine_filter('squared_thumbnail_small') }}">
                         {% endif %}
-                        {{ form_start(form) }}
-                        {{ form_errors(form) }}
 
-                        {% for name, widget in form %}
-                            <div class="mb-2">
-                                {% set widget_type = widget.vars.block_prefixes|first %}
-                                {% if widget_type != 'button' %}
-                                    {% if name != '_token' %}
-                                        <div class="font-weight-bold">
-                                            {{ form_label(widget, null, {label_attr: {class: 'form-label'}}) }}
-                                        </div>
-                                    {% endif %}
+                        <div class="form-control-lg">
+                            {{ form_start(form) }}
+                            {{ form_errors(form) }}
 
-                                    {{ form_widget(widget, {attr:{class: 'form-control'}}) }}
+                            {{ include('admin/components/_form_widgets.html.twig', {form: form}) }}
 
-                                    <small>{{ form_help(widget) }}</small>
-
-                                    <div class="form-error">
-                                        {{ form_errors(widget) }}
-                                    </div>
-                                {% endif %}
-                            </div>
-                        {% endfor %}
-
-                        <div class="row">
-                            <div class="form-control-lg">
-                                <button type="submit" class="btn btn-primary btn mb-1 me-2">Сохранить</button>
-                                <button name="save" value="stay" type="submit" class="btn btn-primary mb-1 me-2">Сохранить и продолжить</button>
-                                <a href="{{ path('admin_user_index', app.request.query|merge(app.request.get('_route_params'))) }}" class="btn btn-text mb-1">Отмена</a>
+                            <div class="row">
+                                <div class="form-control-lg">
+                                    <button type="submit" class="btn btn-primary btn mb-1 me-2">Сохранить</button>
+                                    <button name="save" value="stay" type="submit" class="btn btn-primary mb-1 me-2">
+                                        Сохранить и продолжить
+                                    </button>
+                                    <a href="{{ path('admin_user_index', app.request.query|merge(app.request.get('_route_params'))) }}"
+                                       class="btn btn-text mb-1">Отмена</a>
+                                </div>
                             </div>
                         </div>
 

@@ -3,6 +3,7 @@
 namespace App\Form\Admin\Type;
 
 use App\Entity\User;
+use App\Form\Extension\Core\Type\FlatpickrType;
 use App\Manager\UserManager;
 use App\Security\RoleEnum;
 use Symfony\Component\Form\AbstractType;
@@ -55,26 +56,28 @@ class ProfileType extends AbstractType
 			->add('lastName', TextType::class, [
 				'required' => true,
 			])
-			->add('dateOfBirth', DateType::class, [
+			->add('dateOfBirth', FlatpickrType::class, [
 				'required' => true,
+				'max_date' => (new \DateTime())->modify('-16 year'),
+				'alt_input' => true,
+				'alt_format' => 'j F, Y',
+				'help' => 'It is necessary for everyone in the company to know when to congratulate you on the day of aging.',
 			])
-//            ->add('roles', ChoiceType::class, [
-//				'choices' => [
-////					RoleEnum::ROLE_SUPER_ADMIN->value => RoleEnum::ROLE_SUPER_ADMIN->name,
-//					RoleEnum::ROLE_ADMIN->value => RoleEnum::ROLE_ADMIN->name,
-//					RoleEnum::ROLE_USER->value => RoleEnum::ROLE_USER->name,
-//				],
-//	            'multiple' => true
-//            ])
-            ->add('password', RepeatedType::class, [
+			->add('password', RepeatedType::class, [
 				'mapped' => false,
-		        'type' => PasswordType::class,
-		        'invalid_message' => 'The password fields must match.',
-		        'options' => ['attr' => ['class' => 'password-field']],
-		        'required' => false,
-		        'first_options'  => ['label' => 'Password'],
-		        'second_options' => ['label' => 'Repeat Password'],
-	        ])
+				'type' => PasswordType::class,
+				'invalid_message' => 'The password fields must match.',
+				'options' => ['attr' => ['class' => 'password-field']],
+				'required' => false,
+				'first_options' => [
+					'label' => 'Password',
+				],
+				'second_options' => [
+					'label' => 'Repeat Password',
+				],
+				'label' => false,
+//				'attr' => ['data-controller' => 'password-visibility'],
+			])
 //            ->add('isVerified')
 //            ->add('stores')
 //            ->add('store')

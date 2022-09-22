@@ -13,11 +13,15 @@ const $ = require('jquery');
 
 //add global variables
 global.$ = global.jQuery = require('jquery');
+// Import css files
+import 'select2/dist/css/select2.min.css';
 
 // import js files
+import 'jquery'
+import 'select2/dist/js/select2.full';
 import '../theme/admin_kit/js/app';
 import '../js/font-awesome'
-import 'jquery'
+// import '../js/select2-init'
 
 // start the Stimulus application
 import '../bootstrap';

@@ -2,3 +2,55 @@ label.required:after {
   content: "*";
   color: red;
 }
+
+button.eye-password {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  position: absolute;
+  background-color: transparent;
+  border: none;
+  padding-right: 0.75rem;
+  color: var(--bs-body-color);
+}
+
+.select2-container .select2-selection--multiple .select2-selection__choice {
+  border: 0;
+  border-radius: 4px;
+  background-color: #f1f5f9;
+}
+
+.select2-container--default {
+  .select2-selection--multiple .select2-selection__choice__remove {
+    border-right: 0;
+    padding: 0 6px;
+  }
+
+  .select2-results__option--selected {
+    display: none;
+  }
+
+  .select2-selection--multiple,
+  .select2-selection--single {
+    border: 1px solid #cbd5e1;
+  }
+
+  .select2-search--dropdown .select2-search__field {
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+  }
+
+  &.select2-container--open.select2-container--below {
+    .select2-selection--single,
+    .select2-selection--multiple {
+      border: 1px solid #cbd5e1;
+    }
+  }
+}
+
+input.select2-search__field:focus-visible {
+  outline: none
+}

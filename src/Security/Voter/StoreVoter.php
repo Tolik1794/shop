@@ -43,7 +43,8 @@ class StoreVoter extends Voter
 	private function canEdit(User|UserInterface $user, Store $store): bool
 	{
 		return $user->getManagerStores()->exists(fn (int $key, Store $value) => $value->getId() === $store->getId())
-			&& $this->userManager->hasRole(RoleEnum::ROLE_STORE_ADMIN);
+			&& $this->userManager->hasRole(RoleEnum::ROLE_STORE_ADMIN)
+			|| $this->userManager->hasRole(RoleEnum::ROLE_SUPER_ADMIN);
 	}
 
 	private function canView(User|UserInterface $user, Store $store): bool
