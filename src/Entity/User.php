@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Manager\Avatar\AvatarEntityInterface;
 use App\Repository\UserRepository;
 use DateTimeInterface;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -17,7 +18,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 #[ORM\Table(name: '`user`')]
 #[UniqueEntity(fields: ['email'], message: 'There is already an account with this email')]
 #[UniqueEntity(fields: ['nickname'], message: 'There is already an account with this nickname')]
-class User implements UserInterface, PasswordAuthenticatedUserInterface
+class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarEntityInterface
 {
 	#[ORM\Id]
 	#[ORM\GeneratedValue]

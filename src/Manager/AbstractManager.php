@@ -7,63 +7,35 @@ use Doctrine\Persistence\ObjectRepository;
 
 abstract class AbstractManager
 {
-	public function __construct(public readonly EntityManagerInterface $entityManager)
-	{
-	}
+	abstract public function getEntityManager(): EntityManagerInterface;
 
-	/**
-	 * @param array      $criteria
-	 * @param array|null $orderBy
-	 * @param int|null   $limit
-	 * @param            $offset
-	 * @return mixed
-	 */
+	abstract public function getRepository(): ObjectRepository;
+
 	public function findOneBy(array $criteria, ?array $orderBy = null, ?int $limit = null, $offset = null): mixed
 	{
 		return $this->getRepository()->findOneBy($criteria, $orderBy);
 	}
 
-	/**
-	 * @return array
-	 */
 	public function findAll(): array
 	{
 		return $this->getRepository()->findAll();
 	}
 
-	/**
-	 * @param $id
-	 * @param $lockMode
-	 * @param $lockVersion
-	 * @return mixed
-	 */
 	public function find($id, $lockMode = null, $lockVersion = null): mixed
 	{
 		return $this->getRepository()->find($id, $lockMode, $lockVersion);
 	}
 
-	/**
-	 * @param object $entity
-	 * @return void
-	 */
 	public function save(object $entity): void
 	{
-		$this->entityManager->persist($entity);
-		$this->entityManager->flush();
+		$this->getEntityManager()->persist($entity);
+		$this->getEntityManager()->flush();
 	}
 
-	/**
-	 * @param object $entity
-	 * @return void
-	 */
 	public function delete(object $entity): void
 	{
-		$this->entityManager->remove($entity);
-		$this->entityManager->flush();
+		$this->getEntityManager()->remove($entity);
+		$this->getEntityManager()->flush();
 	}
 
-	/**
-	 * @return ObjectRepository
-	 */
-	public abstract function getRepository(): ObjectRepository;
 }

@@ -16,23 +16,14 @@ use Symfony\Component\Security\Core\User\UserInterface;
 
 class RequestSubscriber implements EventSubscriberInterface
 {
-	/**
-	 * @param BlameableListener     $blameableListener
-	 * @param TokenStorageInterface $tokenStorage
-	 */
 	public function __construct(
 		private readonly BlameableListener     $blameableListener,
 		private readonly TokenStorageInterface $tokenStorage,
 		private readonly RouterInterface $router,
-//		private readonly FlashBagInterface $flash
 	)
 	{
 	}
 
-	/**
-	 * @param RequestEvent $requestEvent
-	 * @return void
-	 */
 	public function onKernelRequest(RequestEvent $requestEvent): void
 	{
 		if ($this->tokenStorage?->getToken()?->getUser() !== null) {
@@ -44,15 +35,11 @@ class RequestSubscriber implements EventSubscriberInterface
 				!$this->isUserHasFullData($user)
 				&& $this->isRoute($requestEvent->getRequest(), 'admin_user_profile')
 			) {
-//				$this->flash->add('notice', 'Write required fields to continue.');
 				$requestEvent->setResponse(new RedirectResponse($this->router->generate('admin_user_profile')));
 			}
 		}
 	}
 
-	/**
-	 * @return string[][]
-	 */
 	#[ArrayShape([KernelEvents::RESPONSE => "string[]"])]
 	public static function getSubscribedEvents(): array
 	{

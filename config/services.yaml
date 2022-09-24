@@ -32,3 +32,8 @@ services:
     App\EventSubscriber\RequestSubscriber:
         tags:
             - { name: kernel.event_listener, event: kernel.request }
+
+    file_uploader:
+        class: App\Service\FileUploader
+        # you CAN still use autowiring: we just want to show what it looks like without
+        autowire: true

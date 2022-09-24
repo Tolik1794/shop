@@ -76,12 +76,7 @@ class ProfileType extends AbstractType
 					'label' => 'Repeat Password',
 				],
 				'label' => false,
-//				'attr' => ['data-controller' => 'password-visibility'],
 			])
-//            ->add('isVerified')
-//            ->add('stores')
-//            ->add('store')
-//            ->add('managerStores')
 		;
 	}
 

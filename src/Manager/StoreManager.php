@@ -3,6 +3,8 @@
 namespace App\Manager;
 
 use App\Entity\Store;
+use App\Manager\Avatar\AvatarEntityInterface;
+use App\Manager\Avatar\AvatarTrait;
 use App\Repository\StoreRepository;
 use App\Service\FileUploader;
 use Doctrine\ORM\EntityManagerInterface;
@@ -12,16 +14,16 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 class StoreManager extends AbstractManager
 {
+	use AvatarTrait;
+
 	const AVATAR_FOLDER = '/store/avatar';
 
 	public function __construct(
-		EntityManagerInterface        $entityManager,
+		private readonly EntityManagerInterface $entityManager,
 		private readonly FileUploader $fileUp,
-		private readonly Filesystem   $filesystem,
+		private readonly Filesystem $filesystem
 	)
 	{
-
-		parent::__construct($entityManager);
 	}
 
 	public function getRepository(): StoreRepository
@@ -29,22 +31,23 @@ class StoreManager extends AbstractManager
 		return $this->entityManager->getRepository(Store::class);
 	}
 
-	public function updateAvatar(Store $store, UploadedFile $uploadedFile): void
+	public function getAvatarFolder(): string
 	{
-		$fileUp = $this->fileUp;
-
-		if ($store->getAvatar())
-			$oldFile = $fileUp->getFile($fileUp->getImagePath($store->getAvatar(), self::AVATAR_FOLDER));
-
-		$file = $fileUp->upload($uploadedFile, $fileUp->getImageDirectory(self::AVATAR_FOLDER));
-		$store->setAvatar($file->getFilename());
-
-		if (isset($oldFile)) $this->filesystem->remove($oldFile->getPathname());
+		return static::AVATAR_FOLDER;
 	}
 
-	public function getAvatar(Store $store): ?File
+	protected function getFileUp(): FileUploader
 	{
-		if (!$store->getAvatar()) return null;
-		return $this->fileUp->getFile($this->fileUp->getImagePath($store->getAvatar(), self::AVATAR_FOLDER));
+		return $this->fileUp;
+	}
+
+	protected function getFilesystem(): Filesystem
+	{
+		return $this->filesystem;
+	}
+
+	public function getEntityManager(): EntityManagerInterface
+	{
+		return $this->entityManager;
 	}
 }

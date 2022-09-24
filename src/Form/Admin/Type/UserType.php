@@ -10,7 +10,6 @@ use App\Manager\UserManager;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -58,7 +57,6 @@ class UserType extends AbstractType
 	        ])
             ->add('roles', ChoiceType::class, [
 				'choices' => [
-//					RoleEnum::ROLE_SUPER_ADMIN->value => RoleEnum::ROLE_SUPER_ADMIN->name,
 					RoleEnum::ROLE_ADMIN->value => RoleEnum::ROLE_ADMIN->name,
 					RoleEnum::ROLE_USER->value => RoleEnum::ROLE_USER->name,
 				],
@@ -68,7 +66,7 @@ class UserType extends AbstractType
             ])
             ->add('managerStores', EntityType::class, [
 				'choices' => $this->userManager->hasRole(RoleEnum::ROLE_ADMIN)
-					? $this->userManager->entityManager->getRepository(Store::class)->findAll()
+					? $this->userManager->getEntityManager()->getRepository(Store::class)->findAll()
 					: $this->userManager->getCurrentUser()->getManagerStores()->getValues(),
 				'class' => Store::class,
 				'choice_label' => 'name',
