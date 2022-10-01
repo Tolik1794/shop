@@ -1,20 +1,63 @@
-{% extends 'base.html.twig' %}
+{% extends 'admin/layout.html.twig' %}
 
-{% block title %}Hello CategoryController!{% endblock %}
+{% block title %}Store list{% endblock %}
 
-{% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
+{% set table_actions %}
+    {% if is_granted('ROLE_STORE_ADMIN') %}
+        <a class="dropdown-item" href="{{ path('admin_category_new', {store_id: app.request.get('store_id')}) }}">New</a>
+    {% endif %}
+{% endset %}
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
+{% set table_head %}
+    <tr>
+        <th>Name</th>
+    </tr>
+{% endset %}
 
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code><a href="{{ '/var/www/shop/src/Controller/Admin/CategoryController.php'|file_link(0) }}">src/Controller/Admin/CategoryController.php</a></code></li>
-        <li>Your template at <code><a href="{{ '/var/www/shop/templates/admin/category/index.html.twig'|file_link(0) }}">templates/admin/category/index.html.twig</a></code></li>
-    </ul>
-</div>
+{% set table_body %}
+    {% for entity in pagination %}
+        <tr
+                id="{{ entity.id }}"
+                data-id-column="id"
+                class="{{ entity.id == first_entity.id ? 'table-active' : '' }}"
+                data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
+                data-link="{{ path('admin_category_show', {store_id: app.request.get('store_id'), id: entity.id}) }}"
+                onclick="document.getElementById('first-tab').click()"
+        >
+            <td>{{ entity.name }}</td>
+        </tr>
+    {% endfor %}
+{% endset %}
+
+{% block main_content %}
+    <main class="content" {{ stimulus_controller('reload-card') }}>
+        <div class="container-fluid p-0">
+            <div class="row">
+                <div class="col-xxl-4 col-xl-5 col-lg-6">
+                    {{ include('admin/components/card/_tab_card.html.twig', {
+                        tab_head: [
+                            include('admin/components/tab_icon/_show.html.twig'),
+                            include('admin/components/tab_icon/_filter.html.twig')
+                            ~ (app.request.get(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
+                        ],
+                        tab_body: first_entity ? [
+                            render(controller(
+                                'App\\Controller\\Admin\\CategoryController::show',
+                                { store_id: app.request.get('store_id'),'id': first_entity.id, 'request': app.request }
+                            )),
+                            include('admin/components/card/_filter_card.html.twig', {form: filter_form})
+                        ] : []
+                    }) }}
+                </div>
+                <div class="col-xxl-8 col-xl-7 col-lg-6">
+                    {{ include('admin/components/card/_table_card.html.twig', {
+                        actions: table_actions,
+                        table_title: 'Stores',
+                        table_head: table_head,
+                        table_body: table_body
+                    }) }}
+                </div>
+            </div>
+        </div>
+    </main>
 {% endblock %}

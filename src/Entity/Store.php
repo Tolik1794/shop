@@ -50,6 +50,9 @@ class Store implements AvatarEntityInterface
 	#[ORM\Column(length: 255, enumType: ActiveStatusEnum::class)]
 	private ActiveStatusEnum $status;
 
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Category::class)]
+	private Collection $categories;
+
 	public function __construct()
 	{
 		$this->managers = new ArrayCollection();
@@ -57,6 +60,7 @@ class Store implements AvatarEntityInterface
 		$this->orders = new ArrayCollection();
 		$this->purchases = new ArrayCollection();
 		$this->status = ActiveStatusEnum::INACTIVE;
+		$this->categories = new ArrayCollection();
 	}
 
 	public function __toString(): string
@@ -266,6 +270,36 @@ class Store implements AvatarEntityInterface
 	public function setStatus(ActiveStatusEnum $status): self
 	{
 		$this->status = $status;
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, Category>
+	 */
+	public function getCategories(): Collection
+	{
+		return $this->categories;
+	}
+
+	public function addCategory(Category $category): self
+	{
+		if (!$this->categories->contains($category)) {
+			$this->categories->add($category);
+			$category->setStore($this);
+		}
+
+		return $this;
+	}
+
+	public function removeCategory(Category $category): self
+	{
+		if ($this->categories->removeElement($category)) {
+			// set the owning side to null (unless already changed)
+			if ($category->getStore() === $this) {
+				$category->setStore(null);
+			}
+		}
 
 		return $this;
 	}

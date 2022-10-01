@@ -1,0 +1,52 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Hello MainController!{% endblock %}
+
+{% block main_content %}
+    <main class="content">
+        <div class="container-fluid p-0">
+            <div class="row">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Private info</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ form_start(form) }}
+                        {{ form_errors(form) }}
+
+                        {% for name, widget in form %}
+                            <div class="mb-2">
+                                {% set widget_type = widget.vars.block_prefixes|first %}
+                                {% if widget_type != 'button' %}
+                                    {% if name != '_token' %}
+                                        <div class="font-weight-bold">
+                                            {{ form_label(widget, null, {label_attr: {class: 'form-label'}}) }}
+                                        </div>
+                                    {% endif %}
+
+                                    {{ form_widget(widget, {attr:{class: 'form-control'}}) }}
+
+                                    <small>{{ form_help(widget) }}</small>
+
+                                    <div class="form-error">
+                                        {{ form_errors(widget) }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+
+                        <div class="row">
+                            <div class="form-control-lg">
+                                <button type="submit" class="btn btn-primary btn mb-1 me-2">Сохранить</button>
+                                <button name="save" value="stay" type="submit" class="btn btn-primary mb-1 me-2">Сохранить и продолжить</button>
+                                <a href="{{ path('admin_category_index', app.request.query|merge(app.request.get('_route_params'))) }}" class="btn btn-text mb-1">Отмена</a>
+                            </div>
+                        </div>
+
+                        {{ form_end(form, {'render_rest': false}) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+{% endblock %}

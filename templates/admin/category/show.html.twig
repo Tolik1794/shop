@@ -1,0 +1,31 @@
+{% set actions %}
+{#    {% if is_granted('POST_EDIT', entity) %}#}
+        <a class="dropdown-item" href="{{ path('admin_category_edit', query_params|merge({store_id: app.request.get('store_id'), id: entity.id})) }}">Edit</a>
+{#    {% endif %}#}
+{% endset %}
+
+<div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+    <div class="card-header">
+        {% if actions|trim %}
+            {{ include('admin/components/card/_actions.html.twig', {actions: actions}) }}
+        {% endif %}
+        <h5 class="card-title mb-0">{{ entity.name }}</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-0">
+            <div class="col-sm-9 col-xl-12 col-xxl-9">
+                <strong>Description</strong>
+                <p>{{ entity.description }}</p>
+            </div>
+        </div>
+
+        <table class="table table-sm mt-2 mb-4">
+            <tbody>
+            <tr>
+                <th>Name</th>
+                <td>{{ entity.name }}</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
