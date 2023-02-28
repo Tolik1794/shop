@@ -1,17 +1,5 @@
 {% extends 'admin/base.html.twig' %}
 
-{% block title %}
-    {% set currentMenuItem = knp_menu_get_current_item('main') %}
-    {% if currentMenuItem is defined and currentMenuItem.name != 'root' %}
-        {% if currentMenuItem.parent %}
-            {{ currentMenuItem.parent.label }} -
-        {% endif %}
-        {{ currentMenuItem.name }}
-    {% else %}
-        {{ 'Tetradka' }}
-    {% endif %}
-{% endblock title %}
-
 {% block body %}
     {% block wrapper %}
         <div class="wrapper">
@@ -26,12 +14,14 @@
                                 <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                      aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                     <div class="simplebar-content" style="padding: 0px;">
-                                        <a class="sidebar-brand" href="{{ path('admin_store_index') }}">
-                                            <span class="align-middle">MyStores</span>
-                                        </a>
+                                        {% block sidebar_brand %}
+                                            <a class="sidebar-brand" href="{{ path('admin_store_index') }}">
+                                                <span class="align-middle">MyStores</span>
+                                            </a>
+                                        {% endblock %}
 
                                         {% block sidebar_menu %}
-                                            {{ knp_menu_render('mainAdmin',{'allow_safe_labels': true}) }}
+                                            {{ knp_menu_render('mainAdmin',{'currentClass': 'active', 'allow_safe_labels': true}) }}
                                         {% endblock sidebar_menu %}
 
                                     </div>
@@ -77,7 +67,7 @@
                                         <span class="text-dark">{{ app.user.email }}</span>
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-end">
-                                        {{ knp_menu_render('userAdmin', {'allow_safe_labels': true}) }}
+                                        {{ knp_menu_render('userAdmin', {'allow_safe_labels': true, template: 'menu/user.html.twig'}) }}
                                     </div>
                                 </li>
                             </ul>

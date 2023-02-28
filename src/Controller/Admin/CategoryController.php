@@ -47,24 +47,21 @@ class CategoryController extends AbstractAdvancedController
 
 		if ($page < 1) return $this->redirectToFirstPage();
 
-		$pagination = $paginator->paginate($queryBuilder, $page, options: [
-			'defaultSortFieldName' => ['category.name'],
-			'defaultSortDirection' => 'asc',
-		]);
+		$pagination = $paginator->paginate($queryBuilder, $page);
 
 		if ($pagination->count() === 0 && $pagination->getTotalItemCount() > 0) {
 			return $this->redirectToLastPage($pagination);
 		}
 
-		if ($storeId = $request->get('category_id')) {
-			$store = $this->categoryManager->getRepository()->find($storeId);
+		if ($id = $request->get('id')) {
+			$category = $this->categoryManager->getRepository()->find($id);
 		} else {
-			$store = $pagination->current();
+			$category = $pagination->current();
 		}
 
 		return $this->render('admin/category/index.html.twig', [
 			'pagination' => $pagination,
-			'first_entity' => $store,
+			'first_entity' => $category,
 			'filter_form' => $filterForm->createView()
 		]);
 	}

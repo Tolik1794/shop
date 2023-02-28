@@ -7,9 +7,9 @@
         <div class="container-fluid p-0">
             <div class="row">
                 <div class="col-xxl-4 col-xl-5 col-lg-6 col-md-6">
-                    {{ include('admin/components/card/_tab_card.html.twig', {
+                    {{ include('admin/_components/card/_tab_card.html.twig', {
                         tab_head: [
-                            include('admin/components/tab_icon/_show.html.twig')
+                            include('admin/_components/tab_icon/_show.html.twig')
                         ],
                         tab_body: [
                             render(controller(
@@ -32,7 +32,7 @@
                             {{ form_start(form) }}
                             {{ form_errors(form) }}
 
-                            {{ include('admin/components/_form_widgets.html.twig', {form: form}) }}
+                            {{ include('admin/_components/_form_widgets.html.twig', {form: form}) }}
 
                             <div class="row">
                                 <div class="form-control-lg">

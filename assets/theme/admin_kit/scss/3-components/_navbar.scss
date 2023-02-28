@@ -135,3 +135,24 @@
 .navbar input {
   direction: ltr;
 }
+
+.sidebar-dropdown .sidebar-item {
+  padding-left: 1rem;
+}
+
+.sidebar-dropdown .sidebar-item .sidebar-link {
+  border-left: 0;
+}
+
+.sidebar-dropdown .sidebar-item.active .sidebar-link, .sidebar-dropdown .sidebar-item.active:hover .sidebar-link {
+  background: transparent;
+  //border-left: 0;
+  color: #518be1;
+  font-weight: 400;
+}
+
+.current_ancestor [data-bs-toggle="collapse"], .current_ancestor [data-bs-toggle="collapse"]:hover {
+  background: linear-gradient(90deg,rgba(59,125,221,.1),rgba(59,125,221,.088) 50%,transparent);
+  border-left-color: #3b7ddd;
+  color: #e9ecef;
+}

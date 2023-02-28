@@ -4,7 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Category;
 use App\Entity\Store;
-use App\Tools\SqlHelperTrait;
+use App\Tools\RepositoryHelperTrait;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\Query\ResultSetMapping;
 use Doctrine\ORM\QueryBuilder;
@@ -20,7 +20,7 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class CategoryRepository extends ServiceEntityRepository
 {
-	use SqlHelperTrait;
+	use RepositoryHelperTrait;
 
 	public function __construct(ManagerRegistry $registry)
 	{
@@ -45,7 +45,10 @@ class CategoryRepository extends ServiceEntityRepository
 		}
 	}
 
-	public function findAvailableCategories(Store $store, int $countOfChildren = 2): ?iterable
+	/**
+	 * @tag recursive_query
+	 */
+	public function findAvailableCategories(Store $store, int $levelOfChildren = 2, iterable $categories = null): ?iterable
 	{
 		$categoryColumns = ['id', 'name', 'description'];
 		$categoryRelationColumns = ['store_id', 'parent_id'];
@@ -53,7 +56,10 @@ class CategoryRepository extends ServiceEntityRepository
 
 		$rsm = (new ResultSetMapping)
 			->addEntityResult(Category::class, 'cte')
-			->addJoinedEntityResult(Category::class, 'p', 'cte', 'parent');
+			->addJoinedEntityResult(Category::class, 'p', 'cte', 'parent')
+			->addFieldResult('p', 'first', 'firstId')
+			->addFieldResult('p', 'level', 'level')
+		;
 
 		foreach ($categoryColumns as $column) {
 			$rsm->addFieldResult('cte', $column, $column)
@@ -62,40 +68,56 @@ class CategoryRepository extends ServiceEntityRepository
 		unset($column);
 
 		$columnsStr = $this->columnsToStr($categoryAllColumns);
+		$parents = $categories ? "id in ({$this->implodeToSql($categories)})" : 'parent_id IS null';
 
-		$query = $this->getEntityManager()->createNativeQuery(
-			'WITH RECURSIVE cte (' . $columnsStr . ', first, count) AS (
-					SELECT ' . $columnsStr . ', id as first, 0
+		$sql = "WITH RECURSIVE cte ($columnsStr, first, level) AS (
+					SELECT $columnsStr, id as first, 0
 					FROM category
-					WHERE parent_id IS null AND store_id = :store
+					WHERE store_id = :store 
+						AND $parents
 					UNION ALL
-					SELECT ' . $this->columnsToStr($categoryAllColumns, 'c') . ', cte.first as first, cte.count + 1
+					SELECT {$this->columnsToStr($categoryAllColumns, 'c')}, cte.first as first, cte.level + 1
 					FROM category c
 					INNER JOIN cte ON c.parent_id = cte.id AND c.store_id = cte.store_id
 				)
 				SELECT 
-					' . $this->columnsToStr($categoryColumns, 'cte') . ',
-					' . $this->columnsToStr($categoryColumns, 'p', 'par') . '
+					{$this->columnsToStr($categoryColumns, 'cte')},
+					{$this->columnsToStr($categoryColumns, 'p', 'par')}
 				FROM cte
 				LEFT JOIN category p ON p.id = cte.parent_id
-				WHERE cte.count <= :count
+				WHERE cte.level <= :level
 				AND cte.store_id = :store
 				GROUP BY cte.id
-				ORDER BY first
-				',
+				ORDER BY first, id
+				";
+
+		$query = $this->getEntityManager()->createNativeQuery(
+			$sql,
 			$rsm
 		)->setParameters([
 			'store' => $store->getId(),
-			'count' => $countOfChildren,
+			'level' => $levelOfChildren,
 		]);
 
 		return $query->getResult();
 	}
 
-	public function findAvailableCategoriesQB(Store $store): QueryBuilder
+	public function findAvailableCategoriesQB(Store $store, int $maxLevel = 2): QueryBuilder
 	{
 		return $this->createQueryBuilder('category')
+			->leftJoin('category.parent', 'parent')
+			->leftJoin('category.firstParent', 'first_parent')
 			->where('category.store = :store')
-			->setParameter('store', $store);
+			->andWhere('category.level <= :max_level')
+			->orderBy('
+				CASE 
+					WHEN category.parent IS null 
+					THEN category.id 
+					ELSE first_parent.id 
+				END, 
+				category.id', 'ASC')
+			->setParameter('store', $store)
+			->setParameter('max_level', $maxLevel)
+			;
 	}
 }

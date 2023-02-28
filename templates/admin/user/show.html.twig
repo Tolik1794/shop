@@ -11,7 +11,7 @@
 <div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
     <div class="card-header">
         {% if actions|trim %}
-            {{ include('admin/components/card/_actions.html.twig', {actions: actions}) }}
+            {{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
         {% endif %}
         <h5 class="card-title mb-0">{{ entity.email }}</h5>
     </div>

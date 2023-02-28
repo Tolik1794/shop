@@ -2,7 +2,7 @@
 
 namespace App\Tools;
 
-trait SqlHelperTrait
+trait RepositoryHelperTrait
 {
 	protected function columnsToStr(array $columns, string $tableAlias = null, string $columnAliasPrefix = null): string
 	{
@@ -14,6 +14,25 @@ trait SqlHelperTrait
 		}
 		unset($col);
 
+
+		return implode(', ', $arr);
+	}
+
+	protected function implodeToSql(iterable $collection): string
+	{
+		$arr = [];
+
+		foreach ($collection as $item) {
+			if (is_object($item)) {
+				$arr[] = $item->getId();
+				continue;
+			}
+
+			if (is_numeric($item) || is_string($item)) {
+				$arr[] = $item;
+			}
+		}
+		unset($item);
 
 		return implode(', ', $arr);
 	}

@@ -3,31 +3,28 @@
 namespace App\Form\Admin\Type;
 
 use App\Entity\Category;
+use App\Entity\Product;
 use App\Repository\CategoryRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
-class CategoryType extends AbstractType
+class ProductType extends AbstractType
 {
-	public function __construct()
-	{
-	}
-
-	public function buildForm(FormBuilderInterface $builder, array $options): void
+    public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-		/** @var Category $category */
-		$category = $builder->getData();
+		$product = $builder->getData();
         $builder
             ->add('name')
-	        ->add('parent', EntityType::class, [
+            ->add('code')
+	        ->add('category', EntityType::class, [
 		        'query_builder' => fn(CategoryRepository $repository)
-		            => $repository->findAvailableCategoriesQB($category->getStore(), maxLevel: 1),
+		            => $repository->findAvailableCategoriesQB($product->getStore()),
 		        'class' => Category::class,
 		        'choice_label' => 'nameWithParent',
 		        'multiple' => false,
-		        'required' => false,
+		        'required' => true,
 		        'attr' => ['class' => 'select2'],
 	        ])
         ;
@@ -36,7 +33,7 @@ class CategoryType extends AbstractType
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'data_class' => Category::class,
+            'data_class' => Product::class,
         ]);
     }
 }

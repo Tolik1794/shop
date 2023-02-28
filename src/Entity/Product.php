@@ -31,6 +31,10 @@ class Product
     #[ORM\OneToMany(mappedBy: 'product', targetEntity: Entry::class)]
     private Collection $entries;
 
+    #[ORM\ManyToOne(inversedBy: 'products')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Store $store = null;
+
     public function __construct()
     {
         $this->warehouseProducts = new ArrayCollection();
@@ -134,6 +138,18 @@ class Product
                 $entry->setProduct(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getStore(): ?Store
+    {
+        return $this->store;
+    }
+
+    public function setStore(?Store $store): self
+    {
+        $this->store = $store;
 
         return $this;
     }

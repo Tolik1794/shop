@@ -27,6 +27,14 @@ services:
         tags:
             - { name: knp_menu.menu_builder, method: mainAdminMenu, alias: mainAdmin }
             - { name: knp_menu.menu_builder, method: userAdminMenu, alias: userAdmin }
+            - { name: knp_menu.menu_builder, method: mainAdminStoreMenu, alias: mainAdminStore }
+
+    menu.voter.uri:
+        class: App\Menu\Voter\UriVoter
+        arguments: [ '@request_stack' ]
+        tags:
+            - { name: knp_menu.voter }
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
     App\EventSubscriber\RequestSubscriber:

@@ -40,10 +40,10 @@
         <div class="container-fluid p-0">
             <div class="row">
                 <div class="col-xxl-4 col-xl-5 col-lg-6">
-                    {{ include('admin/components/card/_tab_card.html.twig', {
+                    {{ include('admin/_components/card/_tab_card.html.twig', {
                         tab_head: [
-                            include('admin/components/tab_icon/_show.html.twig'),
-                            include('admin/components/tab_icon/_filter.html.twig')
+                            include('admin/_components/tab_icon/_show.html.twig'),
+                            include('admin/_components/tab_icon/_filter.html.twig')
                                 ~ (app.request.get(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
                         ],
                         tab_body: first_entity ? [
@@ -51,12 +51,12 @@
                                 'App\\Controller\\Admin\\StoreController::show',
                                 { 'store_id': first_entity.id, 'request': app.request }
                             )),
-                            include('admin/components/card/_filter_card.html.twig', {form: filter_form})
+                            include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
                         ] : []
                     }) }}
                 </div>
                 <div class="col-xxl-8 col-xl-7 col-lg-6">
-                    {{ include('admin/components/card/_table_card.html.twig', {
+                    {{ include('admin/_components/card/_table_card.html.twig', {
                         actions: table_actions,
                         table_title: 'Stores',
                         table_head: table_head,

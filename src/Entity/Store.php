@@ -13,294 +13,328 @@ use Doctrine\ORM\Mapping as ORM;
 class Store implements AvatarEntityInterface
 {
 	#[ORM\Id]
-	#[ORM\GeneratedValue]
-	#[ORM\Column]
-	private ?int $id = null;
+               	#[ORM\GeneratedValue]
+               	#[ORM\Column]
+               	private ?int $id = null;
 
 	#[ORM\Column(length: 255)]
-	private ?string $name = null;
+               	private ?string $name = null;
 
 	#[ORM\Column(length: 255)]
-	private ?string $slug = null;
+               	private ?string $slug = null;
 
 	#[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'managerStores')]
-	private Collection $managers;
+               	private Collection $managers;
 
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Warehouse::class)]
-	private Collection $warehouses;
+               	private Collection $warehouses;
 
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Order::class)]
-	private Collection $orders;
+               	private Collection $orders;
 
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Purchase::class)]
-	private Collection $purchases;
+               	private Collection $purchases;
 
 	#[ORM\Column(length: 255)]
-	private ?string $phone = null;
+               	private ?string $phone = null;
 
 	#[ORM\Column(length: 255)]
-	private ?string $email = null;
+               	private ?string $email = null;
 
 	#[ORM\Column(length: 255, nullable: true)]
-	private ?string $description = null;
+               	private ?string $description = null;
 
 	#[ORM\Column(length: 255, nullable: true)]
-	private ?string $avatar = null;
+               	private ?string $avatar = null;
 
 	#[ORM\Column(length: 255, enumType: ActiveStatusEnum::class)]
-	private ActiveStatusEnum $status;
+               	private ActiveStatusEnum $status;
 
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Category::class)]
-	private Collection $categories;
+               	private Collection $categories;
+
+    #[ORM\OneToMany(mappedBy: 'store', targetEntity: Product::class)]
+    private Collection $products;
 
 	public function __construct()
-	{
-		$this->managers = new ArrayCollection();
-		$this->warehouses = new ArrayCollection();
-		$this->orders = new ArrayCollection();
-		$this->purchases = new ArrayCollection();
-		$this->status = ActiveStatusEnum::INACTIVE;
-		$this->categories = new ArrayCollection();
-	}
+               	{
+               		$this->managers = new ArrayCollection();
+               		$this->warehouses = new ArrayCollection();
+               		$this->orders = new ArrayCollection();
+               		$this->purchases = new ArrayCollection();
+               		$this->status = ActiveStatusEnum::INACTIVE;
+               		$this->categories = new ArrayCollection();
+                 $this->products = new ArrayCollection();
+               	}
 
 	public function __toString(): string
-	{
-		return $this->name;
-	}
+               	{
+               		return $this->name;
+               	}
 
 	public function getId(): ?int
-	{
-		return $this->id;
-	}
+               	{
+               		return $this->id;
+               	}
 
 	public function getName(): ?string
-	{
-		return $this->name;
-	}
+               	{
+               		return $this->name;
+               	}
 
 	public function setName(string $name): self
-	{
-		$this->name = $name;
-
-		return $this;
-	}
+               	{
+               		$this->name = $name;
+               
+               		return $this;
+               	}
 
 	public function getSlug(): ?string
-	{
-		return $this->slug;
-	}
+               	{
+               		return $this->slug;
+               	}
 
 	public function setSlug(string $slug): self
-	{
-		$this->slug = $slug;
-
-		return $this;
-	}
+               	{
+               		$this->slug = $slug;
+               
+               		return $this;
+               	}
 
 	/**
 	 * @return Collection<int, User>
 	 */
 	public function getManagers(): Collection
-	{
-		return $this->managers;
-	}
+               	{
+               		return $this->managers;
+               	}
 
 	public function addManager(User $manager): self
-	{
-		if (!$this->managers->contains($manager)) {
-			$this->managers->add($manager);
-			$manager->addManagerStore($this);
-		}
-
-		return $this;
-	}
+               	{
+               		if (!$this->managers->contains($manager)) {
+               			$this->managers->add($manager);
+               			$manager->addManagerStore($this);
+               		}
+               
+               		return $this;
+               	}
 
 	public function removeManager(User $manager): self
-	{
-		if ($this->managers->removeElement($manager)) {
-			$manager->removeManagerStore($this);
-		}
-
-		return $this;
-	}
+               	{
+               		if ($this->managers->removeElement($manager)) {
+               			$manager->removeManagerStore($this);
+               		}
+               
+               		return $this;
+               	}
 
 	/**
 	 * @return Collection<int, Warehouse>
 	 */
 	public function getWarehouses(): Collection
-	{
-		return $this->warehouses;
-	}
+               	{
+               		return $this->warehouses;
+               	}
 
 	public function addWarehouse(Warehouse $warehouse): self
-	{
-		if (!$this->warehouses->contains($warehouse)) {
-			$this->warehouses->add($warehouse);
-			$warehouse->setStore($this);
-		}
-
-		return $this;
-	}
+               	{
+               		if (!$this->warehouses->contains($warehouse)) {
+               			$this->warehouses->add($warehouse);
+               			$warehouse->setStore($this);
+               		}
+               
+               		return $this;
+               	}
 
 	public function removeWarehouse(Warehouse $warehouse): self
-	{
-		if ($this->warehouses->removeElement($warehouse)) {
-			// set the owning side to null (unless already changed)
-			if ($warehouse->getStore() === $this) {
-				$warehouse->setStore(null);
-			}
-		}
-
-		return $this;
-	}
+               	{
+               		if ($this->warehouses->removeElement($warehouse)) {
+               			// set the owning side to null (unless already changed)
+               			if ($warehouse->getStore() === $this) {
+               				$warehouse->setStore(null);
+               			}
+               		}
+               
+               		return $this;
+               	}
 
 	/**
 	 * @return Collection<int, Order>
 	 */
 	public function getOrders(): Collection
-	{
-		return $this->orders;
-	}
+               	{
+               		return $this->orders;
+               	}
 
 	public function addOrder(Order $order): self
-	{
-		if (!$this->orders->contains($order)) {
-			$this->orders->add($order);
-			$order->setStore($this);
-		}
-
-		return $this;
-	}
+               	{
+               		if (!$this->orders->contains($order)) {
+               			$this->orders->add($order);
+               			$order->setStore($this);
+               		}
+               
+               		return $this;
+               	}
 
 	public function removeOrder(Order $order): self
-	{
-		if ($this->orders->removeElement($order)) {
-			// set the owning side to null (unless already changed)
-			if ($order->getStore() === $this) {
-				$order->setStore(null);
-			}
-		}
-
-		return $this;
-	}
+               	{
+               		if ($this->orders->removeElement($order)) {
+               			// set the owning side to null (unless already changed)
+               			if ($order->getStore() === $this) {
+               				$order->setStore(null);
+               			}
+               		}
+               
+               		return $this;
+               	}
 
 	/**
 	 * @return Collection<int, Purchase>
 	 */
 	public function getPurchases(): Collection
-	{
-		return $this->purchases;
-	}
+               	{
+               		return $this->purchases;
+               	}
 
 	public function addPurchase(Purchase $purchase): self
-	{
-		if (!$this->purchases->contains($purchase)) {
-			$this->purchases->add($purchase);
-			$purchase->setStore($this);
-		}
-
-		return $this;
-	}
+               	{
+               		if (!$this->purchases->contains($purchase)) {
+               			$this->purchases->add($purchase);
+               			$purchase->setStore($this);
+               		}
+               
+               		return $this;
+               	}
 
 	public function removePurchase(Purchase $purchase): self
-	{
-		if ($this->purchases->removeElement($purchase)) {
-			// set the owning side to null (unless already changed)
-			if ($purchase->getStore() === $this) {
-				$purchase->setStore(null);
-			}
-		}
-
-		return $this;
-	}
+               	{
+               		if ($this->purchases->removeElement($purchase)) {
+               			// set the owning side to null (unless already changed)
+               			if ($purchase->getStore() === $this) {
+               				$purchase->setStore(null);
+               			}
+               		}
+               
+               		return $this;
+               	}
 
 	public function getPhone(): ?string
-	{
-		return $this->phone;
-	}
+               	{
+               		return $this->phone;
+               	}
 
 	public function setPhone(string $phone): self
-	{
-		$this->phone = $phone;
-
-		return $this;
-	}
+               	{
+               		$this->phone = $phone;
+               
+               		return $this;
+               	}
 
 	public function getEmail(): ?string
-	{
-		return $this->email;
-	}
+               	{
+               		return $this->email;
+               	}
 
 	public function setEmail(string $email): self
-	{
-		$this->email = $email;
-
-		return $this;
-	}
+               	{
+               		$this->email = $email;
+               
+               		return $this;
+               	}
 
 	public function getDescription(): ?string
-	{
-		return $this->description;
-	}
+               	{
+               		return $this->description;
+               	}
 
 	public function setDescription(?string $description): self
-	{
-		$this->description = $description;
-
-		return $this;
-	}
+               	{
+               		$this->description = $description;
+               
+               		return $this;
+               	}
 
 	public function getAvatar(): ?string
-	{
-		return $this->avatar;
-	}
+               	{
+               		return $this->avatar;
+               	}
 
 	public function setAvatar(?string $avatar): self
-	{
-		$this->avatar = $avatar;
-
-		return $this;
-	}
+               	{
+               		$this->avatar = $avatar;
+               
+               		return $this;
+               	}
 
 	public function getStatus(): ActiveStatusEnum
-	{
-		return $this->status;
-	}
+               	{
+               		return $this->status;
+               	}
 
 	public function setStatus(ActiveStatusEnum $status): self
-	{
-		$this->status = $status;
-
-		return $this;
-	}
+               	{
+               		$this->status = $status;
+               
+               		return $this;
+               	}
 
 	/**
 	 * @return Collection<int, Category>
 	 */
 	public function getCategories(): Collection
-	{
-		return $this->categories;
-	}
+               	{
+               		return $this->categories;
+               	}
 
 	public function addCategory(Category $category): self
-	{
-		if (!$this->categories->contains($category)) {
-			$this->categories->add($category);
-			$category->setStore($this);
-		}
-
-		return $this;
-	}
+               	{
+               		if (!$this->categories->contains($category)) {
+               			$this->categories->add($category);
+               			$category->setStore($this);
+               		}
+               
+               		return $this;
+               	}
 
 	public function removeCategory(Category $category): self
-	{
-		if ($this->categories->removeElement($category)) {
-			// set the owning side to null (unless already changed)
-			if ($category->getStore() === $this) {
-				$category->setStore(null);
-			}
-		}
+               	{
+               		if ($this->categories->removeElement($category)) {
+               			// set the owning side to null (unless already changed)
+               			if ($category->getStore() === $this) {
+               				$category->setStore(null);
+               			}
+               		}
+               
+               		return $this;
+               	}
 
-		return $this;
-	}
+    /**
+     * @return Collection<int, Product>
+     */
+    public function getProducts(): Collection
+    {
+        return $this->products;
+    }
+
+    public function addProduct(Product $product): self
+    {
+        if (!$this->products->contains($product)) {
+            $this->products->add($product);
+            $product->setStore($this);
+        }
+
+        return $this;
+    }
+
+    public function removeProduct(Product $product): self
+    {
+        if ($this->products->removeElement($product)) {
+            // set the owning side to null (unless already changed)
+            if ($product->getStore() === $this) {
+                $product->setStore(null);
+            }
+        }
+
+        return $this;
+    }
 }

@@ -1,6 +1,6 @@
-{% extends 'admin/layout.html.twig' %}
+{% extends 'admin/_store_components/layout.html.twig' %}
 
-{% block title %}Store list{% endblock %}
+{% block title %}Category list{% endblock %}
 
 {% set table_actions %}
     {% if is_granted('ROLE_STORE_ADMIN') %}
@@ -24,7 +24,12 @@
                 data-link="{{ path('admin_category_show', {store_id: app.request.get('store_id'), id: entity.id}) }}"
                 onclick="document.getElementById('first-tab').click()"
         >
-            <td>{{ entity.name }}</td>
+            {% if entity.level > 0 %}
+                <td class="{{ 'ps-'~(entity.level + 3) }}"><i class="fa-solid fa-angles-right"></i>{{ entity.name }}</td>
+            {% else %}
+                <td>{{ entity.name }}</td>
+
+            {% endif %}
         </tr>
     {% endfor %}
 {% endset %}
@@ -34,25 +39,29 @@
         <div class="container-fluid p-0">
             <div class="row">
                 <div class="col-xxl-4 col-xl-5 col-lg-6">
-                    {{ include('admin/components/card/_tab_card.html.twig', {
-                        tab_head: [
-                            include('admin/components/tab_icon/_show.html.twig'),
-                            include('admin/components/tab_icon/_filter.html.twig')
-                            ~ (app.request.get(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
-                        ],
-                        tab_body: first_entity ? [
-                            render(controller(
-                                'App\\Controller\\Admin\\CategoryController::show',
-                                { store_id: app.request.get('store_id'),'id': first_entity.id, 'request': app.request }
-                            )),
-                            include('admin/components/card/_filter_card.html.twig', {form: filter_form})
-                        ] : []
-                    }) }}
+                    {% if pagination.count > 0 %}
+                        {{ include('admin/_components/card/_tab_card.html.twig', {
+                            tab_head: [
+                                include('admin/_components/tab_icon/_show.html.twig'),
+                                include('admin/_components/tab_icon/_filter.html.twig')
+                                ~ (app.request.get(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
+                            ],
+                            tab_body: first_entity ? [
+                                render(controller(
+                                    'App\\Controller\\Admin\\CategoryController::show',
+                                    { store_id: app.request.get('store_id'),'id': first_entity.id, 'request': app.request }
+                                )),
+                                include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
+                            ] : []
+                        }) }}
+                    {% else %}
+                        Nothing to show...
+                    {% endif %}
                 </div>
                 <div class="col-xxl-8 col-xl-7 col-lg-6">
-                    {{ include('admin/components/card/_table_card.html.twig', {
+                    {{ include('admin/_components/card/_table_card.html.twig', {
                         actions: table_actions,
-                        table_title: 'Stores',
+                        table_title: 'Categories',
                         table_head: table_head,
                         table_body: table_body
                     }) }}

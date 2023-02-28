@@ -121,4 +121,12 @@ class StoreController extends AbstractAdvancedController
 			'query_params' => $request->query->all()
 		]);
 	}
+
+	#[Route('/{store_id}/main', name: 'main')]
+	#[Entity('store', expr: 'repository.find(store_id)')]
+	public function main(Request $request): Response
+	{
+		return $this->render('admin/store/main.html.twig');
+	}
+
 }
