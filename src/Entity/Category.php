@@ -42,11 +42,15 @@ class Category
 	#[ORM\Column]
 	private int $level = 0;
 
+	#[ORM\OneToMany(mappedBy: 'category', targetEntity: CategoryProductParameterName::class)]
+	private Collection $categoryProductParameterNames;
+
 	public function __construct()
 	{
 		$this->products = new ArrayCollection();
 		$this->categoryAdditionalNames = new ArrayCollection();
 		$this->children = new ArrayCollection();
+		$this->categoryProductParameterNames = new ArrayCollection();
 	}
 
 	public function __toString(): string
@@ -226,6 +230,36 @@ class Category
 	public function setLevel(int $level): self
 	{
 		$this->level = $level;
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, CategoryProductParameterName>
+	 */
+	public function getCategoryProductParameterNames(): Collection
+	{
+		return $this->categoryProductParameterNames;
+	}
+
+	public function addCategoryProductParameterName(CategoryProductParameterName $categoryProductParameterName): self
+	{
+		if (!$this->categoryProductParameterNames->contains($categoryProductParameterName)) {
+			$this->categoryProductParameterNames->add($categoryProductParameterName);
+			$categoryProductParameterName->setCategory($this);
+		}
+
+		return $this;
+	}
+
+	public function removeCategoryProductParameterName(CategoryProductParameterName $categoryProductParameterName): self
+	{
+		if ($this->categoryProductParameterNames->removeElement($categoryProductParameterName)) {
+			// set the owning side to null (unless already changed)
+			if ($categoryProductParameterName->getCategory() === $this) {
+				$categoryProductParameterName->setCategory(null);
+			}
+		}
 
 		return $this;
 	}

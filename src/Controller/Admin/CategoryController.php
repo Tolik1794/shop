@@ -7,6 +7,7 @@ use App\Entity\Store;
 use App\Form\Admin\FilterType\CategoryFilterType;
 use App\Form\Admin\Type\CategoryType;
 use App\Manager\CategoryManager;
+use App\Repository\CategoryRepository;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
@@ -89,17 +90,21 @@ class CategoryController extends AbstractAdvancedController
 			);
 		}
 
-		return $this->renderForm('admin/category/form.html.twig', [
+		return $this->render('admin/category/form.html.twig', [
 			'entity' => $category,
 			'form' => $form
 		]);
 	}
 
-	#[Route('/{id}/edit', name: 'edit', methods: ['GET', 'POST'])]
+	#[Route('/{category_id}/edit', name: 'edit', methods: ['GET', 'POST'])]
 	#[Entity('store', expr: 'repository.find(store_id)')]
-	public function edit(Request $request, Category $category, Store $store): Response
+	#[Entity('category', expr: 'repository.find(category_id)')]
+	public function edit(
+		Request $request,
+		Category $category,
+		Store $store,
+	): Response
 	{
-//		$this->denyAccessUnlessGranted(StoreVoter::EDIT, $category);
 		$form = $this->createForm(CategoryType::class, $category, ['method' => 'POST']);
 		$form->handleRequest($request);
 
@@ -109,13 +114,14 @@ class CategoryController extends AbstractAdvancedController
 			return $this->stayOrRedirect('admin_category_index', ['store_id' => $store->getId()]);
 		}
 
-		return $this->renderForm('admin/category/form.html.twig', [
+		return $this->render('admin/category/form.html.twig', [
 			'entity' => $category,
 			'form' => $form,
 		]);
 	}
 
-	#[Route('/{id}/show', name: 'show')]
+	#[Route('/{category_id}/show', name: 'show')]
+	#[Entity('category', expr: 'repository.find(category_id)')]
 	public function show(Request $request, Category $category): Response
 	{
 		return $this->render('admin/category/show.html.twig', [

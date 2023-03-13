@@ -2,22 +2,17 @@
 
 namespace App\Form\Admin\Type;
 
-use App\Entity\User;
+use App\Entity\User\User;
 use App\Form\Extension\Core\Type\FlatpickrType;
 use App\Manager\UserManager;
-use App\Security\RoleEnum;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
-use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Component\Security\Core\Role\Role;
 use Symfony\Component\Validator\Constraints\File;
 
 class ProfileType extends AbstractType

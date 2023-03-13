@@ -3,6 +3,8 @@
 namespace App\Form\Admin\Type;
 
 use App\Entity\Category;
+use App\Entity\CategoryProductParameterName;
+use App\Repository\CategoryProductParameterNameRepository;
 use App\Repository\CategoryRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -21,13 +23,15 @@ class CategoryType extends AbstractType
 		$category = $builder->getData();
         $builder
             ->add('name')
+            ->add('description')
 	        ->add('parent', EntityType::class, [
 		        'query_builder' => fn(CategoryRepository $repository)
-		            => $repository->findAvailableCategoriesQB($category->getStore(), maxLevel: 1),
+		            => $repository->findAvailableCategoriesAsListQB($category->getStore()),
 		        'class' => Category::class,
 		        'choice_label' => 'nameWithParent',
 		        'multiple' => false,
 		        'required' => false,
+				'disabled' => true,
 		        'attr' => ['class' => 'select2'],
 	        ])
         ;

@@ -8,7 +8,7 @@ use Twig\TwigFilter;
 
 class ActiveStatusExtension extends AbstractExtension
 {
-	public function getFilters()
+	public function getFilters(): array
 	{
 		return [
 			new TwigFilter('active_status_class', [$this, 'getClass']),

@@ -102,22 +102,54 @@ class CategoryRepository extends ServiceEntityRepository
 		return $query->getResult();
 	}
 
-	public function findAvailableCategoriesQB(Store $store, int $maxLevel = 2): QueryBuilder
+	public function findAllParentIdRecursive(Category $category, bool $withSelf = true): array
+	{
+		$sql = "WITH RECURSIVE cte AS (
+				    SELECT id, parent_id
+				    FROM category
+				    WHERE id = :category
+				    UNION ALL
+				    SELECT c.id, c.parent_id
+				    FROM category c
+				    INNER JOIN cte ON cte.parent_id = c.id
+				)
+				SELECT
+				    cte.id
+				FROM cte
+				";
+
+		if (!$withSelf) $sql .= ' WHERE cte.id <> :category';
+
+		$em = $this->getEntityManager();
+		$stmt = $em->getConnection()->prepare($sql);
+		return $stmt->executeQuery(['category' => $category->getId()])->fetchFirstColumn();
+	}
+
+	public function findAvailableCategoriesQB(Store $store, int $maxLevel = 4): QueryBuilder
+	{
+		$qb = $this->createQueryBuilder('category')
+			->where('category.store = :store')
+			->andWhere('category.level = :level')
+			->setParameter('store', $store)
+			->setParameter('level', 1);
+
+		$previousAlias = 'category';
+		for ($i = 2; $i <= $maxLevel; $i++) {
+			$alias = 'category'.$i;
+			$qb->addSelect($alias)
+				->leftJoin("$previousAlias.children", $alias, 'WITH', "$alias.level = $i");
+			$previousAlias = $alias;
+		}
+
+		return $qb;
+	}
+
+	public function findAvailableCategoriesAsListQB(Store $store, int $maxLevel = 4): QueryBuilder
 	{
 		return $this->createQueryBuilder('category')
-			->leftJoin('category.parent', 'parent')
-			->leftJoin('category.firstParent', 'first_parent')
 			->where('category.store = :store')
-			->andWhere('category.level <= :max_level')
-			->orderBy('
-				CASE 
-					WHEN category.parent IS null 
-					THEN category.id 
-					ELSE first_parent.id 
-				END, 
-				category.id', 'ASC')
+			->andWhere('category.level <= :level')
 			->setParameter('store', $store)
-			->setParameter('max_level', $maxLevel)
-			;
+			->setParameter('level', $maxLevel);
 	}
 }

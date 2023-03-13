@@ -14,7 +14,7 @@
                         tab_body: [
                             render(controller(
                                 'App\\Controller\\Admin\\UserController::info',
-                                { 'user_id': entity.id }
+                                { 'user_id': entity.userIdentifier }
                             ))
                         ]
                     }) }}

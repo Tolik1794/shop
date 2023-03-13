@@ -1,0 +1,62 @@
+@startuml
+
+Entity Category {
+    - id: int
+    - name: string
+    - products: Collection<int, Product>
+    - parent: Category
+    - children: Collection<int, Category>
+    - firstParent: Category
+    - level: int
+}
+
+Entity Product {
+    - id: int
+    - name: string
+    - code: string
+    - category: Category
+    - productParameters: Collection<int, ProductParameter>
+}
+
+Entity ProductParameterName {
+    - id
+    - name
+}
+
+Entity ProductParameter {
+    - id
+    - productParameterName: ProductParameterName
+    - product: Product
+    - value: string
+}
+
+Entity CategoryProductParameterName {
+    - id: int
+    - productParameterName: ProductParameterName
+    - category: Category
+    - isRequired: bool
+    - isFilter: bool
+}
+
+Entity Warehouse {
+    - id: int
+    - name: string
+}
+
+Entity WarehouseProduct {
+    - id: int
+    - warehouse: Warehouse
+    - product: Product
+    - quantity: int
+    - reserveQuantity: int
+}
+
+Product *--> ProductParameter
+ProductParameterName *--> ProductParameter
+Category *--> CategoryProductParameterName
+Category *--> Product
+ProductParameterName *--> CategoryProductParameterName
+Product *--> WarehouseProduct
+Warehouse *-->WarehouseProduct
+
+@enduml

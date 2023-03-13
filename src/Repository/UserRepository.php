@@ -2,8 +2,8 @@
 
 namespace App\Repository;
 
-use App\Entity\User;
-use App\Enum\RoleEnum;
+use App\Entity\User\RoleEnum;
+use App\Entity\User\User;
 use App\Manager\UserManager;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -62,9 +62,7 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
 
 	public function findUsersToShowQB(User|UserInterface $user): QueryBuilder
 	{
-		$qb = $this->createQueryBuilder('user')
-			->addSelect('roles')
-			->innerJoin('user.roles', 'roles');
+		$qb = $this->createQueryBuilder('user');
 
 		if ($this->userManager->hasRole(RoleEnum::ROLE_SUPER_ADMIN, $user)) return $qb;
 

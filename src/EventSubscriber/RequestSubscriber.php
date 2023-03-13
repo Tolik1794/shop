@@ -2,7 +2,7 @@
 
 namespace App\EventSubscriber;
 
-use App\Entity\User;
+use App\Entity\User\User;
 use Gedmo\Blameable\BlameableListener;
 use JetBrains\PhpStorm\ArrayShape;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;

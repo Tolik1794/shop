@@ -35,10 +35,14 @@ class Product
     #[ORM\JoinColumn(nullable: false)]
     private ?Store $store = null;
 
+    #[ORM\OneToMany(mappedBy: 'product', targetEntity: ProductParameter::class, orphanRemoval: true)]
+    private Collection $productParameters;
+
     public function __construct()
     {
         $this->warehouseProducts = new ArrayCollection();
         $this->entries = new ArrayCollection();
+        $this->productParameters = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -150,6 +154,36 @@ class Product
     public function setStore(?Store $store): self
     {
         $this->store = $store;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, ProductParameter>
+     */
+    public function getProductParameters(): Collection
+    {
+        return $this->productParameters;
+    }
+
+    public function addProductParameter(ProductParameter $productParameter): self
+    {
+        if (!$this->productParameters->contains($productParameter)) {
+            $this->productParameters->add($productParameter);
+            $productParameter->setProduct($this);
+        }
+
+        return $this;
+    }
+
+    public function removeProductParameter(ProductParameter $productParameter): self
+    {
+        if ($this->productParameters->removeElement($productParameter)) {
+            // set the owning side to null (unless already changed)
+            if ($productParameter->getProduct() === $this) {
+                $productParameter->setProduct(null);
+            }
+        }
 
         return $this;
     }

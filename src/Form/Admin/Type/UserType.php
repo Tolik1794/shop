@@ -3,8 +3,8 @@
 namespace App\Form\Admin\Type;
 
 use App\Entity\Store;
-use App\Entity\User;
-use App\Enum\RoleEnum;
+use App\Entity\User\RoleEnum;
+use App\Entity\User\User;
 use App\Form\Extension\Core\Type\FlatpickrType;
 use App\Manager\UserManager;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
@@ -56,12 +56,9 @@ class UserType extends AbstractType
 				'disabled' => true,
 	        ])
             ->add('roles', ChoiceType::class, [
-				'choices' => [
-					RoleEnum::ROLE_ADMIN->value => RoleEnum::ROLE_ADMIN->name,
-					RoleEnum::ROLE_USER->value => RoleEnum::ROLE_USER->name,
-				],
+				'choices' => RoleEnum::array(),
 	            'multiple' => true,
-	            'disabled' => true,
+	            'disabled' => false,
 	            'attr' => ['class' => 'select2'],
             ])
             ->add('managerStores', EntityType::class, [

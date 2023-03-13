@@ -1,7 +1,10 @@
 <?php
 
-namespace App\Entity;
+namespace App\Entity\User;
 
+use App\Entity\Permission;
+use App\Entity\Role;
+use App\Entity\Store;
 use App\Manager\Avatar\AvatarEntityInterface;
 use App\Repository\UserRepository;
 use DateTimeInterface;
@@ -21,9 +24,8 @@ use Symfony\Component\Security\Core\User\UserInterface;
 class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarEntityInterface
 {
 	#[ORM\Id]
-	#[ORM\GeneratedValue]
-	#[ORM\Column]
-	private ?int $id = null;
+	#[ORM\Column(length: 255, unique: true, nullable: true)]
+	private ?string $nickname = null;
 
 	#[ORM\Column(length: 180, unique: true)]
 	private ?string $email = null;
@@ -46,49 +48,33 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarE
 	#[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
 	private ?DateTimeInterface $dateOfBirth = null;
 
-	#[ORM\Column(length: 255, unique: true, nullable: true)]
-	private ?string $nickname = null;
-
 	#[ORM\Column(type: 'boolean')]
 	private bool $isVerified = false;
 
 	#[ORM\ManyToMany(targetEntity: Store::class, inversedBy: 'managers')]
+	#[ORM\JoinColumn(name: 'nickname', referencedColumnName: 'nickname', onDelete: 'CASCADE')]
 	private Collection $managerStores;
 
 	#[Blameable(on: 'create')]
 	#[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'children')]
+	#[ORM\JoinColumn(name: 'parent', referencedColumnName: 'nickname', onDelete: 'CASCADE')]
 	private ?self $parent = null;
 
 	#[ORM\OneToMany(mappedBy: 'parent', targetEntity: self::class)]
 	private Collection $children;
 
-	#[ORM\ManyToMany(targetEntity: Role::class, inversedBy: 'users')]
-	private Collection $roles;
-
-	#[ORM\ManyToMany(targetEntity: Permission::class, inversedBy: 'users')]
-	private Collection $permissions;
+	#[ORM\Column]
+	private array $roles = [];
 
 	public function __construct()
 	{
 		$this->managerStores = new ArrayCollection();
 		$this->children = new ArrayCollection();
-		$this->roles = new ArrayCollection();
-		$this->permissions = new ArrayCollection();
 	}
 
 	public function __toString(): string
 	{
 		return $this->email;
-	}
-
-	public function getId(): ?int
-	{
-		return $this->id;
-	}
-
-	public function getUserIdentifier(): string
-	{
-		return (string) $this->id;
 	}
 
 	public function getEmail(): ?string
@@ -103,9 +89,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarE
 		return $this;
 	}
 
-	/**
-	 * @deprecated since Symfony 5.3, use getUserIdentifier instead
-	 */
 	public function getUsername(): string
 	{
 		return (string)$this->email;
@@ -236,56 +219,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarE
 		return $this;
 	}
 
-	/**
-	 * @return array<int, Role>
-	 */
-	public function getRoles(): array
-	{
-		return $this->roles->map(function (Role $role) {
-				return $role->getKey();
-			})->toArray() + ['ROLE_USER'];
-	}
-
-	public function addRole(Role $role): self
-	{
-		if (!$this->roles->contains($role)) {
-			$this->roles->add($role);
-		}
-
-		return $this;
-	}
-
-	public function removeRole(Role $role): self
-	{
-		$this->roles->removeElement($role);
-
-		return $this;
-	}
-
-	/**
-	 * @return Collection<int, Permission>
-	 */
-	public function getPermissions(): Collection
-	{
-		return $this->permissions;
-	}
-
-	public function addPermission(Permission $permission): self
-	{
-		if (!$this->permissions->contains($permission)) {
-			$this->permissions->add($permission);
-		}
-
-		return $this;
-	}
-
-	public function removePermission(Permission $permission): self
-	{
-		$this->permissions->removeElement($permission);
-
-		return $this;
-	}
-
 	public function getFirstName(): ?string
 	{
 		return $this->firstName;
@@ -332,5 +265,22 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarE
 		$this->nickname = $nickname;
 
 		return $this;
+	}
+
+	public function getRoles(): array
+	{
+		return $this->roles;
+	}
+
+	public function setRoles(array $roles): self
+	{
+		$this->roles = $roles;
+
+		return $this;
+	}
+
+	public function getUserIdentifier(): string
+	{
+		return $this->nickname;
 	}
 }

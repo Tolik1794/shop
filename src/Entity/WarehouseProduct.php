@@ -6,6 +6,7 @@ use App\Repository\WarehouseProductRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
+#[ORM\UniqueConstraint(columns: ['product_id', 'warehouse_id'])]
 #[ORM\Entity(repositoryClass: WarehouseProductRepository::class)]
 class WarehouseProduct
 {

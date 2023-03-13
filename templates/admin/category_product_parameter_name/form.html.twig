@@ -5,9 +5,10 @@
 {% block main_content %}
     <main class="content">
         <div class="container-fluid p-0">
+            <div class="row">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="card-title mb-0">{{ entity is defined ? entity.name : 'New' }}</h5>
+                        <h5 class="card-title mb-0">Private info</h5>
                     </div>
                     <div class="card-body">
                         {{ form_start(form) }}
@@ -38,23 +39,13 @@
                             <div class="form-control-lg">
                                 <button type="submit" class="btn btn-primary btn mb-1 me-2">Сохранить</button>
                                 <button name="save" value="stay" type="submit" class="btn btn-primary mb-1 me-2">Сохранить и продолжить</button>
-                                <a href="{{ path('admin_category_index', app.request.query|merge(app.request.get('_route_params'))) }}" class="btn btn-text mb-1">Отмена</a>
+                                <a href="{{ path('admin_category_edit', app.request.query|merge(app.request.get('_route_params'))) }}" class="btn btn-text mb-1">Отмена</a>
                             </div>
                         </div>
 
                         {{ form_end(form, {'render_rest': false}) }}
                     </div>
                 </div>
-
-            <div>
-                {{ render(controller(
-                    'App\\Controller\\Admin\\CategoryProductParameterNameController::index',
-                    {
-                        store_id: app.request.get('store_id'),
-                        category_id: app.request.get('category_id'),
-                        request: app.request
-                    }
-                )) }}
             </div>
         </div>
     </main>

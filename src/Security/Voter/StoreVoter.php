@@ -3,8 +3,8 @@
 namespace App\Security\Voter;
 
 use App\Entity\Store;
-use App\Entity\User;
-use App\Enum\RoleEnum;
+use App\Entity\User\RoleEnum;
+use App\Entity\User\User;
 use App\Manager\UserManager;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;

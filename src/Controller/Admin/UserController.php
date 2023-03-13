@@ -2,7 +2,7 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\User;
+use App\Entity\User\User;
 use App\Form\Admin\FilterType\UserFilterType;
 use App\Form\Admin\Type\ProfileType;
 use App\Form\Admin\Type\UserType;

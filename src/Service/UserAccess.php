@@ -2,8 +2,7 @@
 
 namespace App\Service;
 
-use App\Entity\User;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use App\Entity\User\User;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 /**

@@ -2,8 +2,8 @@
 
 namespace App\Manager;
 
-use App\Entity\User;
-use App\Enum\RoleEnum;
+use App\Entity\User\RoleEnum;
+use App\Entity\User\User;
 use App\Manager\Avatar\AvatarTrait;
 use App\Repository\UserRepository;
 use App\Service\FileUploader;
@@ -11,7 +11,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Core\Role\RoleHierarchyInterface;
-use Symfony\Component\Security\Core\Security;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 class UserManager extends AbstractManager

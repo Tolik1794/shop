@@ -1,0 +1,57 @@
+{% set table_actions %}
+    {% if is_granted('ROLE_SUPER_ADMIN') %}
+        <a class="dropdown-item" href="{{ path('admin_category_product_parameter_name_new',
+            {
+                store_id: store.id,
+                category_id: category.id
+            }
+        ) }}">New</a>
+    {% endif %}
+{% endset %}
+
+{% set table_head %}
+    <tr>
+        <th>Name</th>
+        <th>Is filter</th>
+        <th>Is required</th>
+        <th>Category</th>
+        <th>Actions</th>
+    </tr>
+{% endset %}
+
+{% set table_body %}
+    {% for entity in pagination %}
+        {% set item_actions %}
+            <a class="dropdown-item" href="{{ path('admin_category_product_parameter_name_edit',
+                {
+                    store_id: store.id,
+                    category_id: category.id,
+                    parameter_name_id: entity.id
+                }
+            ) }}">Edit</a>
+        {% endset %}
+
+        <tr
+                class="{{ entity.category == category ?: 'table-secondary' }}"
+        >
+            <td>{{ entity.productParameterName }}</td>
+            <td>{{ entity.isFilter }}</td>
+            <td>{{ entity.isRequired }}</td>
+            <td>{{ entity.category.name }}</td>
+            {% if entity.category == category %}
+                <td>{{ include('admin/_components/card/_actions.html.twig', {actions: item_actions}) }}</td>
+            {% else %}
+                <td></td>
+            {% endif %}
+        </tr>
+    {% endfor %}
+{% endset %}
+
+<div class="col">
+    {{ include('admin/_components/card/_table_card.html.twig', {
+        actions: table_actions,
+        table_title: 'Category product parameter names',
+        table_head: table_head,
+        table_body: table_body
+    }) }}
+</div>

@@ -30,3 +30,8 @@
 .hidden {
   display: none;
 }
+
+.data-hover:hover > * {
+  background: var(--bs-table-hover-bg);
+  color: var(--bs-table-hover-color);
+}

@@ -3,11 +3,10 @@
 namespace App\Repository;
 
 use App\Entity\Store;
-use App\Entity\User;
-use App\Enum\RoleEnum;
+use App\Entity\User\RoleEnum;
+use App\Entity\User\User;
 use App\Manager\UserManager;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\Security\Core\User\UserInterface;

@@ -1,0 +1,40 @@
+<table class="table">
+    <tbody>
+    <div class="accordion" id="accordionExample">
+
+        {% for item in items %}
+            {% set heading = 'heading'~item.name %}
+            {% set collapse = 'collapse'~item.name %}
+
+            <tr>
+                <td>
+                    <div
+                            id="{{ item.id }}"
+                            data-id-column="id"
+                            class="{{ item.id == first_entity.id ? 'table-active' : '' }} data-hover"
+                            data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
+                            data-link="{{ path('admin_category_show', {store_id: app.request.get('store_id'), category_id: item.id}) }}"
+                            onclick="document.getElementById('first-tab').click()"
+                    >
+
+                        <div id="{{ heading }}">
+                            <a href="#" data-bs-toggle="collapse" data-bs-target="#{{ collapse }}"
+                               aria-expanded="false" aria-controls="{{ collapse }}" class="collapsed">
+                                {{ item.name }}
+                            </a>
+                        </div>
+                    </div>
+                    {% if item.children is defined %}
+                        <div id="{{ collapse }}" class="collapse" aria-labelledby="{{ heading }}"
+                             data-bs-parent="#accordionExample" style="">
+                            <div class="card-body">
+                                {{ include('admin/_components/card/_collapse_table_card.html.twig', {items: item.children}) }}
+                            </div>
+                        </div>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+    </div>
+    </tbody>
+</table>

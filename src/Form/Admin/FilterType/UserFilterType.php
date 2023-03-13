@@ -2,7 +2,6 @@
 
 namespace App\Form\Admin\FilterType;
 
-use App\Entity\User;
 use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\SearchType;
