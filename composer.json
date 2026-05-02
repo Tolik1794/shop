@@ -25,6 +25,8 @@
         "symfony/mailer": "7.4.*",
         "symfony/runtime": "7.4.*",
         "symfony/security-bundle": "7.4.*",
+        "symfony/stimulus-bundle": "^3.0",
+        "symfony/translation": "7.4.*",
         "symfony/twig-bundle": "7.4.*",
         "symfony/validator": "7.4.*",
         "symfony/webpack-encore-bundle": "^2.4",

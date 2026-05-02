@@ -6,6 +6,7 @@ use App\Entity\Category;
 use App\Entity\Store;
 use App\Tools\RepositoryHelperTrait;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\Query\ResultSetMapping;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -120,9 +121,14 @@ class CategoryRepository extends ServiceEntityRepository
 
 		if (!$withSelf) $sql .= ' WHERE cte.id <> :category';
 
-		$em = $this->getEntityManager();
-		$stmt = $em->getConnection()->prepare($sql);
-		return $stmt->executeQuery(['category' => $category->getId()])->fetchFirstColumn();
+		return $this->getEntityManager()
+			->getConnection()
+			->executeQuery(
+				$sql,
+				['category' => $category->getId()],
+				['category' => ParameterType::INTEGER]
+			)
+			->fetchFirstColumn();
 	}
 
 	public function findAvailableCategoriesQB(Store $store, int $maxLevel = 4): QueryBuilder

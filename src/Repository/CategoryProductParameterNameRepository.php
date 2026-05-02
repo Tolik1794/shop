@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Category;
 use App\Entity\CategoryProductParameterName;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -43,10 +44,12 @@ class CategoryProductParameterNameRepository extends ServiceEntityRepository
 	public function findAllByCategory(Category $category)
 	{
 		return $this->createQueryBuilder('category_product_parameter_name')
-			->where('category_product_parameter_name.category in (:categories)')
+			->innerJoin('category_product_parameter_name.category', 'category')
+			->where('category.id in (:categories)')
 			->setParameter(
 				'categories',
-				$this->getEntityManager()->getRepository(Category::class)->findAllParentIdRecursive($category)
+				$this->getEntityManager()->getRepository(Category::class)->findAllParentIdRecursive($category),
+				ArrayParameterType::INTEGER
 			)->getQuery()->execute();
 	}
 }

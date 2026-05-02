@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\Category;
 use App\Entity\ProductParameterName;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -48,7 +49,8 @@ class ProductParameterNameRepository extends ServiceEntityRepository
 			->setParameter(
 				'categories',
 				$this->getEntityManager()->getRepository(Category::class)
-					->findAllParentIdRecursive($category, withSelf: false)
+					->findAllParentIdRecursive($category, withSelf: false),
+				ArrayParameterType::INTEGER
 			)
 			->getQuery()->execute();
 	}
