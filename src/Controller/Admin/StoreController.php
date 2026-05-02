@@ -10,11 +10,11 @@ use App\Security\Voter\StoreVoter;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Entity;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
+use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/admin/store', name: 'admin_store_'), IsGranted('ROLE_STORE_MANAGER')]
 class StoreController extends AbstractAdvancedController
@@ -63,7 +63,7 @@ class StoreController extends AbstractAdvancedController
 		]);
 	}
 
-	#[isGranted('ROLE_SUPER_ADMIN')]
+	#[IsGranted('ROLE_SUPER_ADMIN')]
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
 	public function new(Request $request): Response
 	{
@@ -90,8 +90,7 @@ class StoreController extends AbstractAdvancedController
 	}
 
 	#[Route('/{store_id}/edit', name: 'edit', methods: ['GET', 'POST'])]
-	#[Entity('store', expr: 'repository.find(store_id)')]
-	public function edit(Request $request, Store $store): Response
+	public function edit(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store): Response
 	{
 		$this->denyAccessUnlessGranted(StoreVoter::EDIT, $store);
 		$form = $this->createForm(StoreType::class, $store, ['method' => 'POST']);
@@ -112,8 +111,7 @@ class StoreController extends AbstractAdvancedController
 	}
 
 	#[Route('/{store_id}/show', name: 'show')]
-	#[Entity('store', expr: 'repository.find(store_id)')]
-	public function show(Request $request, Store $store): Response
+	public function show(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store): Response
 	{
 		return $this->render('admin/store/show.html.twig', [
 			'entity' => $store,
@@ -123,8 +121,7 @@ class StoreController extends AbstractAdvancedController
 	}
 
 	#[Route('/{store_id}/main', name: 'main')]
-	#[Entity('store', expr: 'repository.find(store_id)')]
-	public function main(Request $request): Response
+	public function main(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store): Response
 	{
 		return $this->render('admin/store/main.html.twig');
 	}

@@ -10,15 +10,13 @@ use App\Repository\CategoryProductParameterNameRepository;
 use App\Tools\AbstractAdvancedController;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Entity;
+use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[
-	Route('/admin/store/{store_id}/category/{category_id}/product-parameter-name', name: 'admin_category_product_parameter_name_'),
-	Entity("category", expr: "repository.find(category_id)"),
-	Entity("store", expr: "repository.find(store_id)")
+	Route('/admin/store/{store_id}/category/{category_id}/product-parameter-name', name: 'admin_category_product_parameter_name_')
 ]
 class CategoryProductParameterNameController extends AbstractAdvancedController
 {
@@ -29,7 +27,9 @@ class CategoryProductParameterNameController extends AbstractAdvancedController
 	#[Route('/', name: 'index', methods: ['GET'])]
 	public function index(
 		CategoryProductParameterNameRepository $categoryProductParameterNameRepository,
+		#[MapEntity(expr: 'repository.find(category_id)')]
 		Category                               $category,
+		#[MapEntity(expr: 'repository.find(store_id)')]
 		Store                                  $store,
 		Request                                $request,
 		PaginatorInterface                     $paginator,
@@ -68,7 +68,10 @@ class CategoryProductParameterNameController extends AbstractAdvancedController
 	public function new(
 		Request                                $request,
 		CategoryProductParameterNameRepository $categoryProductParameterNameRepository,
+		#[MapEntity(expr: 'repository.find(category_id)')]
 		Category                               $category,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store                                  $store,
 	): Response
 	{
 		$categoryProductParameterName = new CategoryProductParameterName();
@@ -97,7 +100,10 @@ class CategoryProductParameterNameController extends AbstractAdvancedController
 		Request $request,
 		CategoryProductParameterName $categoryProductParameterName,
 		CategoryProductParameterNameRepository $categoryProductParameterNameRepository,
+		#[MapEntity(expr: 'repository.find(category_id)')]
 		Category $category,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
 	): Response
 	{
 		$form = $this->createForm(CategoryProductParameterNameType::class, $categoryProductParameterName);
@@ -122,7 +128,10 @@ class CategoryProductParameterNameController extends AbstractAdvancedController
 		Request $request,
 		CategoryProductParameterName $categoryProductParameterName,
 		CategoryProductParameterNameRepository $categoryProductParameterNameRepository,
+		#[MapEntity(expr: 'repository.find(category_id)')]
 		Category $category,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
 	): Response
 	{
 		if ($this->isCsrfTokenValid('delete' . $categoryProductParameterName->getId(), $request->request->get('_token'))) {

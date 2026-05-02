@@ -10,11 +10,11 @@ use App\Manager\ProductManager;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Entity;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
+use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/admin/store/{store_id}/product', name: 'admin_product_'), IsGranted('ROLE_STORE_ADMIN')]
 class ProductController extends AbstractAdvancedController
@@ -24,11 +24,11 @@ class ProductController extends AbstractAdvancedController
 	}
 
 	#[Route('/', name: 'index', methods: ['GET'])]
-	#[Entity('store', expr: 'repository.find(store_id)')]
 	public function index(
 		PaginatorInterface $paginator,
 		Request            $request,
 		FilterFormHandler  $filterTypeHandler,
+		#[MapEntity(expr: 'repository.find(store_id)')]
 		Store              $store,
 	): Response
 	{
@@ -68,10 +68,9 @@ class ProductController extends AbstractAdvancedController
 		]);
 	}
 
-	#[isGranted('ROLE_SUPER_ADMIN')]
+	#[IsGranted('ROLE_SUPER_ADMIN')]
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
-	#[Entity('store', expr: 'repository.find(store_id)')]
-	public function new(Request $request, Store $store): Response
+	public function new(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store): Response
 	{
 		$product = new Product();
 		$product->setStore($store);
@@ -98,8 +97,7 @@ class ProductController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/edit', name: 'edit', methods: ['GET', 'POST'])]
-	#[Entity('store', expr: 'repository.find(store_id)')]
-	public function edit(Request $request, Store $store, Product $product): Response
+	public function edit(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store, Product $product): Response
 	{
 //		$this->denyAccessUnlessGranted(StoreVoter::EDIT, $store);
 		$form = $this->createForm(ProductType::class, $product, ['method' => 'POST']);
