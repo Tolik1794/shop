@@ -35,7 +35,12 @@ class Product
     #[ORM\JoinColumn(nullable: false)]
     private ?Store $store = null;
 
-    #[ORM\OneToMany(mappedBy: 'product', targetEntity: ProductParameter::class, orphanRemoval: true)]
+    #[ORM\OneToMany(
+		mappedBy: 'product',
+	    targetEntity: ProductParameter::class,
+	    cascade: ['persist'],
+	    orphanRemoval: true
+    )]
     private Collection $productParameters;
 
     public function __construct()

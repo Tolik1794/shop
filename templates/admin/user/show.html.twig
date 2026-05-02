@@ -1,14 +1,14 @@
 {% set actions %}
-    {% if entity.id == app.user.id %}
+    {% if entity.nickname == app.user.nickname %}
         <a class="dropdown-item" href="{{ path('admin_user_profile', query_params) }}">Edit</a>
     {% elseif is_granted('POST_EDIT', entity) %}
-        <a class="dropdown-item" href="{{ path('admin_user_edit', query_params|merge({user_id: entity.id})) }}">
+        <a class="dropdown-item" href="{{ path('admin_user_edit', query_params|merge({user_id: entity.nickname})) }}">
             Edit
         </a>
     {% endif %}
 {% endset %}
 
-<div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+<div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.nickname }}">
     <div class="card-header">
         {% if actions|trim %}
             {{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}

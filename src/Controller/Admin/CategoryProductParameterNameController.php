@@ -5,7 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Category;
 use App\Entity\CategoryProductParameterName;
 use App\Entity\Store;
-use App\Form\CategoryProductParameterNameType;
+use App\Form\Admin\Type\CategoryProductParameterNameType;
 use App\Repository\CategoryProductParameterNameRepository;
 use App\Tools\AbstractAdvancedController;
 use Doctrine\ORM\EntityManagerInterface;
@@ -118,12 +118,20 @@ class CategoryProductParameterNameController extends AbstractAdvancedController
 	}
 
 	#[Route('/{parameter_name_id}', name: 'delete', methods: ['POST'])]
-	public function delete(Request $request, CategoryProductParameterName $categoryProductParameterName, CategoryProductParameterNameRepository $categoryProductParameterNameRepository): Response
+	public function delete(
+		Request $request,
+		CategoryProductParameterName $categoryProductParameterName,
+		CategoryProductParameterNameRepository $categoryProductParameterNameRepository,
+		Category $category,
+	): Response
 	{
 		if ($this->isCsrfTokenValid('delete' . $categoryProductParameterName->getId(), $request->request->get('_token'))) {
 			$categoryProductParameterNameRepository->remove($categoryProductParameterName, true);
 		}
 
-		return $this->redirectToRoute('admin_category_product_parameter_name_index', [], Response::HTTP_SEE_OTHER);
+		return $this->redirectToRoute('admin_category_edit', [
+			'store_id' => $category->getStore()->getId(),
+			'category_id' => $category->getId()
+		], Response::HTTP_SEE_OTHER);
 	}
 }

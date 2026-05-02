@@ -91,7 +91,7 @@ class ProductController extends AbstractAdvancedController
 			);
 		}
 
-		return $this->renderForm('admin/product/form.html.twig', [
+		return $this->render('admin/product/form.html.twig', [
 			'entity' => $product,
 			'form' => $form
 		]);
@@ -111,7 +111,7 @@ class ProductController extends AbstractAdvancedController
 			return $this->stayOrRedirect('admin_product_index', ['store_id' => $store->getId()]);
 		}
 
-		return $this->renderForm('admin/product/form.html.twig', [
+		return $this->render('admin/product/form.html.twig', [
 			'entity' => $product,
 			'form' => $form,
 		]);

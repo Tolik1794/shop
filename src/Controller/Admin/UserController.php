@@ -40,7 +40,7 @@ class UserController extends AbstractAdvancedController
 			return $this->redirectToRoute('admin_user_profile');
 		}
 
-		return $this->renderForm('admin/user/profile_form.html.twig', [
+		return $this->render('admin/user/profile_form.html.twig', [
 			'entity' => $user,
 			'form' => $form,
 			'avatar' => $this->userManager->getAvatar($user)?->getPathname()
@@ -51,7 +51,7 @@ class UserController extends AbstractAdvancedController
 	public function info(): Response
 	{
 		$user = $this->getUser();
-		return $this->renderForm('admin/user/info.html.twig', [
+		return $this->render('admin/user/info.html.twig', [
 			'entity' => $user,
 			'avatar' => $this->userManager->getAvatar($user)?->getPathname()
 		]);
@@ -117,7 +117,7 @@ class UserController extends AbstractAdvancedController
 			return $this->stayOrRedirect('admin_user_index');
 		}
 
-		return $this->renderForm('admin/user/form.html.twig', [
+		return $this->render('admin/user/form.html.twig', [
 			'entity' => $user,
 			'form' => $form,
 			'avatar' => $this->userManager->getAvatar($user)?->getPathname()
@@ -129,7 +129,7 @@ class UserController extends AbstractAdvancedController
 	public function show(Request $request, User $user): Response
 	{
 		$this->denyAccessUnlessGranted(UserVoter::VIEW, $user);
-		return $this->renderForm('admin/user/show.html.twig', [
+		return $this->render('admin/user/show.html.twig', [
 			'entity' => $user,
 			'avatar' => $this->userManager->getAvatar($user)?->getPathname(),
 			'query_params' => $request->query->all()

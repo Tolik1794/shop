@@ -83,7 +83,7 @@ class StoreController extends AbstractAdvancedController
 			);
 		}
 
-		return $this->renderForm('admin/store/form.html.twig', [
+		return $this->render('admin/store/form.html.twig', [
 			'entity' => $store,
 			'form' => $form
 		]);
@@ -104,7 +104,7 @@ class StoreController extends AbstractAdvancedController
 			return $this->stayOrRedirect('admin_store_index');
 		}
 
-		return $this->renderForm('admin/store/form.html.twig', [
+		return $this->render('admin/store/form.html.twig', [
 			'entity' => $store,
 			'form' => $form,
 			'avatar' => $this->storeManager->getAvatar($store)?->getPathname()

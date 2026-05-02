@@ -1,17 +1,13 @@
 <?php
 
-namespace App\Form;
+namespace App\Form\Admin\Type;
 
-use App\Entity\Category;
 use App\Entity\CategoryProductParameterName;
 use App\Entity\ProductParameterName;
-use App\Repository\CategoryRepository;
 use App\Repository\ProductParameterNameRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\QueryBuilder;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 

@@ -19,11 +19,11 @@
 {% set table_body %}
     {% for entity in pagination %}
         <tr
-                id="{{ entity.id }}"
+                id="{{ entity.nickname }}"
                 data-id-column="user_id"
-                class="{{ entity.id == first_entity.id ? 'table-active' : '' }}"
+                class="{{ entity.nickname == first_entity.nickname ? 'table-active' : '' }}"
                 data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
-                data-link="{{ path('admin_user_show', {user_id: entity.id}) }}"
+                data-link="{{ path('admin_user_show', {user_id: entity.nickname}) }}"
                 onclick="document.getElementById('first-tab').click()"
         >
             <td>{{ entity.email }}</td>
@@ -47,7 +47,7 @@
                         tab_body: [
                             render(controller(
                                 'App\\Controller\\Admin\\UserController::show',
-                                { 'user_id': first_entity.id, 'request': app.request }
+                                { 'user_id': first_entity.nickname, 'request': app.request }
                             )),
                             include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
                         ]
