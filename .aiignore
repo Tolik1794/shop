@@ -1,0 +1,81 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+# Symfony cache and logs
+/var/cache/
+/var/log/
+/var/sessions/
+
+# Build artifacts
+/public/build/
+/public/bundles/
+/assets/build/
+/build/
+/dist/
+
+# IDE/project files
+/.idea/
+*.iml
+
+# Environment and secrets
+.env
+.env.*
+.env.local
+.env.*.local
+.env.prod
+.env.production
+.env.stage
+.env.staging
+.env.dev.local
+.env.test.local
+!.env.example
+!.env.dist
+!.env.test
+/config/secrets/prod/prod.decrypt.private.php
+
+# Docker/local data
+/docker/mysql/data/
+/docker/postgres/data/
+/docker/redis/data/
+
+# Database dumps and backups
+*.sql
+*.dump
+*.sqlite
+*.db
+*.bak
+*.backup
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.cache
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Generated reports
+/coverage/
+/phpunit.result.cache
+/.phpunit.cache/
+/var/phpunit/
+
+# Composer lock - optional, read below
+/composer.lock
+
+# Symfony lock - optional, read below
+/symfony.lock
+
+# Migrations - optional, read below
+# /migrations/
