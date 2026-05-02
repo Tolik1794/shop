@@ -1,13 +1,18 @@
 FROM php:8.4-fpm-alpine
 
+COPY --from=ghcr.io/symfony-cli/symfony-cli:latest /usr/local/bin/symfony /usr/local/bin/symfony
+
 RUN apk add --no-cache \
         bash \
         git \
         icu-dev \
         libpng-dev \
         libzip-dev \
+        nodejs \
+        npm \
         postgresql-dev \
         unzip \
+        yarn \
         zip \
     && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
     && docker-php-ext-install -j"$(nproc)" \

@@ -59,6 +59,8 @@ services:
       retries: 10
     networks:
       - shop
+    ports:
+      - "15434:5432"
 
   redis:
     container_name: shop_redis

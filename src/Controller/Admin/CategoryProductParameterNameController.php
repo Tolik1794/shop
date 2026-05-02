@@ -8,6 +8,7 @@ use App\Entity\Store;
 use App\Form\Admin\Type\CategoryProductParameterNameType;
 use App\Repository\CategoryProductParameterNameRepository;
 use App\Tools\AbstractAdvancedController;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
@@ -38,10 +39,11 @@ class CategoryProductParameterNameController extends AbstractAdvancedController
 		$queryBuilder = $categoryProductParameterNameRepository
 			->createQueryBuilder('category_product_parameter_name')
 			->innerJoin('category_product_parameter_name.category', 'category')
-			->where('category_product_parameter_name.category in (:categories)')
+			->where('category.id in (:categories)')
 			->setParameter(
 				'categories',
-				$this->em->getRepository(Category::class)->findAllParentIdRecursive($category)
+				$this->em->getRepository(Category::class)->findAllParentIdRecursive($category),
+				ArrayParameterType::INTEGER
 			)
 			->orderBy('category.id', 'DESC')
 		;
