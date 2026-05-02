@@ -11,11 +11,11 @@ use App\Repository\CategoryRepository;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Entity;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
+use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/admin/store/{store_id}/category', name: 'admin_category_'), IsGranted('ROLE_STORE_ADMIN')]
 class CategoryController extends AbstractAdvancedController
@@ -25,11 +25,11 @@ class CategoryController extends AbstractAdvancedController
 	}
 
 	#[Route('/', name: 'index', methods: ['GET'])]
-	#[Entity('store', expr: 'repository.find(store_id)')]
 	public function index(
 		Request $request,
 		PaginatorInterface $paginator,
 		FilterFormHandler $filterTypeHandler,
+		#[MapEntity(expr: 'repository.find(store_id)')]
 		Store $store
 	): Response
 	{
@@ -67,10 +67,9 @@ class CategoryController extends AbstractAdvancedController
 		]);
 	}
 
-	#[isGranted('ROLE_SUPER_ADMIN')]
+	#[IsGranted('ROLE_SUPER_ADMIN')]
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
-	#[Entity('store', expr: 'repository.find(store_id)')]
-	public function new(Request $request, Store $store): Response
+	public function new(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store): Response
 	{
 		$category = new Category();
 		$category->setStore($store);
@@ -97,11 +96,11 @@ class CategoryController extends AbstractAdvancedController
 	}
 
 	#[Route('/{category_id}/edit', name: 'edit', methods: ['GET', 'POST'])]
-	#[Entity('store', expr: 'repository.find(store_id)')]
-	#[Entity('category', expr: 'repository.find(category_id)')]
 	public function edit(
 		Request $request,
+		#[MapEntity(expr: 'repository.find(category_id)')]
 		Category $category,
+		#[MapEntity(expr: 'repository.find(store_id)')]
 		Store $store,
 	): Response
 	{
@@ -121,8 +120,7 @@ class CategoryController extends AbstractAdvancedController
 	}
 
 	#[Route('/{category_id}/show', name: 'show')]
-	#[Entity('category', expr: 'repository.find(category_id)')]
-	public function show(Request $request, Category $category): Response
+	public function show(Request $request, #[MapEntity(expr: 'repository.find(category_id)')] Category $category): Response
 	{
 		return $this->render('admin/category/show.html.twig', [
 			'entity' => $category,

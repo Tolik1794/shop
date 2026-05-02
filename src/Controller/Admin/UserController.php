@@ -11,11 +11,11 @@ use App\Security\Voter\UserVoter;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Entity;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
+use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/admin/user', name: 'admin_user_'), IsGranted('ROLE_STORE_MANAGER')]
 class UserController extends AbstractAdvancedController
@@ -96,8 +96,7 @@ class UserController extends AbstractAdvancedController
 	}
 
 	#[Route('/{user_id}/edit', name: 'edit', methods: ['GET', 'POST'])]
-	#[Entity('user', expr: 'repository.find(user_id)')]
-	public function edit(Request $request, User $user): Response
+	public function edit(Request $request, #[MapEntity(expr: 'repository.find(user_id)')] User $user): Response
 	{
 		$this->denyAccessUnlessGranted(UserVoter::EDIT, $user);
 		$form = $this->createForm(UserType::class, $user, [
@@ -125,8 +124,7 @@ class UserController extends AbstractAdvancedController
 	}
 
 	#[Route('/{user_id}/show', name: 'show', methods: ['GET'])]
-	#[Entity('user', expr: 'repository.find(user_id)')]
-	public function show(Request $request, User $user): Response
+	public function show(Request $request, #[MapEntity(expr: 'repository.find(user_id)')] User $user): Response
 	{
 		$this->denyAccessUnlessGranted(UserVoter::VIEW, $user);
 		return $this->render('admin/user/show.html.twig', [
