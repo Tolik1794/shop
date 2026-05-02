@@ -45,3 +45,5 @@ services:
         class: App\Service\FileUploader
         # you CAN still use autowiring: we just want to show what it looks like without
         autowire: true
+
+    Gedmo\Blameable\BlameableListener: '@stof_doctrine_extensions.listener.blameable'
