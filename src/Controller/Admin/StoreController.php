@@ -85,7 +85,8 @@ class StoreController extends AbstractAdvancedController
 
 		return $this->render('admin/store/form.html.twig', [
 			'entity' => $store,
-			'form' => $form
+			'form' => $form,
+			'avatar' => $this->storeManager->getAvatar($store)?->getPathname()
 		]);
 	}
 

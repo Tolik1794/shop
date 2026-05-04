@@ -86,10 +86,10 @@ class ProductTypeTest extends KernelTestCase
 
 	private function persistCategoryProductParameterName(Category $category, string $name): void
 	{
-		$productParameterName = (new ProductParameterName())
+		$productParameterName = new ProductParameterName()
 			->setName($name)
 			->setDescription($name);
-		$categoryProductParameterName = (new CategoryProductParameterName())
+		$categoryProductParameterName = new CategoryProductParameterName()
 			->setCategory($category)
 			->setProductParameterName($productParameterName)
 			->setIsFilter(true)
