@@ -46,16 +46,18 @@
                     </div>
                 </div>
 
-            <div>
-                {{ render(controller(
-                    'App\\Controller\\Admin\\CategoryProductParameterNameController::index',
-                    {
-                        store_id: app.request.get('store_id'),
-                        category_id: app.request.get('category_id'),
-                        request: app.request
-                    }
-                )) }}
-            </div>
+            {% if entity.id %}
+                <div>
+                    {{ render(controller(
+                        'App\\Controller\\Admin\\CategoryProductParameterNameController::index',
+                        {
+                            store_id: app.request.get('store_id'),
+                            category_id: entity.id,
+                            request: app.request
+                        }
+                    )) }}
+                </div>
+            {% endif %}
         </div>
     </main>
 {% endblock %}

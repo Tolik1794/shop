@@ -85,7 +85,7 @@ class CategoryController extends AbstractAdvancedController
 				route: 'admin_category_index',
 				parameters: ['store_id' => $store->getId()],
 				stayRoute: 'admin_category_edit',
-				stayParameters: ['store_id' => $store->getId(), 'id' => $category->getId()],
+				stayParameters: ['store_id' => $store->getId(), 'category_id' => $category->getId()],
 			);
 		}
 

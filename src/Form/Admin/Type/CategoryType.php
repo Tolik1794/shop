@@ -31,7 +31,7 @@ class CategoryType extends AbstractType
 		        'choice_label' => 'nameWithParent',
 		        'multiple' => false,
 		        'required' => false,
-				'disabled' => true,
+				'disabled' => false,
 		        'attr' => ['class' => 'select2'],
 	        ])
         ;
