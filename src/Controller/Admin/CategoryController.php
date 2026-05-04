@@ -75,6 +75,10 @@ class CategoryController extends AbstractAdvancedController
 		$category->setStore($store);
 		$form = $this->createForm(CategoryType::class, $category, [
 			'method' => 'POST',
+			'attr' => [
+				'data-controller' => 'select-two',
+				'data-select-two-target' => 'form',
+			],
 		]);
 		$form->handleRequest($request);
 
@@ -104,7 +108,13 @@ class CategoryController extends AbstractAdvancedController
 		Store $store,
 	): Response
 	{
-		$form = $this->createForm(CategoryType::class, $category, ['method' => 'POST']);
+		$form = $this->createForm(CategoryType::class, $category, [
+			'method' => 'POST',
+			'attr' => [
+				'data-controller' => 'select-two',
+				'data-select-two-target' => 'form',
+			],
+		]);
 		$form->handleRequest($request);
 
 		if ($form->isSubmitted() && $form->isValid()) {

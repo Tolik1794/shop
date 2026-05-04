@@ -23,7 +23,7 @@
                                         </div>
                                     {% endif %}
 
-                                    {{ form_widget(widget, {attr:{class: 'form-control'}}) }}
+                                    {{ form_widget(widget, {attr: {class: (widget.vars.attr.class|default('') ~ ' form-control')|trim}}) }}
 
                                     <small>{{ form_help(widget) }}</small>
 
