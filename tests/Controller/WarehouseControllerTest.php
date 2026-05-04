@@ -1,117 +1,96 @@
 <?php
 
-namespace App\Test\Controller;
+namespace App\Tests\Controller;
 
+use App\Entity\User\RoleEnum;
+use App\Entity\User\User;
+use App\Entity\Store;
 use App\Entity\Warehouse;
-use App\Repository\WarehouseRepository;
+use DateTime;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 class WarehouseControllerTest extends WebTestCase
 {
-    private KernelBrowser $client;
-    private WarehouseRepository $repository;
-    private string $path = '/admin/warehouse/';
+	private KernelBrowser $client;
+	private EntityManagerInterface $entityManager;
 
-    protected function setUp(): void
-    {
-        $this->client = static::createClient();
-        $this->repository = static::getContainer()->get('doctrine')->getRepository(Warehouse::class);
+	protected function setUp(): void
+	{
+		$this->client = static::createClient();
+		$this->entityManager = static::getContainer()->get(EntityManagerInterface::class);
+	}
 
-        foreach ($this->repository->findAll() as $object) {
-            $this->repository->remove($object, true);
-        }
-    }
+	public function testIndexRequiresAuthenticatedAdminUser(): void
+	{
+		$this->client->request('GET', '/admin/warehouse/');
 
-    public function testIndex(): void
-    {
-        $crawler = $this->client->request('GET', $this->path);
+		self::assertResponseRedirects('/login');
+	}
 
-        self::assertResponseStatusCodeSame(200);
-        self::assertPageTitleContains('Warehouse index');
+	public function testIndexIsAvailableForAdminUser(): void
+	{
+		$this->client->loginUser($this->createUser('warehouse-admin-' . uniqid() . '@example.com'));
 
-        // Use the $crawler to perform additional assertions e.g.
-        // self::assertSame('Some text on the page', $crawler->filter('.p')->first());
-    }
+		$this->client->request('GET', '/admin/warehouse/');
 
-    public function testNew(): void
-    {
-        $originalNumObjectsInRepository = count($this->repository->findAll());
+		self::assertResponseIsSuccessful();
+		self::assertPageTitleContains('Warehouse index');
+	}
 
-        $this->markTestIncomplete();
-        $this->client->request('GET', sprintf('%snew', $this->path));
+	public function testShowDisplaysWarehouse(): void
+	{
+		$this->client->loginUser($this->createUser('warehouse-show-admin-' . uniqid() . '@example.com'));
+		$warehouse = $this->createWarehouse('Test warehouse ' . uniqid());
 
-        self::assertResponseStatusCodeSame(200);
+		$this->client->request('GET', sprintf('/admin/warehouse/%d', $warehouse->getId()));
 
-        $this->client->submitForm('Save', [
-            'warehouse[name]' => 'Testing',
-            'warehouse[store]' => 'Testing',
-        ]);
+		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('h1', 'Warehouse');
+		self::assertSelectorTextContains('body', 'Test warehouse');
+	}
 
-        self::assertResponseRedirects('/admin/warehouse/');
+	private function createUser(string $email): User
+	{
+		$user = (new User())
+			->setEmail($email)
+			->setNickname(str_replace(['@', '.'], '-', $email))
+			->setFirstName('Admin')
+			->setLastName('User')
+			->setDateOfBirth(new DateTime('1990-01-01'))
+			->setPassword('password')
+			->setRoles([RoleEnum::ROLE_SUPER_ADMIN->name]);
 
-        self::assertSame($originalNumObjectsInRepository + 1, count($this->repository->findAll()));
-    }
+		$this->entityManager->persist($user);
+		$this->entityManager->flush();
 
-    public function testShow(): void
-    {
-        $this->markTestIncomplete();
-        $fixture = new Warehouse();
-        $fixture->setName('My Title');
-        $fixture->setStore('My Title');
+		return $user;
+	}
 
-        $this->repository->save($fixture, true);
+	private function createWarehouse(string $name): Warehouse
+	{
+		$warehouse = (new Warehouse())
+			->setName($name)
+			->setStore($this->createStore('warehouse-store-' . uniqid()));
 
-        $this->client->request('GET', sprintf('%s%s', $this->path, $fixture->getId()));
+		$this->entityManager->persist($warehouse);
+		$this->entityManager->flush();
 
-        self::assertResponseStatusCodeSame(200);
-        self::assertPageTitleContains('Warehouse');
+		return $warehouse;
+	}
 
-        // Use assertions to check that the properties are properly displayed.
-    }
+	private function createStore(string $slug): Store
+	{
+		$store = (new Store())
+			->setName($slug)
+			->setSlug($slug)
+			->setPhone('+380000000000')
+			->setEmail($slug . '@example.com');
 
-    public function testEdit(): void
-    {
-        $this->markTestIncomplete();
-        $fixture = new Warehouse();
-        $fixture->setName('My Title');
-        $fixture->setStore('My Title');
+		$this->entityManager->persist($store);
+		$this->entityManager->flush();
 
-        $this->repository->save($fixture, true);
-
-        $this->client->request('GET', sprintf('%s%s/edit', $this->path, $fixture->getId()));
-
-        $this->client->submitForm('Update', [
-            'warehouse[name]' => 'Something New',
-            'warehouse[store]' => 'Something New',
-        ]);
-
-        self::assertResponseRedirects('/admin/warehouse/');
-
-        $fixture = $this->repository->findAll();
-
-        self::assertSame('Something New', $fixture[0]->getName());
-        self::assertSame('Something New', $fixture[0]->getStore());
-    }
-
-    public function testRemove(): void
-    {
-        $this->markTestIncomplete();
-
-        $originalNumObjectsInRepository = count($this->repository->findAll());
-
-        $fixture = new Warehouse();
-        $fixture->setName('My Title');
-        $fixture->setStore('My Title');
-
-        $this->repository->save($fixture, true);
-
-        self::assertSame($originalNumObjectsInRepository + 1, count($this->repository->findAll()));
-
-        $this->client->request('GET', sprintf('%s%s', $this->path, $fixture->getId()));
-        $this->client->submitForm('Delete');
-
-        self::assertSame($originalNumObjectsInRepository, count($this->repository->findAll()));
-        self::assertResponseRedirects('/admin/warehouse/');
-    }
+		return $store;
+	}
 }

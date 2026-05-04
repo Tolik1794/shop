@@ -18,12 +18,16 @@ use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
-#[ORM\Table(name: '`user`')]
+#[ORM\Table(name: 'users')]
 #[UniqueEntity(fields: ['email'], message: 'There is already an account with this email')]
 #[UniqueEntity(fields: ['nickname'], message: 'There is already an account with this nickname')]
 class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarEntityInterface
 {
 	#[ORM\Id]
+	#[ORM\GeneratedValue]
+	#[ORM\Column]
+	private ?int $id = null;
+
 	#[ORM\Column(length: 255, unique: true, nullable: true)]
 	private ?string $nickname = null;
 
@@ -52,12 +56,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarE
 	private bool $isVerified = false;
 
 	#[ORM\ManyToMany(targetEntity: Store::class, inversedBy: 'managers')]
-	#[ORM\JoinColumn(name: 'nickname', referencedColumnName: 'nickname', onDelete: 'CASCADE')]
+	#[ORM\JoinTable(name: 'user_store')]
+	#[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+	#[ORM\InverseJoinColumn(name: 'store_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
 	private Collection $managerStores;
 
 	#[Blameable(on: 'create')]
 	#[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'children')]
-	#[ORM\JoinColumn(name: 'parent', referencedColumnName: 'nickname', onDelete: 'CASCADE')]
+	#[ORM\JoinColumn(name: 'parent_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
 	private ?self $parent = null;
 
 	#[ORM\OneToMany(mappedBy: 'parent', targetEntity: self::class)]
@@ -75,6 +81,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarE
 	public function __toString(): string
 	{
 		return $this->email;
+	}
+
+	public function getId(): ?int
+	{
+		return $this->id;
 	}
 
 	public function getEmail(): ?string
@@ -281,6 +292,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarE
 
 	public function getUserIdentifier(): string
 	{
-		return $this->nickname;
+		return $this->email;
 	}
 }

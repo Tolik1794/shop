@@ -18,7 +18,7 @@ class ProductParameterName
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
-    #[ORM\OneToMany(mappedBy: 'name', targetEntity: ProductParameter::class, orphanRemoval: true)]
+    #[ORM\OneToMany(mappedBy: 'productParameterName', targetEntity: ProductParameter::class, orphanRemoval: true)]
     private Collection $productParameters;
 
     #[ORM\OneToMany(mappedBy: 'productParameterName', targetEntity: CategoryProductParameterName::class)]

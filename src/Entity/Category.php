@@ -8,6 +8,8 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: CategoryRepository::class)]
+#[ORM\UniqueConstraint(name: 'uniq_category_store_parent_name', columns: ['store_id', 'parent_id', 'name'], options: ['where' => '(parent_id IS NOT NULL)'])]
+#[ORM\UniqueConstraint(name: 'uniq_category_store_root_name', columns: ['store_id', 'name'], options: ['where' => '(parent_id IS NULL)'])]
 class Category
 {
 	#[ORM\Id]
@@ -28,6 +30,7 @@ class Category
 	private ?string $description = null;
 
 	#[ORM\ManyToOne(inversedBy: 'categories')]
+	#[ORM\JoinColumn(nullable: false)]
 	private ?Store $store = null;
 
 	#[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'children')]
