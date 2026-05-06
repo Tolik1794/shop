@@ -29,9 +29,6 @@ class Product
     #[ORM\OneToMany(mappedBy: 'product', targetEntity: WarehouseProduct::class)]
     private Collection $warehouseProducts;
 
-    #[ORM\OneToMany(mappedBy: 'product', targetEntity: Entry::class)]
-    private Collection $entries;
-
     #[ORM\ManyToOne(inversedBy: 'products')]
     #[ORM\JoinColumn(nullable: false)]
     private ?Store $store = null;
@@ -47,7 +44,6 @@ class Product
     public function __construct()
     {
         $this->warehouseProducts = new ArrayCollection();
-        $this->entries = new ArrayCollection();
         $this->productParameters = new ArrayCollection();
     }
 
@@ -116,36 +112,6 @@ class Product
             // set the owning side to null (unless already changed)
             if ($warehouseProduct->getProduct() === $this) {
                 $warehouseProduct->setProduct(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Entry>
-     */
-    public function getEntries(): Collection
-    {
-        return $this->entries;
-    }
-
-    public function addEntry(Entry $entry): self
-    {
-        if (!$this->entries->contains($entry)) {
-            $this->entries->add($entry);
-            $entry->setProduct($this);
-        }
-
-        return $this;
-    }
-
-    public function removeEntry(Entry $entry): self
-    {
-        if ($this->entries->removeElement($entry)) {
-            // set the owning side to null (unless already changed)
-            if ($entry->getProduct() === $this) {
-                $entry->setProduct(null);
             }
         }
 

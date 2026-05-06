@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\WarehouseProductRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -37,6 +39,14 @@ class WarehouseProduct
 
     #[ORM\Column]
     private ?int $reserveCount = null;
+
+    #[ORM\OneToMany(mappedBy: 'warehouseProduct', targetEntity: Entry::class)]
+    private Collection $entries;
+
+    public function __construct()
+    {
+        $this->entries = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -123,6 +133,36 @@ class WarehouseProduct
     public function setReserveCount(int $reserveCount): self
     {
         $this->reserveCount = $reserveCount;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Entry>
+     */
+    public function getEntries(): Collection
+    {
+        return $this->entries;
+    }
+
+    public function addEntry(Entry $entry): self
+    {
+        if (!$this->entries->contains($entry)) {
+            $this->entries->add($entry);
+            $entry->setWarehouseProduct($this);
+        }
+
+        return $this;
+    }
+
+    public function removeEntry(Entry $entry): self
+    {
+        if ($this->entries->removeElement($entry)) {
+            // set the owning side to null (unless already changed)
+            if ($entry->getWarehouseProduct() === $this) {
+                $entry->setWarehouseProduct(null);
+            }
+        }
 
         return $this;
     }

@@ -40,7 +40,6 @@ entity Product {
     * category: Category
     productParameters: Collection<ProductParameter>
     warehouseProducts: Collection<WarehouseProduct>
-    entries: Collection<Entry>
 }
 
 entity ProductParameterName {
@@ -87,12 +86,13 @@ entity WarehouseProduct {
     * sellingPrice: decimal(14, 4)
     * count: int
     * reserveCount: int
+    entries: Collection<Entry>
 }
 
 entity Entry {
     * id: int
     --
-    * product: Product
+    * warehouseProduct: WarehouseProduct
     * cost: decimal(14, 4)
     deliveryCost: decimal(10, 4)?
 }
@@ -111,8 +111,8 @@ ProductParameterName ||--o{ ProductParameter : names
 
 Product ||--o{ ProductParameter : has
 Product ||--o{ WarehouseProduct : stocked as
-Product ||--o{ Entry : accounting entries
 Warehouse ||--o{ WarehouseProduct : contains
+WarehouseProduct ||--o{ Entry : accounting entries
 
 note right of Product
   Unique database constraint:
