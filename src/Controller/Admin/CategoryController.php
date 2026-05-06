@@ -54,7 +54,7 @@ class CategoryController extends AbstractAdvancedController
 			return $this->redirectToLastPage($pagination);
 		}
 
-		if ($id = $request->get('id')) {
+		if ($id = $request->query->get('id')) {
 			$category = $this->categoryManager->getRepository()->find($id);
 		} else {
 			$category = $pagination->current();
@@ -75,6 +75,10 @@ class CategoryController extends AbstractAdvancedController
 		$category->setStore($store);
 		$form = $this->createForm(CategoryType::class, $category, [
 			'method' => 'POST',
+			'attr' => [
+				'data-controller' => 'select-two',
+				'data-select-two-target' => 'form',
+			],
 		]);
 		$form->handleRequest($request);
 
@@ -85,7 +89,7 @@ class CategoryController extends AbstractAdvancedController
 				route: 'admin_category_index',
 				parameters: ['store_id' => $store->getId()],
 				stayRoute: 'admin_category_edit',
-				stayParameters: ['store_id' => $store->getId(), 'id' => $category->getId()],
+				stayParameters: ['store_id' => $store->getId(), 'category_id' => $category->getId()],
 			);
 		}
 
@@ -104,7 +108,13 @@ class CategoryController extends AbstractAdvancedController
 		Store $store,
 	): Response
 	{
-		$form = $this->createForm(CategoryType::class, $category, ['method' => 'POST']);
+		$form = $this->createForm(CategoryType::class, $category, [
+			'method' => 'POST',
+			'attr' => [
+				'data-controller' => 'select-two',
+				'data-select-two-target' => 'form',
+			],
+		]);
 		$form->handleRequest($request);
 
 		if ($form->isSubmitted() && $form->isValid()) {

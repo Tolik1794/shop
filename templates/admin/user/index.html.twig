@@ -42,13 +42,13 @@
                         tab_head: [
                             include('admin/_components/tab_icon/_show.html.twig'),
                             include('admin/_components/tab_icon/_filter.html.twig')
-                            ~ (app.request.get(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
+                            ~ (app.request.query.get(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
                         ],
                         tab_body: [
-                            render(controller(
+                            first_entity ? render(controller(
                                 'App\\Controller\\Admin\\UserController::show',
                                 { 'user_id': first_entity.nickname, 'request': app.request }
-                            )),
+                            )) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
                             include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
                         ]
                     }) }}

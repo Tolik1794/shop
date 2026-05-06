@@ -23,7 +23,7 @@
                                         </div>
                                     {% endif %}
 
-                                    {{ form_widget(widget, {attr:{class: 'form-control'}}) }}
+                                    {{ form_widget(widget, {attr: {class: (widget.vars.attr.class|default('') ~ ' form-control')|trim}}) }}
 
                                     <small>{{ form_help(widget) }}</small>
 
@@ -38,7 +38,7 @@
                             <div class="form-control-lg">
                                 <button type="submit" class="btn btn-primary btn mb-1 me-2">Сохранить</button>
                                 <button name="save" value="stay" type="submit" class="btn btn-primary mb-1 me-2">Сохранить и продолжить</button>
-                                <a href="{{ path('admin_category_index', app.request.query|merge(app.request.get('_route_params'))) }}" class="btn btn-text mb-1">Отмена</a>
+                                <a href="{{ path('admin_category_index', app.request.query.all|merge(app.request.attributes.get('_route_params'))) }}" class="btn btn-text mb-1">Отмена</a>
                             </div>
                         </div>
 
@@ -46,16 +46,18 @@
                     </div>
                 </div>
 
-            <div>
-                {{ render(controller(
-                    'App\\Controller\\Admin\\CategoryProductParameterNameController::index',
-                    {
-                        store_id: app.request.get('store_id'),
-                        category_id: app.request.get('category_id'),
-                        request: app.request
-                    }
-                )) }}
-            </div>
+            {% if entity.id %}
+                <div>
+                    {{ render(controller(
+                        'App\\Controller\\Admin\\CategoryProductParameterNameController::index',
+                        {
+                            store_id: app.request.attributes.get('store_id'),
+                            category_id: entity.id,
+                            request: app.request
+                        }
+                    )) }}
+                </div>
+            {% endif %}
         </div>
     </main>
 {% endblock %}

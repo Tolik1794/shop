@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: WarehouseRepository::class)]
+#[ORM\UniqueConstraint(name: 'uniq_warehouse_store_name', columns: ['store_id', 'name'])]
 class Warehouse
 {
     #[ORM\Id]

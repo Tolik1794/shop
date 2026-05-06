@@ -13,7 +13,7 @@
                             data-id-column="id"
                             class="{{ item.id == first_entity.id ? 'table-active' : '' }} data-hover"
                             data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
-                            data-link="{{ path('admin_category_show', {store_id: app.request.get('store_id'), category_id: item.id}) }}"
+                            data-link="{{ path('admin_category_show', {store_id: app.request.attributes.get('store_id'), category_id: item.id}) }}"
                             onclick="document.getElementById('first-tab').click()"
                     >
 

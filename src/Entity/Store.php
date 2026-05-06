@@ -11,6 +11,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: StoreRepository::class)]
+#[ORM\UniqueConstraint(name: 'uniq_store_slug', columns: ['slug'])]
 class Store implements AvatarEntityInterface
 {
 	#[ORM\Id]

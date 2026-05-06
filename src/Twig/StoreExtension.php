@@ -30,7 +30,7 @@ class StoreExtension extends AbstractExtension
 
 	public function getStore(): ?Store
 	{
-		return ($storeId = $this->requestStack->getCurrentRequest()->get('store_id'))
+		return ($storeId = $this->requestStack->getCurrentRequest()?->attributes->get('store_id'))
 			? $this->storeManager->getRepository()->find($storeId)
 			: null;
 	}

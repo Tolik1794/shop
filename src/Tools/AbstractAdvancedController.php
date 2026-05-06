@@ -12,28 +12,28 @@ abstract class AbstractAdvancedController extends AbstractController
 	public function stayOrRedirect(
 		string $route,
 		array  $parameters = [],
-		string $stayRoute = null,
+		?string $stayRoute = null,
 		array  $stayParameters = []
 	): RedirectResponse
 	{
 		$request = $this->getCurrentRequest();
 		$referer = $this->getRefererRequest($request);
 
-		if ($request->get('save') && $request->get('save') === 'stay') {
+		if ($request->request->get('save') && $request->request->get('save') === 'stay') {
 			if ($stayRoute) return $this->redirectToRoute(
 				route: $stayRoute,
 				parameters: $referer->query->all() + $stayParameters
 			);
 
 			return $this->redirectToRoute(
-				route: $request->get('_route'),
-				parameters: $referer->query->all() + $request->get('_route_params')
+				route: $request->attributes->get('_route'),
+				parameters: $referer->query->all() + $request->attributes->get('_route_params', [])
 			);
 		}
 
 		return $this->redirectToRoute(
 			route: $route,
-			parameters: $referer->query->all() + $request->get('_route_params') + $parameters
+			parameters: $referer->query->all() + $request->attributes->get('_route_params', []) + $parameters
 		);
 	}
 
@@ -44,8 +44,8 @@ abstract class AbstractAdvancedController extends AbstractController
 		$params['page'] = 1;
 
 		return $this->redirectToRoute(
-			route: $request->get('_route'),
-			parameters: $params + $request->get('_route_params')
+			route: $request->attributes->get('_route'),
+			parameters: $params + $request->attributes->get('_route_params', [])
 		);
 	}
 
@@ -58,8 +58,8 @@ abstract class AbstractAdvancedController extends AbstractController
 		$params['page'] = $page;
 
 		return $this->redirectToRoute(
-			route: $request->get('_route'),
-			parameters: $params + $request->get('_route_params')
+			route: $request->attributes->get('_route'),
+			parameters: $params + $request->attributes->get('_route_params', [])
 		);
 	}
 

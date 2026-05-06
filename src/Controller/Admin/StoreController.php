@@ -50,7 +50,7 @@ class StoreController extends AbstractAdvancedController
 			return $this->redirectToLastPage($pagination);
 		}
 
-		if ($storeId = $request->get('store_id')) {
+		if ($storeId = $request->query->get('store_id')) {
 			$store = $this->storeManager->getRepository()->find($storeId);
 		} else {
 			$store = $pagination->current();
@@ -85,7 +85,8 @@ class StoreController extends AbstractAdvancedController
 
 		return $this->render('admin/store/form.html.twig', [
 			'entity' => $store,
-			'form' => $form
+			'form' => $form,
+			'avatar' => $this->storeManager->getAvatar($store)?->getPathname()
 		]);
 	}
 

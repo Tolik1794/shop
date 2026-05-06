@@ -16,6 +16,7 @@ class WarehouseProduct
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'warehouseProducts')]
+    #[ORM\JoinColumn(nullable: false)]
     private ?Warehouse $warehouse = null;
 
     #[ORM\ManyToOne(inversedBy: 'warehouseProducts')]

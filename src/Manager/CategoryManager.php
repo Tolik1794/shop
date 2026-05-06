@@ -23,4 +23,14 @@ class CategoryManager extends AbstractManager
 	{
 		return $this->entityManager;
 	}
+
+	public function save(object $entity): void
+	{
+		if ($entity instanceof Category) {
+			$parent = $entity->getParent();
+			$entity->setLevel($parent ? $parent->getLevel() + 1 : 1);
+		}
+
+		parent::save($entity);
+	}
 }

@@ -4,7 +4,7 @@
 
 {% set table_actions %}
     {% if is_granted('ROLE_STORE_ADMIN') %}
-        <a class="dropdown-item" href="{{ path('admin_product_new', {store_id: app.request.get('store_id')}) }}">New</a>
+        <a class="dropdown-item" href="{{ path('admin_product_new', {store_id: app.request.attributes.get('store_id')}) }}">New</a>
     {% endif %}
 {% endset %}
 
@@ -21,7 +21,7 @@
                 data-id-column="id"
                 class="{{ entity.id == first_entity.id ? 'table-active' : '' }}"
                 data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
-                data-link="{{ path('admin_product_show', {store_id: app.request.get('store_id'), id: entity.id}) }}"
+                data-link="{{ path('admin_product_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
                 onclick="document.getElementById('first-tab').click()"
         >
             <td>{{ entity.name }}</td>
@@ -38,15 +38,15 @@
                         tab_head: [
                             include('admin/_components/tab_icon/_show.html.twig'),
                             include('admin/_components/tab_icon/_filter.html.twig')
-                            ~ (app.request.get(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
+                            ~ (app.request.query.get(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
                         ],
-                        tab_body: first_entity ? [
-                            render(controller(
+                        tab_body: [
+                            first_entity ? render(controller(
                                 'App\\Controller\\Admin\\ProductController::show',
-                                { store_id: app.request.get('store_id'),'id': first_entity.id, 'request': app.request }
-                            )),
+                                { store_id: app.request.attributes.get('store_id'),'id': first_entity.id, 'request': app.request }
+                            )) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
                             include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
-                        ] : []
+                        ]
                     }) }}
                 </div>
                 <div class="col-xxl-8 col-xl-7 col-lg-6">

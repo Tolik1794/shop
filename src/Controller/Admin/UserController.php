@@ -11,7 +11,6 @@ use App\Security\Voter\UserVoter;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
-use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -84,8 +83,8 @@ class UserController extends AbstractAdvancedController
 			return $this->redirectToLastPage($pagination);
 		}
 
-		$entity = ($entityId = $request->get('user_id'))
-			? $this->userManager->getRepository()->find($entityId)
+		$entity = ($entityId = $request->query->get('user_id'))
+			? $this->userManager->getRepository()->findOneBy(['nickname' => $entityId])
 			: $pagination->current();
 
 		return $this->render('admin/user/index.html.twig', [
@@ -96,8 +95,11 @@ class UserController extends AbstractAdvancedController
 	}
 
 	#[Route('/{user_id}/edit', name: 'edit', methods: ['GET', 'POST'])]
-	public function edit(Request $request, #[MapEntity(expr: 'repository.find(user_id)')] User $user): Response
+	public function edit(Request $request, string $user_id): Response
 	{
+		$user = $this->userManager->getRepository()->findOneBy(['nickname' => $user_id]);
+		if (!$user) throw $this->createNotFoundException();
+
 		$this->denyAccessUnlessGranted(UserVoter::EDIT, $user);
 		$form = $this->createForm(UserType::class, $user, [
 			'method' => 'POST',
@@ -124,8 +126,11 @@ class UserController extends AbstractAdvancedController
 	}
 
 	#[Route('/{user_id}/show', name: 'show', methods: ['GET'])]
-	public function show(Request $request, #[MapEntity(expr: 'repository.find(user_id)')] User $user): Response
+	public function show(Request $request, string $user_id): Response
 	{
+		$user = $this->userManager->getRepository()->findOneBy(['nickname' => $user_id]);
+		if (!$user) throw $this->createNotFoundException();
+
 		$this->denyAccessUnlessGranted(UserVoter::VIEW, $user);
 		return $this->render('admin/user/show.html.twig', [
 			'entity' => $user,

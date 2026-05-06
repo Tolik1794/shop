@@ -1,5 +1,6 @@
 # Project instructions
 
+- Project run on docker.
 - Project uses Symfony 6.4
 - Do not change database migrations that were already executed.
 - Do not rename routes, services, form field names, JS selectors, data attributes, or translation keys without explicit approval.
@@ -97,6 +98,8 @@
 - src/EventSubscriber/ - request subscriber.
 - migrations/ - Doctrine migrations, їх не чіпати, якщо вони вже виконані/закомічені.
 - tests/ - PHPUnit/controller тести.
+- docker/ - docker configs
+- docker-compose.yml - docker-compose.
 
 ## Frontend
 Frontend розташований у assets і Twig:
