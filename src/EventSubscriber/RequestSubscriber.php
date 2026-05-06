@@ -50,7 +50,7 @@ class RequestSubscriber implements EventSubscriberInterface
 
 	private function isRoute(Request $request, string $routeName): bool
 	{
-		return $request->get('_route') !== $routeName && $request->getPathInfo() !== '/_fragment';
+		return $request->attributes->get('_route') !== $routeName && $request->getPathInfo() !== '/_fragment';
 	}
 
 	private function isUserHasFullData(User $user): bool

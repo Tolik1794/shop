@@ -83,7 +83,7 @@ class UserController extends AbstractAdvancedController
 			return $this->redirectToLastPage($pagination);
 		}
 
-		$entity = ($entityId = $request->get('user_id'))
+		$entity = ($entityId = $request->query->get('user_id'))
 			? $this->userManager->getRepository()->findOneBy(['nickname' => $entityId])
 			: $pagination->current();
 

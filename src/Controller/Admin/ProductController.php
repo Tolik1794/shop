@@ -55,7 +55,7 @@ class ProductController extends AbstractAdvancedController
 			return $this->redirectToLastPage($pagination);
 		}
 
-		if ($id = $request->get('id')) {
+		if ($id = $request->query->get('id')) {
 			$product = $this->productManager->getRepository()->find($id);
 		} else {
 			$product = $pagination->current();

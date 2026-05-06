@@ -54,7 +54,7 @@ class CategoryController extends AbstractAdvancedController
 			return $this->redirectToLastPage($pagination);
 		}
 
-		if ($id = $request->get('id')) {
+		if ($id = $request->query->get('id')) {
 			$category = $this->categoryManager->getRepository()->find($id);
 		} else {
 			$category = $pagination->current();

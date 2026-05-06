@@ -48,7 +48,7 @@ final class MenuBuilder
 
 	public function mainAdminStoreMenu(array $options): ItemInterface
 	{
-		$storeId = $this->requestStack->getCurrentRequest()->get('store_id');
+		$storeId = $this->requestStack->getCurrentRequest()?->attributes->get('store_id');
 
 		$menu = $this->factory->createItem('mainAdminStore', [
 			'childrenAttributes' => [
