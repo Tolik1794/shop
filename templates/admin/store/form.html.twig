@@ -12,7 +12,7 @@
                     </div>
                     <div class="card-body">
                         {% if avatar %}
-                            <img class="article-img" src="{{ avatar|trim_full_path|imagine_filter('squared_thumbnail_small') }}">
+                            <img alt="Avatar" class="article-img" src="{{ avatar|trim_full_path|imagine_filter('squared_thumbnail_small') }}">
                         {% endif %}
                         {{ form_start(form) }}
                         {{ form_errors(form) }}
