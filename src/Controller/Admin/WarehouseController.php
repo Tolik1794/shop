@@ -2,79 +2,129 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Store;
 use App\Entity\Warehouse;
+use App\Form\Admin\FilterType\WarehouseFilterType;
 use App\Form\Admin\Type\WarehouseType;
-use App\Repository\WarehouseRepository;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use App\Manager\WarehouseManager;
+use App\Service\FilterFormHandler;
+use App\Tools\AbstractAdvancedController;
+use Knp\Component\Pager\PaginatorInterface;
+use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/warehouse')]
-class WarehouseController extends AbstractController
+#[Route('/admin/store/{store_id}/warehouse', name: 'app_admin_warehouse_'), IsGranted('ROLE_STORE_ADMIN')]
+class WarehouseController extends AbstractAdvancedController
 {
-    #[Route('/', name: 'app_admin_warehouse_index', methods: ['GET'])]
-    public function index(WarehouseRepository $warehouseRepository): Response
-    {
-        return $this->render('admin/warehouse/index.html.twig', [
-            'warehouses' => $warehouseRepository->findAll(),
-        ]);
-    }
+	public function __construct(private readonly WarehouseManager $warehouseManager)
+	{
+	}
 
-    #[Route('/new', name: 'app_admin_warehouse_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
-    {
-        $warehouse = new Warehouse();
-        $form = $this->createForm(WarehouseType::class, $warehouse);
-        $form->handleRequest($request);
+	#[Route('/', name: 'index', methods: ['GET'])]
+	public function index(
+		PaginatorInterface $paginator,
+		Request $request,
+		FilterFormHandler $filterTypeHandler,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+	): Response
+	{
+		$queryBuilder = $this->warehouseManager
+			->getRepository()
+			->findAvailableByStoreQB($store);
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->persist($warehouse);
-            $entityManager->flush();
+		$filterForm = $this->createForm(WarehouseFilterType::class)->handleRequest($request);
 
-            return $this->redirectToRoute('app_admin_warehouse_index', [], Response::HTTP_SEE_OTHER);
-        }
+		if ($filterForm->isSubmitted() && $filterForm->isValid()) {
+			$filterTypeHandler->handleFilterForm($filterForm, $queryBuilder);
+		}
 
-        return $this->renderForm('admin/warehouse/new.html.twig', [
-            'warehouse' => $warehouse,
-            'form' => $form,
-        ]);
-    }
+		$page = $request->query->getInt('page', 1);
 
-    #[Route('/{id}', name: 'app_admin_warehouse_show', methods: ['GET'])]
-    public function show(Warehouse $warehouse): Response
-    {
-        return $this->render('admin/warehouse/show.html.twig', [
-            'warehouse' => $warehouse,
-        ]);
-    }
+		if ($page < 1) return $this->redirectToFirstPage();
 
-    #[Route('/{id}/edit', name: 'app_admin_warehouse_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Warehouse $warehouse, EntityManagerInterface $entityManager): Response
-    {
-        $form = $this->createForm(WarehouseType::class, $warehouse);
-        $form->handleRequest($request);
+		$pagination = $paginator->paginate($queryBuilder, $page, options: [
+			'defaultSortFieldName' => ['warehouse.name'],
+			'defaultSortDirection' => 'desc',
+		]);
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->flush();
+		if ($pagination->count() === 0 && $pagination->getTotalItemCount() > 0) {
+			return $this->redirectToLastPage($pagination);
+		}
 
-            return $this->redirectToRoute('app_admin_warehouse_index', [], Response::HTTP_SEE_OTHER);
-        }
+		if ($id = $request->query->get('id')) {
+			$warehouse = $this->warehouseManager->getRepository()->find($id);
+		} else {
+			$warehouse = $pagination->current();
+		}
 
-        return $this->renderForm('admin/warehouse/edit.html.twig', [
-            'warehouse' => $warehouse,
-            'form' => $form,
-        ]);
-    }
+		return $this->render('admin/warehouse/index.html.twig', [
+			'pagination' => $pagination,
+			'first_entity' => $warehouse,
+			'filter_form' => $filterForm->createView()
+		]);
+	}
 
-    #[Route('/{id}', name: 'app_admin_warehouse_delete', methods: ['POST'])]
-    public function delete(Request $request, Warehouse $warehouse, EntityManagerInterface $entityManager): Response
-    {
-        if ($this->isCsrfTokenValid('delete'.$warehouse->getId(), $request->request->get('_token'))) {
-            $entityManager->remove($warehouse);
-            $entityManager->flush();
-        }
+	#[IsGranted('ROLE_SUPER_ADMIN')]
+	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
+	public function new(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store): Response
+	{
+		$warehouse = new Warehouse();
+		$warehouse->setStore($store);
+		$form = $this->createForm(WarehouseType::class, $warehouse, [
+			'method' => 'POST',
+		]);
+		$form->handleRequest($request);
 
-        return $this->redirectToRoute('app_admin_warehouse_index', [], Response::HTTP_SEE_OTHER);
-    }
+		if ($form->isSubmitted() && $form->isValid()) {
+			$this->warehouseManager->save($warehouse);
+
+			return $this->stayOrRedirect(
+				route: 'app_admin_warehouse_index',
+				parameters: ['store_id' => $store->getId()],
+				stayRoute: 'app_admin_warehouse_edit',
+				stayParameters: ['store_id' => $store->getId(), 'id' => $warehouse->getId()],
+			);
+		}
+
+		return $this->render('admin/warehouse/form.html.twig', [
+			'entity' => $warehouse,
+			'form' => $form
+		]);
+	}
+
+	#[Route('/{id}/edit', name: 'edit', methods: ['GET', 'POST'])]
+	public function edit(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Warehouse $warehouse,
+	): Response
+	{
+		$form = $this->createForm(WarehouseType::class, $warehouse, ['method' => 'POST']);
+		$form->handleRequest($request);
+
+		if ($form->isSubmitted() && $form->isValid()) {
+			$this->warehouseManager->save($warehouse);
+
+			return $this->stayOrRedirect('app_admin_warehouse_index', ['store_id' => $store->getId()]);
+		}
+
+		return $this->render('admin/warehouse/form.html.twig', [
+			'entity' => $warehouse,
+			'form' => $form,
+		]);
+	}
+
+	#[Route('/{id}/show', name: 'show')]
+	public function show(Request $request, Warehouse $warehouse): Response
+	{
+		return $this->render('admin/warehouse/show.html.twig', [
+			'entity' => $warehouse,
+			'query_params' => $request->query->all()
+		]);
+	}
 }

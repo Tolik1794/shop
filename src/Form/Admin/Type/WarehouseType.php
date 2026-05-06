@@ -13,7 +13,6 @@ class WarehouseType extends AbstractType
     {
         $builder
             ->add('name')
-            ->add('store')
         ;
     }
 

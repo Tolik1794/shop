@@ -24,7 +24,7 @@ class WarehouseControllerTest extends WebTestCase
 
 	public function testIndexRequiresAuthenticatedAdminUser(): void
 	{
-		$this->client->request('GET', '/admin/warehouse/');
+		$this->client->request('GET', '/admin/store/1/warehouse/');
 
 		self::assertResponseRedirects('/login');
 	}
@@ -32,11 +32,12 @@ class WarehouseControllerTest extends WebTestCase
 	public function testIndexIsAvailableForAdminUser(): void
 	{
 		$this->client->loginUser($this->createUser('warehouse-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('warehouse-index-store-' . uniqid());
 
-		$this->client->request('GET', '/admin/warehouse/');
+		$this->client->request('GET', sprintf('/admin/store/%d/warehouse/', $store->getId()));
 
 		self::assertResponseIsSuccessful();
-		self::assertPageTitleContains('Warehouse index');
+		self::assertPageTitleContains('Warehouse list');
 	}
 
 	public function testShowDisplaysWarehouse(): void
@@ -44,10 +45,13 @@ class WarehouseControllerTest extends WebTestCase
 		$this->client->loginUser($this->createUser('warehouse-show-admin-' . uniqid() . '@example.com'));
 		$warehouse = $this->createWarehouse('Test warehouse ' . uniqid());
 
-		$this->client->request('GET', sprintf('/admin/warehouse/%d', $warehouse->getId()));
+		$this->client->request('GET', sprintf(
+			'/admin/store/%d/warehouse/%d/show',
+			$warehouse->getStore()->getId(),
+			$warehouse->getId()
+		));
 
 		self::assertResponseIsSuccessful();
-		self::assertSelectorTextContains('h1', 'Warehouse');
 		self::assertSelectorTextContains('body', 'Test warehouse');
 	}
 

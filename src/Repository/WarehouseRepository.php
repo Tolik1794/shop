@@ -3,7 +3,9 @@
 namespace App\Repository;
 
 use App\Entity\Warehouse;
+use App\Entity\Store;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -38,6 +40,14 @@ class WarehouseRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
+
+	public function findAvailableByStoreQB(Store $store): QueryBuilder
+	{
+		return $this->createQueryBuilder('warehouse')
+			->innerJoin('warehouse.store', 'store')
+			->where('store = :store')
+			->setParameter('store', $store);
+	}
 
 //    /**
 //     * @return Warehouse[] Returns an array of Warehouse objects

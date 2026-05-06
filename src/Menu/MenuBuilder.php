@@ -92,18 +92,29 @@ final class MenuBuilder
 			]
 		]);
 
-		$item->addChild('Products', [
-			'route' => 'admin_product_index',
-			'routeParameters' => ['store_id' => $storeId],
-			'attributes' => [
-				'class' => 'sidebar-item',
+			$item->addChild('Products', [
+				'route' => 'admin_product_index',
+				'routeParameters' => ['store_id' => $storeId],
+				'attributes' => [
+					'class' => 'sidebar-item',
 			],
 			'linkAttributes' => [
 				'class' => 'sidebar-link'
-			]
-		]);
+				]
+			]);
 
-		return $menu;
+			$item->addChild('Warehouses', [
+				'route' => 'app_admin_warehouse_index',
+				'routeParameters' => ['store_id' => $storeId],
+				'attributes' => [
+					'class' => 'sidebar-item',
+				],
+				'linkAttributes' => [
+					'class' => 'sidebar-link'
+				]
+			]);
+
+			return $menu;
 	}
 
 	public function userAdminMenu(array $options): ItemInterface
