@@ -40,13 +40,13 @@
                             include('admin/_components/tab_icon/_filter.html.twig')
                             ~ (app.request.get(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
                         ],
-                        tab_body: first_entity ? [
-                            render(controller(
+                        tab_body: [
+                            first_entity ? render(controller(
                                 'App\\Controller\\Admin\\ProductController::show',
                                 { store_id: app.request.get('store_id'),'id': first_entity.id, 'request': app.request }
-                            )),
+                            )) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
                             include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
-                        ] : []
+                        ]
                     }) }}
                 </div>
                 <div class="col-xxl-8 col-xl-7 col-lg-6">

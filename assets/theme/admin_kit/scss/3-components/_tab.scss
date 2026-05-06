@@ -23,3 +23,98 @@
 .tab .nav-tabs {
   border-bottom: none;
 }
+
+.tab-card {
+  filter: drop-shadow($card-shadow);
+
+  .nav-tabs .nav-link {
+    background-color: $gray-200;
+    color: $gray-600;
+    margin-bottom: 0;
+
+    &:hover,
+    &:focus {
+      background-color: $gray-100;
+      color: $gray-700;
+    }
+  }
+
+  .nav-tabs .nav-link.active {
+    background-color: $card-cap-bg;
+    color: $card-title-color;
+  }
+
+  .nav-tabs,
+  .nav-tabs .nav-link,
+  .tab-content {
+    box-shadow: none;
+  }
+
+  .tab-content .card {
+    box-shadow: none;
+  }
+
+  .tab-content .card {
+    background-color: $card-bg;
+  }
+
+  .tab-content .card-header {
+    background-color: $card-cap-bg;
+  }
+
+  @include media-breakpoint-up(md) {
+    .nav-tabs .nav-item:first-child .nav-link {
+      border-top-left-radius: $card-border-radius;
+    }
+
+    .nav-tabs .nav-item:last-child .nav-link {
+      border-bottom-left-radius: $card-border-radius;
+    }
+
+    .nav-tabs .nav-link:not(.active) {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    .nav-tabs .nav-link.active {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    .nav-tabs .nav-link {
+      border-right: 0;
+    }
+
+    .tab-content {
+      overflow: hidden;
+      border-top-right-radius: $card-border-radius;
+      border-bottom-right-radius: $card-border-radius;
+    }
+
+    .tab-content .card {
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+  }
+
+  @include media-breakpoint-down(md) {
+    .nav-tabs .nav-item:first-child .nav-link {
+      border-top-left-radius: $card-border-radius;
+    }
+
+    .nav-tabs .nav-item:last-child .nav-link {
+      border-top-right-radius: $card-border-radius;
+    }
+
+    .tab-content {
+      overflow: hidden;
+      border-bottom-left-radius: $card-border-radius;
+      border-bottom-right-radius: $card-border-radius;
+    }
+
+    .tab-content .card {
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+  }
+}
