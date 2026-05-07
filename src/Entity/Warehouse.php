@@ -26,9 +26,16 @@ class Warehouse
     #[ORM\OneToMany(mappedBy: 'warehouse', targetEntity: WarehouseStock::class)]
     private Collection $warehouseStocks;
 
+    /**
+     * @var Collection<int, WarehouseStockBatch>
+     */
+    #[ORM\OneToMany(targetEntity: WarehouseStockBatch::class, mappedBy: 'warehouse')]
+    private Collection $warehouseStockBatches;
+
     public function __construct()
     {
         $this->warehouseStocks = new ArrayCollection();
+        $this->warehouseStockBatches = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -84,6 +91,36 @@ class Warehouse
             // set the owning side to null (unless already changed)
             if ($warehouseStock->getWarehouse() === $this) {
                 $warehouseStock->setWarehouse(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, WarehouseStockBatch>
+     */
+    public function getWarehouseStockBatches(): Collection
+    {
+        return $this->warehouseStockBatches;
+    }
+
+    public function addWarehouseStockBatch(WarehouseStockBatch $warehouseStockBatch): static
+    {
+        if (!$this->warehouseStockBatches->contains($warehouseStockBatch)) {
+            $this->warehouseStockBatches->add($warehouseStockBatch);
+            $warehouseStockBatch->setWarehouse($this);
+        }
+
+        return $this;
+    }
+
+    public function removeWarehouseStockBatch(WarehouseStockBatch $warehouseStockBatch): static
+    {
+        if ($this->warehouseStockBatches->removeElement($warehouseStockBatch)) {
+            // set the owning side to null (unless already changed)
+            if ($warehouseStockBatch->getWarehouse() === $this) {
+                $warehouseStockBatch->setWarehouse(null);
             }
         }
 

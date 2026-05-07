@@ -18,14 +18,14 @@ class ProductParameterName
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
+    #[ORM\Column(length: 255)]
+    private ?string $description = null;
+
     #[ORM\OneToMany(mappedBy: 'productParameterName', targetEntity: ProductParameter::class, orphanRemoval: true)]
     private Collection $productParameters;
 
     #[ORM\OneToMany(mappedBy: 'productParameterName', targetEntity: CategoryProductParameterName::class)]
     private Collection $categoryProductParameterNames;
-
-    #[ORM\Column(length: 255)]
-    private ?string $description = null;
 
     public function __construct()
     {
@@ -51,6 +51,18 @@ class ProductParameterName
     public function setName(string $name): self
     {
         $this->name = $name;
+
+        return $this;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    public function setDescription(string $description): self
+    {
+        $this->description = $description;
 
         return $this;
     }
@@ -111,18 +123,6 @@ class ProductParameterName
                 $categoryProductParameterName->setProductParameterName(null);
             }
         }
-
-        return $this;
-    }
-
-    public function getDescription(): ?string
-    {
-        return $this->description;
-    }
-
-    public function setDescription(string $description): self
-    {
-        $this->description = $description;
 
         return $this;
     }

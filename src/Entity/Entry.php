@@ -14,15 +14,15 @@ class Entry
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(inversedBy: 'entries')]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?WarehouseStock $warehouseStock = null;
-
     #[ORM\Column(type: Types::DECIMAL, precision: 14, scale: 4)]
     private ?string $cost = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 4, nullable: true)]
     private ?string $delivery_cost = null;
+
+    #[ORM\ManyToOne(inversedBy: 'entries')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?WarehouseStock $warehouseStock = null;
 
     #[ORM\OneToOne(mappedBy: 'entry', cascade: ['persist', 'remove'])]
     private ?OrderEntry $orderEntry = null;
@@ -35,18 +35,6 @@ class Entry
         return $this->id;
     }
 
-    public function getWarehouseStock(): ?WarehouseStock
-    {
-        return $this->warehouseStock;
-    }
-
-    public function setWarehouseStock(?WarehouseStock $warehouseStock): self
-    {
-        $this->warehouseStock = $warehouseStock;
-
-        return $this;
-    }
-
     public function getCost(): ?string
     {
         return $this->cost;
@@ -55,6 +43,18 @@ class Entry
     public function setCost(string $cost): self
     {
         $this->cost = $cost;
+
+        return $this;
+    }
+
+    public function getWarehouseStock(): ?WarehouseStock
+    {
+        return $this->warehouseStock;
+    }
+
+    public function setWarehouseStock(?WarehouseStock $warehouseStock): self
+    {
+        $this->warehouseStock = $warehouseStock;
 
         return $this;
     }

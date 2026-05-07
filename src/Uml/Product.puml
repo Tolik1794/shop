@@ -81,9 +81,7 @@ entity WarehouseStock {
     --
     * warehouse: Warehouse
     * product: Product
-    * purchasePrice: decimal(14, 4)
-    * minimumSellingPrice: decimal(14, 4)
-    * sellingPrice: decimal(14, 4)
+    * averageCostPrice: decimal(14, 4)
     * count: int
     * reserveCount: int
     entries: Collection<Entry>
@@ -148,9 +146,7 @@ note right of WarehouseStock
   (product_id, warehouse_id)
 
   Database checks:
-  purchasePrice >= 0
-  minimumSellingPrice >= 0
-  sellingPrice >= 0
+  averageCostPrice >= 0
   count >= 0
   reserveCount >= 0
   reserveCount <= count

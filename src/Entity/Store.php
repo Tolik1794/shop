@@ -25,18 +25,6 @@ class Store implements AvatarEntityInterface
 	#[ORM\Column(length: 255)]
 	private ?string $slug = null;
 
-	#[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'managerStores')]
-	private Collection $managers;
-
-	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Warehouse::class)]
-	private Collection $warehouses;
-
-	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Order::class)]
-	private Collection $orders;
-
-	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Purchase::class)]
-	private Collection $purchases;
-
 	#[ORM\Column(length: 255)]
 	private ?string $phone = null;
 
@@ -51,6 +39,18 @@ class Store implements AvatarEntityInterface
 
 	#[ORM\Column(length: 255, enumType: ActiveStatusEnum::class)]
 	private ActiveStatusEnum $status;
+
+	#[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'managerStores')]
+	private Collection $managers;
+
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Warehouse::class)]
+	private Collection $warehouses;
+
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Order::class)]
+	private Collection $orders;
+
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Purchase::class)]
+	private Collection $purchases;
 
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Category::class)]
 	private Collection $categories;
@@ -99,6 +99,18 @@ class Store implements AvatarEntityInterface
 	public function setSlug(string $slug): self
 	{
 		$this->slug = $slug;
+
+		return $this;
+	}
+
+	public function getPhone(): ?string
+	{
+		return $this->phone;
+	}
+
+	public function setPhone(string $phone): self
+	{
+		$this->phone = $phone;
 
 		return $this;
 	}
@@ -216,18 +228,6 @@ class Store implements AvatarEntityInterface
 				$purchase->setStore(null);
 			}
 		}
-
-		return $this;
-	}
-
-	public function getPhone(): ?string
-	{
-		return $this->phone;
-	}
-
-	public function setPhone(string $phone): self
-	{
-		$this->phone = $phone;
 
 		return $this;
 	}

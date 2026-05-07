@@ -16,12 +16,12 @@ class Order
 	#[ORM\Column]
 	private ?int $id = null;
 
+	#[ORM\Column(length: 128, enumType: OrderStatus::class)]
+	private OrderStatus $status;
+
 	#[ORM\ManyToOne(inversedBy: 'orders')]
 	#[ORM\JoinColumn(nullable: false)]
 	private Store $store;
-
-	#[ORM\Column(length: 128, enumType: OrderStatus::class)]
-	private OrderStatus $status;
 
 	#[ORM\OneToMany(mappedBy: 'order', targetEntity: OrderEntry::class)]
 	private Collection $orderEntries;
@@ -37,18 +37,6 @@ class Order
 		return $this->id;
 	}
 
-	public function getStore(): ?Store
-	{
-		return $this->store;
-	}
-
-	public function setStore(?Store $store): self
-	{
-		$this->store = $store;
-
-		return $this;
-	}
-
 	public function getStatus(): ?OrderStatus
 	{
 		return $this->status;
@@ -57,6 +45,18 @@ class Order
 	public function setStatus(OrderStatus $status): self
 	{
 		$this->status = $status;
+
+		return $this;
+	}
+
+	public function getStore(): ?Store
+	{
+		return $this->store;
+	}
+
+	public function setStore(?Store $store): self
+	{
+		$this->store = $store;
 
 		return $this;
 	}

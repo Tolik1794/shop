@@ -18,12 +18,12 @@ class Purchase
     #[ORM\Column(length: 128, enumType: PurchaseStatus::class)]
     private PurchaseStatus $status;
 
+    #[ORM\OneToMany(mappedBy: 'purchase', targetEntity: PurchaseEntry::class)]
+    private Collection $purchaseEntries;
+
     #[ORM\ManyToOne(inversedBy: 'purchases')]
     #[ORM\JoinColumn(nullable: false)]
     private Store $store;
-
-    #[ORM\OneToMany(mappedBy: 'purchase', targetEntity: PurchaseEntry::class)]
-    private Collection $purchaseEntries;
 
     public function __construct()
     {

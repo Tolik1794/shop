@@ -22,29 +22,52 @@ class Product
     #[ORM\Column(length: 255)]
     private ?string $code = null;
 
+	#[ORM\Column]
+	private ?bool $canBeSold = null;
+
+	#[ORM\Column]
+	private ?bool $canBePurchased = null;
+
+	#[ORM\Column]
+	private ?bool $canBeManufactured = null;
+
+	#[ORM\Column(length: 55)]
+	private ?string $unit = null;
+
     #[ORM\ManyToOne(inversedBy: 'products')]
     #[ORM\JoinColumn(nullable: false)]
     private ?Category $category = null;
-
-    #[ORM\OneToMany(mappedBy: 'product', targetEntity: WarehouseStock::class)]
-    private Collection $warehouseStocks;
 
     #[ORM\ManyToOne(inversedBy: 'products')]
     #[ORM\JoinColumn(nullable: false)]
     private ?Store $store = null;
 
+    #[ORM\ManyToOne(inversedBy: 'products')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?ProductType $productType = null;
+
+    #[ORM\OneToMany(mappedBy: 'product', targetEntity: WarehouseStock::class)]
+    private Collection $warehouseStocks;
+
     #[ORM\OneToMany(
-		mappedBy: 'product',
-	    targetEntity: ProductParameter::class,
+		targetEntity: ProductParameter::class,
+	    mappedBy: 'product',
 	    cascade: ['persist'],
 	    orphanRemoval: true
     )]
     private Collection $productParameters;
 
+    /**
+     * @var Collection<int, WarehouseStockBatch>
+     */
+    #[ORM\OneToMany(targetEntity: WarehouseStockBatch::class, mappedBy: 'product')]
+    private Collection $warehouseStockBatches;
+
     public function __construct()
     {
         $this->warehouseStocks = new ArrayCollection();
         $this->productParameters = new ArrayCollection();
+        $this->warehouseStockBatches = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -76,6 +99,54 @@ class Product
         return $this;
     }
 
+    public function isCanBeSold(): ?bool
+    {
+        return $this->canBeSold;
+    }
+
+    public function setCanBeSold(bool $canBeSold): static
+    {
+        $this->canBeSold = $canBeSold;
+
+        return $this;
+    }
+
+    public function isCanBePurchased(): ?bool
+    {
+        return $this->canBePurchased;
+    }
+
+    public function setCanBePurchased(bool $canBePurchased): static
+    {
+        $this->canBePurchased = $canBePurchased;
+
+        return $this;
+    }
+
+    public function isCanBeManufactured(): ?bool
+    {
+        return $this->canBeManufactured;
+    }
+
+    public function setCanBeManufactured(bool $canBeManufactured): static
+    {
+        $this->canBeManufactured = $canBeManufactured;
+
+        return $this;
+    }
+
+    public function getUnit(): ?string
+    {
+        return $this->unit;
+    }
+
+    public function setUnit(string $unit): static
+    {
+        $this->unit = $unit;
+
+        return $this;
+    }
+
     public function getCategory(): ?Category
     {
         return $this->category;
@@ -84,6 +155,30 @@ class Product
     public function setCategory(?Category $category): self
     {
         $this->category = $category;
+
+        return $this;
+    }
+
+    public function getStore(): ?Store
+    {
+        return $this->store;
+    }
+
+    public function setStore(?Store $store): self
+    {
+        $this->store = $store;
+
+        return $this;
+    }
+
+    public function getProductType(): ?ProductType
+    {
+        return $this->productType;
+    }
+
+    public function setProductType(?ProductType $productType): static
+    {
+        $this->productType = $productType;
 
         return $this;
     }
@@ -118,18 +213,6 @@ class Product
         return $this;
     }
 
-    public function getStore(): ?Store
-    {
-        return $this->store;
-    }
-
-    public function setStore(?Store $store): self
-    {
-        $this->store = $store;
-
-        return $this;
-    }
-
     /**
      * @return Collection<int, ProductParameter>
      */
@@ -154,6 +237,36 @@ class Product
             // set the owning side to null (unless already changed)
             if ($productParameter->getProduct() === $this) {
                 $productParameter->setProduct(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, WarehouseStockBatch>
+     */
+    public function getWarehouseStockBatches(): Collection
+    {
+        return $this->warehouseStockBatches;
+    }
+
+    public function addWarehouseStockBatch(WarehouseStockBatch $warehouseStockBatch): static
+    {
+        if (!$this->warehouseStockBatches->contains($warehouseStockBatch)) {
+            $this->warehouseStockBatches->add($warehouseStockBatch);
+            $warehouseStockBatch->setProduct($this);
+        }
+
+        return $this;
+    }
+
+    public function removeWarehouseStockBatch(WarehouseStockBatch $warehouseStockBatch): static
+    {
+        if ($this->warehouseStockBatches->removeElement($warehouseStockBatch)) {
+            // set the owning side to null (unless already changed)
+            if ($warehouseStockBatch->getProduct() === $this) {
+                $warehouseStockBatch->setProduct(null);
             }
         }
 

@@ -28,9 +28,7 @@ class WarehouseStockType extends AbstractType
 	    $this->addProductField($builder, $options, $warehouseStock?->getProduct());
 
         $builder
-            ->add('purchasePrice')
-            ->add('minimumSellingPrice')
-            ->add('sellingPrice')
+            ->add('averageCostPrice')
             ->add('count')
             ->add('reserveCount')
         ;

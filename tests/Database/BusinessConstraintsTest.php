@@ -68,9 +68,7 @@ class BusinessConstraintsTest extends KernelTestCase
 		$warehouseStock = (new WarehouseStock())
 			->setWarehouse($warehouse)
 			->setProduct($product)
-			->setPurchasePrice('10.0000')
-			->setMinimumSellingPrice('11.0000')
-			->setSellingPrice('12.0000')
+			->setAverageCostPrice('10.0000')
 			->setCount(-1)
 			->setReserveCount(0);
 

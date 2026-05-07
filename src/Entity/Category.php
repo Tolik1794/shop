@@ -20,14 +20,11 @@ class Category
 	#[ORM\Column(length: 255)]
 	private ?string $name = null;
 
-	#[ORM\OneToMany(mappedBy: 'category', targetEntity: Product::class)]
-	private Collection $products;
-
-	#[ORM\OneToMany(mappedBy: 'category', targetEntity: CategoryAdditionalName::class)]
-	private Collection $categoryAdditionalNames;
-
 	#[ORM\Column(length: 255, nullable: true)]
 	private ?string $description = null;
+
+	#[ORM\Column]
+	private int $level = 0;
 
 	#[ORM\ManyToOne(inversedBy: 'categories')]
 	#[ORM\JoinColumn(nullable: false)]
@@ -42,8 +39,11 @@ class Category
 	#[ORM\ManyToOne(targetEntity: self::class)]
 	private ?self $firstParent = null;
 
-	#[ORM\Column]
-	private int $level = 0;
+	#[ORM\OneToMany(mappedBy: 'category', targetEntity: Product::class)]
+	private Collection $products;
+
+	#[ORM\OneToMany(mappedBy: 'category', targetEntity: CategoryAdditionalName::class)]
+	private Collection $categoryAdditionalNames;
 
 	#[ORM\OneToMany(mappedBy: 'category', targetEntity: CategoryProductParameterName::class)]
 	private Collection $categoryProductParameterNames;
@@ -78,66 +78,6 @@ class Category
 		return $this;
 	}
 
-	/**
-	 * @return Collection<int, Product>
-	 */
-	public function getProducts(): Collection
-	{
-		return $this->products;
-	}
-
-	public function addProduct(Product $product): self
-	{
-		if (!$this->products->contains($product)) {
-			$this->products->add($product);
-			$product->setCategory($this);
-		}
-
-		return $this;
-	}
-
-	public function removeProduct(Product $product): self
-	{
-		if ($this->products->removeElement($product)) {
-			// set the owning side to null (unless already changed)
-			if ($product->getCategory() === $this) {
-				$product->setCategory(null);
-			}
-		}
-
-		return $this;
-	}
-
-	/**
-	 * @return Collection<int, CategoryAdditionalName>
-	 */
-	public function getCategoryAdditionalNames(): Collection
-	{
-		return $this->categoryAdditionalNames;
-	}
-
-	public function addCategoryAdditionalName(CategoryAdditionalName $categoryAdditionalName): self
-	{
-		if (!$this->categoryAdditionalNames->contains($categoryAdditionalName)) {
-			$this->categoryAdditionalNames->add($categoryAdditionalName);
-			$categoryAdditionalName->setCategory($this);
-		}
-
-		return $this;
-	}
-
-	public function removeCategoryAdditionalName(CategoryAdditionalName $categoryAdditionalName): self
-	{
-		if ($this->categoryAdditionalNames->removeElement($categoryAdditionalName)) {
-			// set the owning side to null (unless already changed)
-			if ($categoryAdditionalName->getCategory() === $this) {
-				$categoryAdditionalName->setCategory(null);
-			}
-		}
-
-		return $this;
-	}
-
 	public function getDescription(): ?string
 	{
 		return $this->description;
@@ -146,6 +86,18 @@ class Category
 	public function setDescription(?string $description): self
 	{
 		$this->description = $description;
+
+		return $this;
+	}
+
+	public function getLevel(): int
+	{
+		return $this->level;
+	}
+
+	public function setLevel(int $level): self
+	{
+		$this->level = $level;
 
 		return $this;
 	}
@@ -225,14 +177,62 @@ class Category
 		return $this;
 	}
 
-	public function getLevel(): int
+	/**
+	 * @return Collection<int, Product>
+	 */
+	public function getProducts(): Collection
 	{
-		return $this->level;
+		return $this->products;
 	}
 
-	public function setLevel(int $level): self
+	public function addProduct(Product $product): self
 	{
-		$this->level = $level;
+		if (!$this->products->contains($product)) {
+			$this->products->add($product);
+			$product->setCategory($this);
+		}
+
+		return $this;
+	}
+
+	public function removeProduct(Product $product): self
+	{
+		if ($this->products->removeElement($product)) {
+			// set the owning side to null (unless already changed)
+			if ($product->getCategory() === $this) {
+				$product->setCategory(null);
+			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, CategoryAdditionalName>
+	 */
+	public function getCategoryAdditionalNames(): Collection
+	{
+		return $this->categoryAdditionalNames;
+	}
+
+	public function addCategoryAdditionalName(CategoryAdditionalName $categoryAdditionalName): self
+	{
+		if (!$this->categoryAdditionalNames->contains($categoryAdditionalName)) {
+			$this->categoryAdditionalNames->add($categoryAdditionalName);
+			$categoryAdditionalName->setCategory($this);
+		}
+
+		return $this;
+	}
+
+	public function removeCategoryAdditionalName(CategoryAdditionalName $categoryAdditionalName): self
+	{
+		if ($this->categoryAdditionalNames->removeElement($categoryAdditionalName)) {
+			// set the owning side to null (unless already changed)
+			if ($categoryAdditionalName->getCategory() === $this) {
+				$categoryAdditionalName->setCategory(null);
+			}
+		}
 
 		return $this;
 	}
