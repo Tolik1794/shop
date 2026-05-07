@@ -23,12 +23,12 @@ class Warehouse
     #[ORM\JoinColumn(nullable: false)]
     private ?Store $store = null;
 
-    #[ORM\OneToMany(mappedBy: 'warehouse', targetEntity: WarehouseProduct::class)]
-    private Collection $warehouseProducts;
+    #[ORM\OneToMany(mappedBy: 'warehouse', targetEntity: WarehouseStock::class)]
+    private Collection $warehouseStocks;
 
     public function __construct()
     {
-        $this->warehouseProducts = new ArrayCollection();
+        $this->warehouseStocks = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -61,29 +61,29 @@ class Warehouse
     }
 
     /**
-     * @return Collection<int, WarehouseProduct>
+     * @return Collection<int, WarehouseStock>
      */
-    public function getWarehouseProducts(): Collection
+    public function getWarehouseStocks(): Collection
     {
-        return $this->warehouseProducts;
+        return $this->warehouseStocks;
     }
 
-    public function addWarehouseProduct(WarehouseProduct $warehouseProduct): self
+    public function addWarehouseStock(WarehouseStock $warehouseStock): self
     {
-        if (!$this->warehouseProducts->contains($warehouseProduct)) {
-            $this->warehouseProducts->add($warehouseProduct);
-            $warehouseProduct->setWarehouse($this);
+        if (!$this->warehouseStocks->contains($warehouseStock)) {
+            $this->warehouseStocks->add($warehouseStock);
+            $warehouseStock->setWarehouse($this);
         }
 
         return $this;
     }
 
-    public function removeWarehouseProduct(WarehouseProduct $warehouseProduct): self
+    public function removeWarehouseStock(WarehouseStock $warehouseStock): self
     {
-        if ($this->warehouseProducts->removeElement($warehouseProduct)) {
+        if ($this->warehouseStocks->removeElement($warehouseStock)) {
             // set the owning side to null (unless already changed)
-            if ($warehouseProduct->getWarehouse() === $this) {
-                $warehouseProduct->setWarehouse(null);
+            if ($warehouseStock->getWarehouse() === $this) {
+                $warehouseStock->setWarehouse(null);
             }
         }
 

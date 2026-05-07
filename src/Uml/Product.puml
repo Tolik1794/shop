@@ -39,7 +39,7 @@ entity Product {
     * store: Store
     * category: Category
     productParameters: Collection<ProductParameter>
-    warehouseProducts: Collection<WarehouseProduct>
+    warehouseStocks: Collection<WarehouseStock>
 }
 
 entity ProductParameterName {
@@ -73,10 +73,10 @@ entity Warehouse {
     --
     * name: string(255)
     * store: Store
-    warehouseProducts: Collection<WarehouseProduct>
+    warehouseStocks: Collection<WarehouseStock>
 }
 
-entity WarehouseProduct {
+entity WarehouseStock {
     * id: int
     --
     * warehouse: Warehouse
@@ -92,7 +92,7 @@ entity WarehouseProduct {
 entity Entry {
     * id: int
     --
-    * warehouseProduct: WarehouseProduct
+    * warehouseStock: WarehouseStock
     * cost: decimal(14, 4)
     deliveryCost: decimal(10, 4)?
 }
@@ -110,9 +110,9 @@ ProductParameterName ||--o{ CategoryProductParameterName : allowed for category
 ProductParameterName ||--o{ ProductParameter : names
 
 Product ||--o{ ProductParameter : has
-Product ||--o{ WarehouseProduct : stocked as
-Warehouse ||--o{ WarehouseProduct : contains
-WarehouseProduct ||--o{ Entry : accounting entries
+Product ||--o{ WarehouseStock : stocked as
+Warehouse ||--o{ WarehouseStock : contains
+WarehouseStock ||--o{ Entry : accounting entries
 
 note right of Product
   Unique database constraint:
@@ -143,7 +143,7 @@ note right of Warehouse
   (store_id, name)
 end note
 
-note right of WarehouseProduct
+note right of WarehouseStock
   Unique database constraint:
   (product_id, warehouse_id)
 

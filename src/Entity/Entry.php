@@ -16,7 +16,7 @@ class Entry
 
     #[ORM\ManyToOne(inversedBy: 'entries')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?WarehouseProduct $warehouseProduct = null;
+    private ?WarehouseStock $warehouseStock = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 14, scale: 4)]
     private ?string $cost = null;
@@ -35,14 +35,14 @@ class Entry
         return $this->id;
     }
 
-    public function getWarehouseProduct(): ?WarehouseProduct
+    public function getWarehouseStock(): ?WarehouseStock
     {
-        return $this->warehouseProduct;
+        return $this->warehouseStock;
     }
 
-    public function setWarehouseProduct(?WarehouseProduct $warehouseProduct): self
+    public function setWarehouseStock(?WarehouseStock $warehouseStock): self
     {
-        $this->warehouseProduct = $warehouseProduct;
+        $this->warehouseStock = $warehouseStock;
 
         return $this;
     }

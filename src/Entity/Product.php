@@ -26,8 +26,8 @@ class Product
     #[ORM\JoinColumn(nullable: false)]
     private ?Category $category = null;
 
-    #[ORM\OneToMany(mappedBy: 'product', targetEntity: WarehouseProduct::class)]
-    private Collection $warehouseProducts;
+    #[ORM\OneToMany(mappedBy: 'product', targetEntity: WarehouseStock::class)]
+    private Collection $warehouseStocks;
 
     #[ORM\ManyToOne(inversedBy: 'products')]
     #[ORM\JoinColumn(nullable: false)]
@@ -43,7 +43,7 @@ class Product
 
     public function __construct()
     {
-        $this->warehouseProducts = new ArrayCollection();
+        $this->warehouseStocks = new ArrayCollection();
         $this->productParameters = new ArrayCollection();
     }
 
@@ -89,29 +89,29 @@ class Product
     }
 
     /**
-     * @return Collection<int, WarehouseProduct>
+     * @return Collection<int, WarehouseStock>
      */
-    public function getWarehouseProducts(): Collection
+    public function getWarehouseStocks(): Collection
     {
-        return $this->warehouseProducts;
+        return $this->warehouseStocks;
     }
 
-    public function addWarehouseProduct(WarehouseProduct $warehouseProduct): self
+    public function addWarehouseStock(WarehouseStock $warehouseStock): self
     {
-        if (!$this->warehouseProducts->contains($warehouseProduct)) {
-            $this->warehouseProducts->add($warehouseProduct);
-            $warehouseProduct->setProduct($this);
+        if (!$this->warehouseStocks->contains($warehouseStock)) {
+            $this->warehouseStocks->add($warehouseStock);
+            $warehouseStock->setProduct($this);
         }
 
         return $this;
     }
 
-    public function removeWarehouseProduct(WarehouseProduct $warehouseProduct): self
+    public function removeWarehouseStock(WarehouseStock $warehouseStock): self
     {
-        if ($this->warehouseProducts->removeElement($warehouseProduct)) {
+        if ($this->warehouseStocks->removeElement($warehouseStock)) {
             // set the owning side to null (unless already changed)
-            if ($warehouseProduct->getProduct() === $this) {
-                $warehouseProduct->setProduct(null);
+            if ($warehouseStock->getProduct() === $this) {
+                $warehouseStock->setProduct(null);
             }
         }
 

@@ -1,5 +1,6 @@
 {% set actions %}
     <a class="dropdown-item" href="{{ path('app_admin_warehouse_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}">Edit</a>
+    <a class="dropdown-item" href="{{ path('app_admin_warehouse_stock_index', {store_id: app.request.attributes.get('store_id'), warehouse_id: entity.id}) }}">Stock</a>
 {% endset %}
 
 <div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
@@ -22,6 +23,12 @@
             <tr>
                 <th>Store</th>
                 <td>{{ entity.store }}</td>
+            </tr>
+            <tr>
+                <th>Stock</th>
+                <td>
+                    <a href="{{ path('app_admin_warehouse_stock_index', {store_id: app.request.attributes.get('store_id'), warehouse_id: entity.id}) }}">Open</a>
+                </td>
             </tr>
             </tbody>
         </table>

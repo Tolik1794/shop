@@ -6,7 +6,7 @@ use App\Entity\Category;
 use App\Entity\Product;
 use App\Entity\Store;
 use App\Entity\Warehouse;
-use App\Entity\WarehouseProduct;
+use App\Entity\WarehouseStock;
 use Doctrine\DBAL\Exception;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -58,14 +58,14 @@ class BusinessConstraintsTest extends KernelTestCase
 		$this->entityManager->flush();
 	}
 
-	public function testWarehouseProductCountCannotBeNegative(): void
+	public function testWarehouseStockCountCannotBeNegative(): void
 	{
 		$store = $this->persistStore('stock-store-' . uniqid());
 		$category = $this->persistCategory($store, 'Stock');
 		$product = $this->persistProduct($store, $category, 'SKU-' . uniqid());
 		$warehouse = $this->persistWarehouse($store, 'Main');
 
-		$warehouseProduct = (new WarehouseProduct())
+		$warehouseStock = (new WarehouseStock())
 			->setWarehouse($warehouse)
 			->setProduct($product)
 			->setPurchasePrice('10.0000')
@@ -74,7 +74,7 @@ class BusinessConstraintsTest extends KernelTestCase
 			->setCount(-1)
 			->setReserveCount(0);
 
-		$this->entityManager->persist($warehouseProduct);
+		$this->entityManager->persist($warehouseStock);
 
 		$this->expectException(Exception::class);
 		$this->entityManager->flush();

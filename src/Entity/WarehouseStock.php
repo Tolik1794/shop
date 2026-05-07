@@ -2,26 +2,27 @@
 
 namespace App\Entity;
 
-use App\Repository\WarehouseProductRepository;
+use App\Repository\WarehouseStockRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
+#[ORM\Table(name: 'warehouse_product')]
 #[ORM\UniqueConstraint(columns: ['product_id', 'warehouse_id'])]
-#[ORM\Entity(repositoryClass: WarehouseProductRepository::class)]
-class WarehouseProduct
+#[ORM\Entity(repositoryClass: WarehouseStockRepository::class)]
+class WarehouseStock
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(inversedBy: 'warehouseProducts')]
+    #[ORM\ManyToOne(inversedBy: 'warehouseStocks')]
     #[ORM\JoinColumn(nullable: false)]
     private ?Warehouse $warehouse = null;
 
-    #[ORM\ManyToOne(inversedBy: 'warehouseProducts')]
+    #[ORM\ManyToOne(inversedBy: 'warehouseStocks')]
     #[ORM\JoinColumn(nullable: false)]
     private ?Product $product = null;
 
@@ -40,7 +41,7 @@ class WarehouseProduct
     #[ORM\Column]
     private ?int $reserveCount = null;
 
-    #[ORM\OneToMany(mappedBy: 'warehouseProduct', targetEntity: Entry::class)]
+    #[ORM\OneToMany(mappedBy: 'warehouseStock', targetEntity: Entry::class)]
     private Collection $entries;
 
     public function __construct()
@@ -149,7 +150,7 @@ class WarehouseProduct
     {
         if (!$this->entries->contains($entry)) {
             $this->entries->add($entry);
-            $entry->setWarehouseProduct($this);
+            $entry->setWarehouseStock($this);
         }
 
         return $this;
@@ -159,8 +160,8 @@ class WarehouseProduct
     {
         if ($this->entries->removeElement($entry)) {
             // set the owning side to null (unless already changed)
-            if ($entry->getWarehouseProduct() === $this) {
-                $entry->setWarehouseProduct(null);
+            if ($entry->getWarehouseStock() === $this) {
+                $entry->setWarehouseStock(null);
             }
         }
 
