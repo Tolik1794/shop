@@ -1,0 +1,306 @@
+@startuml
+
+title Shop database
+
+hide circle
+skinparam linetype ortho
+
+entity Store {
+    * id: int
+    --
+    * name: string(255)
+    * slug: string(255) <<unique>>
+    * phone: string(255)
+    * email: string(255)
+    description: string(255)?
+    avatar: string(255)?
+    * status: ActiveStatusEnum
+}
+
+entity User {
+    * id: int
+    --
+    nickname: string(255)? <<unique>>
+    * email: string(180) <<unique>>
+    * password: string(255)
+    avatar: string(255)?
+    firstName: string(255)?
+    lastName: string(255)?
+    dateOfBirth: date?
+    * isVerified: bool
+    * roles: json
+    parent: User?
+}
+
+entity UserStore {
+    * user_id: int
+    * store_id: int
+}
+
+enum RoleEnum {
+    ROLE_SUPER_ADMIN
+    ROLE_ADMIN
+    ROLE_STORE_ADMIN
+    ROLE_STORE_MANAGER
+    ROLE_USER
+}
+
+entity Category {
+    * id: int
+    --
+    * name: string(255)
+    description: string(255)?
+    * level: int
+    * store: Store
+    parent: Category?
+    firstParent: Category?
+}
+
+entity AdditionalName {
+    * id: int
+    --
+    * name: string(255)
+}
+
+entity CategoryAdditionalName {
+    * id: int
+    --
+    * store: Store
+    * category: Category
+    * additionalName: AdditionalName
+}
+
+entity ProductType {
+    * id: int
+    --
+    * name: string(255)
+}
+
+entity Product {
+    * id: int
+    --
+    * name: string(255)
+    * code: string(255)
+    * canBeSold: bool
+    * canBePurchased: bool
+    * canBeManufactured: bool
+    * unit: string(55)
+    * category: Category
+    * store: Store
+    * productType: ProductType
+}
+
+entity ProductParameterName {
+    * id: int
+    --
+    * name: string(255)
+    * description: string(255)
+}
+
+entity ProductParameter {
+    * id: int
+    --
+    * value: string(255)
+    * productParameterName: ProductParameterName
+    * product: Product
+}
+
+entity CategoryProductParameterName {
+    * id: int
+    --
+    * isRequired: bool
+    * isFilter: bool
+    * productParameterName: ProductParameterName
+    * category: Category
+}
+
+entity Warehouse {
+    * id: int
+    --
+    * name: string(255)
+    * store: Store
+}
+
+entity WarehouseStock {
+    * id: int
+    --
+    * averageCostPrice: decimal(14, 4)
+    * count: int
+    * reserveCount: int
+    * warehouse: Warehouse
+    * product: Product
+}
+
+entity WarehouseStockBatch {
+    * id: int
+    --
+    * initialQuantity: int
+    * remainingQuantity: int
+    * purchasePrice: decimal(14, 4)
+    * salePrice: decimal(14, 4)
+    * receivedAt: DateTimeImmutable
+    * warehouseStock: WarehouseStock
+    * purchaseEntry: PurchaseEntry
+    * product: Product
+    * warehouse: Warehouse
+}
+
+entity Entry {
+    * id: int
+    --
+    * cost: decimal(14, 4)
+    deliveryCost: decimal(10, 4)?
+    * warehouseStock: WarehouseStock
+}
+
+entity Order {
+    * id: int
+    --
+    * status: OrderStatus
+    * store: Store
+}
+
+enum OrderStatus {
+    form
+    processing
+    sent
+    delivered
+    canceled
+    returned
+    partially returned
+}
+
+entity OrderEntry {
+    * id: int
+    --
+    * order: Order
+    * entry: Entry
+}
+
+entity Purchase {
+    * id: int
+    --
+    * status: PurchaseStatus
+    * store: Store
+}
+
+enum PurchaseStatus {
+    form
+    processing
+    sent
+    delivered
+    canceled
+    returned
+    partially returned
+}
+
+entity PurchaseEntry {
+    * id: int
+    --
+    * purchase: Purchase
+    * entry: Entry
+}
+
+User |o--o{ User : parent
+User ||--o{ UserStore : manages
+Store ||--o{ UserStore : managed by
+
+Store ||--o{ Category : owns
+Store ||--o{ CategoryAdditionalName : scopes
+Store ||--o{ Product : owns
+Store ||--o{ Warehouse : owns
+Store ||--o{ Order : receives
+Store ||--o{ Purchase : creates
+
+Category |o--o{ Category : parent
+Category |o--o{ Category : firstParent
+Category ||--o{ Product : classifies
+Category ||--o{ CategoryAdditionalName : has aliases
+Category ||--o{ CategoryProductParameterName : defines
+
+AdditionalName ||--o{ CategoryAdditionalName : names
+
+ProductType ||--o{ Product : types
+Product ||--o{ ProductParameter : has
+Product ||--o{ WarehouseStock : stocked as
+Product ||--o{ WarehouseStockBatch : appears in batches
+
+ProductParameterName ||--o{ ProductParameter : names
+ProductParameterName ||--o{ CategoryProductParameterName : allowed for category
+
+Warehouse ||--o{ WarehouseStock : contains
+Warehouse ||--o{ WarehouseStockBatch : receives batches
+
+WarehouseStock ||--o{ Entry : accounting entries
+WarehouseStock ||--o{ WarehouseStockBatch : split by batches
+
+Order ||--o{ OrderEntry : has
+OrderEntry ||--|| Entry : records
+
+Purchase ||--o{ PurchaseEntry : has
+PurchaseEntry ||--|| Entry : records
+PurchaseEntry ||--o{ WarehouseStockBatch : creates batches
+
+note right of Store
+  Unique:
+  slug
+end note
+
+note right of User
+  Unique:
+  nickname
+  email
+end note
+
+note right of UserStore
+  Primary key:
+  (user_id, store_id)
+end note
+
+note right of Category
+  Unique:
+  (store_id, parent_id, name) when parent_id is not null
+  (store_id, name) when parent_id is null
+end note
+
+note right of CategoryAdditionalName
+  Unique:
+  (store_id, additional_name_id, category_id)
+end note
+
+note right of CategoryProductParameterName
+  Unique:
+  (category_id, product_parameter_name_id)
+end note
+
+note right of Product
+  Unique:
+  (store_id, code)
+end note
+
+note right of ProductParameter
+  Unique:
+  (product_id, product_parameter_name_id)
+end note
+
+note right of Warehouse
+  Unique:
+  (store_id, name)
+end note
+
+note right of WarehouseStock
+  Unique:
+  (product_id, warehouse_id)
+end note
+
+note right of OrderEntry
+  Unique:
+  entry_id
+end note
+
+note right of PurchaseEntry
+  Unique:
+  entry_id
+end note
+
+@enduml
