@@ -15,6 +15,11 @@ entity Store {
     description: string(255)?
     avatar: string(255)?
     * status: ActiveStatusEnum
+    * costingMethod: CostingMethodEnum
+    * allowBackorders: bool
+    * baseCurrency: Currency
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
 }
 
 entity User {
@@ -45,13 +50,59 @@ enum RoleEnum {
     ROLE_USER
 }
 
+enum ActiveStatusEnum {
+    active
+    inactive
+}
+
+enum CostingMethodEnum {
+    average_cost
+    fifo
+}
+
+enum ProductPriceType {
+    regular
+    sale
+    wholesale
+    custom
+}
+
+entity Currency {
+    * code: string(3)
+    --
+    * name: string(255)
+    * symbol: string(10)
+    * decimalPlaces: int
+    * status: ActiveStatusEnum
+}
+
+entity ExchangeRate {
+    * id: int
+    --
+    * rate: decimal(18, 8)
+    * validFrom: DateTimeImmutable
+    validTo: DateTimeImmutable?
+    source: string(255)?
+    comment: text?
+    * createdAt: DateTimeImmutable
+    * fromCurrency: Currency
+    * toCurrency: Currency
+    store: Store?
+}
+
 entity Category {
     * id: int
     --
     * name: string(255)
     description: string(255)?
     * level: int
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
     * store: Store
+    createdBy: User?
+    updatedBy: User?
     parent: Category?
     firstParent: Category?
 }
@@ -70,10 +121,59 @@ entity CategoryAdditionalName {
     * additionalName: AdditionalName
 }
 
-entity ProductType {
+enum ProductKindEnum {
+    material
+    finished_product
+    resale_product
+    semi_finished_product
+    service
+}
+
+entity Unit {
+    * id: int
+    --
+    * code: string(50)
+    * name: string(255)
+    * precision: int
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+}
+
+entity Customer {
     * id: int
     --
     * name: string(255)
+    phone: string(255)?
+    email: string(255)?
+    comment: text?
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+}
+
+entity Supplier {
+    * id: int
+    --
+    * name: string(255)
+    phone: string(255)?
+    email: string(255)?
+    comment: text?
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
 }
 
 entity Product {
@@ -84,10 +184,36 @@ entity Product {
     * canBeSold: bool
     * canBePurchased: bool
     * canBeManufactured: bool
-    * unit: string(55)
+    * unit: Unit
+    baseSalePrice: decimal(14, 4)?
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
     * category: Category
     * store: Store
-    * productType: ProductType
+    createdBy: User?
+    updatedBy: User?
+    * productKind: ProductKindEnum
+}
+
+entity ProductPrice {
+    * id: int
+    --
+    * type: ProductPriceType
+    * price: decimal(14, 4)
+    * priceBase: decimal(14, 4)
+    * validFrom: DateTimeImmutable
+    validTo: DateTimeImmutable?
+    comment: text?
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
+    * product: Product
+    * currency: Currency
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
 }
 
 entity ProductParameterName {
@@ -118,15 +244,23 @@ entity Warehouse {
     * id: int
     --
     * name: string(255)
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
     * store: Store
+    createdBy: User?
+    updatedBy: User?
 }
 
 entity WarehouseStock {
     * id: int
     --
-    * averageCostPrice: decimal(14, 4)
-    * count: int
-    * reserveCount: int
+    * quantityOnHand: decimal(14, 4)
+    * reservedQuantity: decimal(14, 4)
+    * averageCost: decimal(14, 4)
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
     * warehouse: Warehouse
     * product: Product
 }
@@ -134,71 +268,397 @@ entity WarehouseStock {
 entity WarehouseStockBatch {
     * id: int
     --
-    * initialQuantity: int
-    * remainingQuantity: int
-    * purchasePrice: decimal(14, 4)
-    * salePrice: decimal(14, 4)
+    * initialQuantity: decimal(14, 4)
+    * remainingQuantity: decimal(14, 4)
+    * unitCost: decimal(14, 4)
+    salePrice: decimal(14, 4)?
     * receivedAt: DateTimeImmutable
+    * createdAt: DateTimeImmutable
     * warehouseStock: WarehouseStock
-    * purchaseEntry: PurchaseEntry
-    * product: Product
-    * warehouse: Warehouse
+    purchaseEntry: PurchaseEntry?
+    createdByMovement: StockMovement?
 }
 
-entity Entry {
+entity InventoryDocument {
     * id: int
     --
-    * cost: decimal(14, 4)
-    deliveryCost: decimal(10, 4)?
+    * number: string(255)
+    * type: InventoryDocumentType
+    * status: InventoryDocumentStatus
+    * documentDate: DateTimeImmutable
+    currency: Currency?
+    exchangeRateToBase: decimal(18, 8)?
+    totalAmount: decimal(14, 4)?
+    totalAmountBase: decimal(14, 4)?
+    postedAt: DateTimeImmutable?
+    canceledAt: DateTimeImmutable?
+    comment: text?
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+    postedBy: User?
+    canceledBy: User?
+    reversedDocument: InventoryDocument?
+    order: Order?
+    purchase: Purchase?
+    productionOrder: ProductionOrder?
+}
+
+enum InventoryDocumentType {
+    purchase_receipt
+    sale_shipment
+    customer_return
+    supplier_return
+    production
+    write_off
+    stock_adjustment
+    transfer
+    reversal
+}
+
+enum InventoryDocumentStatus {
+    draft
+    posted
+    canceled
+}
+
+
+enum InventoryReasonType {
+    write_off
+    stock_adjustment
+    return
+    production_loss
+    transfer
+    initial_stock
+    inventory_count
+    damage
+    other
+}
+
+entity InventoryReason {
+    * id: int
+    --
+    * name: string(255)
+    * type: InventoryReasonType
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+}
+
+entity StatusHistory {
+    * id: int
+    --
+    * entityType: StatusHistoryEntityType
+    * entityId: int
+    oldStatus: string(100)?
+    * newStatus: string(100)
+    comment: text?
+    * changedAt: DateTimeImmutable
+    changedBy: User?
+    * store: Store
+}
+
+enum StatusHistoryEntityType {
+    order
+    purchase
+    inventory_document
+    production_order
+}
+
+
+enum PaymentDirection {
+    incoming
+    outgoing
+}
+
+enum PaymentType {
+    cash
+    card
+    bank_transfer
+    online
+    refund
+    other
+}
+
+enum PaymentStatusEnum {
+    unpaid
+    partially_paid
+    paid
+    overpaid
+    refunded
+}
+
+entity Payment {
+    * id: int
+    --
+    * direction: PaymentDirection
+    * type: PaymentType
+    * amount: decimal(14, 4)
+    * amountBase: decimal(14, 4)
+    * paidAt: DateTimeImmutable
+    comment: text?
+    externalReference: string(255)?
+    * currency: Currency
+    * exchangeRateToBase: decimal(18, 8)
+    * store: Store
+    order: Order?
+    purchase: Purchase?
+    createdBy: User?
+    updatedBy: User?
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+}
+
+entity InventoryDocumentLine {
+    * id: int
+    --
+    * quantity: decimal(14, 4)
+    unitPrice: decimal(14, 4)?
+    unitPriceBase: decimal(14, 4)?
+    totalPrice: decimal(14, 4)?
+    totalPriceBase: decimal(14, 4)?
+    * direction: InventoryDirection
+    * inventoryDocument: InventoryDocument
+    * product: Product
+    * warehouse: Warehouse
+    warehouseStock: WarehouseStock?
+    orderEntry: OrderEntry?
+    purchaseEntry: PurchaseEntry?
+}
+
+enum InventoryDirection {
+    in
+    out
+}
+
+entity StockMovement {
+    * id: int
+    --
+    * quantityChange: decimal(14, 4)
+    * unitCost: decimal(14, 4)
+    balanceAfter: decimal(14, 4)?
+    * createdAt: DateTimeImmutable
+    * inventoryDocumentLine: InventoryDocumentLine
     * warehouseStock: WarehouseStock
+    warehouseStockBatch: WarehouseStockBatch?
+}
+
+entity StockReservation {
+    * id: int
+    --
+    * quantity: decimal(14, 4)
+    * status: StockReservationStatus
+    * reservedAt: DateTimeImmutable
+    expiresAt: DateTimeImmutable?
+    * warehouseStock: WarehouseStock
+    * orderEntry: OrderEntry
+}
+
+enum StockReservationStatus {
+    active
+    completed
+    canceled
+    expired
+}
+
+entity ProductionRecipe {
+    * id: int
+    --
+    * name: string(255)
+    * isDefault: bool
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    * store: Store
+    * product: Product
+}
+
+entity ProductionRecipeItem {
+    * id: int
+    --
+    * quantity: decimal(14, 4)
+    wastePercent: decimal(5, 2)?
+    * recipe: ProductionRecipe
+    * material: Product
+}
+
+entity ProductionOrderMaterial {
+    * id: int
+    --
+    * plannedQuantity: decimal(14, 4)
+    wastePercent: decimal(5, 2)?
+    comment: text?
+    * productionOrder: ProductionOrder
+    * material: Product
+    recipeItem: ProductionRecipeItem?
+}
+
+entity ProductionOrder {
+    * id: int
+    --
+    * status: ProductionOrderStatus
+    * plannedQuantity: decimal(14, 4)
+    completedQuantity: decimal(14, 4)?
+    plannedStartAt: DateTimeImmutable?
+    plannedEndAt: DateTimeImmutable?
+    startedAt: DateTimeImmutable?
+    completedAt: DateTimeImmutable?
+    canceledAt: DateTimeImmutable?
+    comment: text?
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+    startedBy: User?
+    completedBy: User?
+    canceledBy: User?
+    * product: Product
+    warehouse: Warehouse?
+    recipe: ProductionRecipe?
+}
+
+enum ProductionOrderStatus {
+    draft
+    planned
+    materials_reserved
+    in_progress
+    completed
+    canceled
 }
 
 entity Order {
     * id: int
     --
+    * number: string(255)
     * status: OrderStatus
+    * currency: Currency
+    * exchangeRateToBase: decimal(18, 8)
+    customerNameSnapshot: string(255)?
+    customerPhoneSnapshot: string(255)?
+    customerEmailSnapshot: string(255)?
+    deliveryAddress: text?
+    comment: text?
+    * totalAmount: decimal(14, 4)
+    * totalAmountBase: decimal(14, 4)
+    discountAmount: decimal(14, 4)?
+    discountAmountBase: decimal(14, 4)?
+    * paidAmountBase: decimal(14, 4)
+    * paymentStatus: PaymentStatusEnum
+    paidAt: DateTimeImmutable?
+    canceledAt: DateTimeImmutable?
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
     * store: Store
+    createdBy: User?
+    updatedBy: User?
+    canceledBy: User?
+    customer: Customer?
 }
 
 enum OrderStatus {
-    form
-    processing
-    sent
+    draft
+    confirmed
+    awaiting_stock
+    ready_to_ship
+    partially_shipped
+    shipped
     delivered
+    completed
     canceled
+    partially_returned
     returned
-    partially returned
 }
 
 entity OrderEntry {
     * id: int
     --
+    * quantity: decimal(14, 4)
+    shippedQuantity: decimal(14, 4)?
+    returnedQuantity: decimal(14, 4)?
+    canceledQuantity: decimal(14, 4)?
+    * unitPrice: decimal(14, 4)
+    * unitPriceBase: decimal(14, 4)
+    discountAmount: decimal(14, 4)?
+    discountAmountBase: decimal(14, 4)?
+    * totalPrice: decimal(14, 4)
+    * totalPriceBase: decimal(14, 4)
+    * productNameSnapshot: string(255)
+    * productCodeSnapshot: string(255)
+    * unitCodeSnapshot: string(50)
+    * unitNameSnapshot: string(255)
     * order: Order
-    * entry: Entry
+    * product: Product
+    warehouse: Warehouse?
 }
 
 entity Purchase {
     * id: int
     --
+    * number: string(255)
     * status: PurchaseStatus
+    * currency: Currency
+    * exchangeRateToBase: decimal(18, 8)
+    supplierNameSnapshot: string(255)?
+    supplierPhoneSnapshot: string(255)?
+    supplierEmailSnapshot: string(255)?
+    invoiceNumber: string(255)?
+    documentDate: DateTimeImmutable?
+    comment: text?
+    * totalAmount: decimal(14, 4)
+    * totalAmountBase: decimal(14, 4)
+    deliveryCost: decimal(14, 4)?
+    deliveryCostBase: decimal(14, 4)?
+    canceledAt: DateTimeImmutable?
+    * paidAmountBase: decimal(14, 4)
+    * paymentStatus: PaymentStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
     * store: Store
+    createdBy: User?
+    updatedBy: User?
+    canceledBy: User?
+    supplier: Supplier?
 }
 
 enum PurchaseStatus {
-    form
-    processing
-    sent
-    delivered
+    draft
+    ordered
+    partially_received
+    received
+    completed
     canceled
+    partially_returned
     returned
-    partially returned
 }
 
 entity PurchaseEntry {
     * id: int
     --
+    * quantity: decimal(14, 4)
+    receivedQuantity: decimal(14, 4)?
+    returnedQuantity: decimal(14, 4)?
+    * unitCost: decimal(14, 4)
+    * unitCostBase: decimal(14, 4)
+    deliveryCost: decimal(14, 4)?
+    deliveryCostBase: decimal(14, 4)?
+    * totalCost: decimal(14, 4)
+    * totalCostBase: decimal(14, 4)
+    salePrice: decimal(14, 4)?
+    salePriceBase: decimal(14, 4)?
+    * productNameSnapshot: string(255)
+    * productCodeSnapshot: string(255)
+    * unitCodeSnapshot: string(50)
+    * unitNameSnapshot: string(255)
     * purchase: Purchase
-    * entry: Entry
+    * product: Product
+    * warehouse: Warehouse
 }
 
 User |o--o{ User : parent
@@ -208,9 +668,21 @@ Store ||--o{ UserStore : managed by
 Store ||--o{ Category : owns
 Store ||--o{ CategoryAdditionalName : scopes
 Store ||--o{ Product : owns
+Store ||--o{ ProductPrice : defines prices
+CostingMethodEnum ||--o{ Store : costing method
+Currency ||--o{ Store : base currency
+Currency ||--o{ ExchangeRate : from/to
+Store |o--o{ ExchangeRate : custom rates
+Store ||--o{ Unit : defines
+Store ||--o{ Customer : has customers
+Store ||--o{ Supplier : has suppliers
 Store ||--o{ Warehouse : owns
 Store ||--o{ Order : receives
 Store ||--o{ Purchase : creates
+Store ||--o{ Payment : has payments
+Currency ||--o{ Order : order currency
+Currency ||--o{ Purchase : purchase currency
+Currency ||--o{ Payment : payment currency
 
 Category |o--o{ Category : parent
 Category |o--o{ Category : firstParent
@@ -220,30 +692,129 @@ Category ||--o{ CategoryProductParameterName : defines
 
 AdditionalName ||--o{ CategoryAdditionalName : names
 
-ProductType ||--o{ Product : types
+ProductKindEnum ||--o{ Product : classifies
+Unit ||--o{ Product : measures
+Product ||--o{ ProductPrice : has prices
+ProductPriceType ||--o{ ProductPrice : classifies
+Currency ||--o{ ProductPrice : price currency
 Product ||--o{ ProductParameter : has
 Product ||--o{ WarehouseStock : stocked as
-Product ||--o{ WarehouseStockBatch : appears in batches
 
 ProductParameterName ||--o{ ProductParameter : names
 ProductParameterName ||--o{ CategoryProductParameterName : allowed for category
 
 Warehouse ||--o{ WarehouseStock : contains
-Warehouse ||--o{ WarehouseStockBatch : receives batches
-
-WarehouseStock ||--o{ Entry : accounting entries
 WarehouseStock ||--o{ WarehouseStockBatch : split by batches
 
+Customer |o--o{ Order : places
 Order ||--o{ OrderEntry : has
-OrderEntry ||--|| Entry : records
+Order |o--o{ Payment : paid by
+Product ||--o{ OrderEntry : ordered as
+Warehouse |o--o{ OrderEntry : ships from
 
+Supplier |o--o{ Purchase : supplies
 Purchase ||--o{ PurchaseEntry : has
-PurchaseEntry ||--|| Entry : records
-PurchaseEntry ||--o{ WarehouseStockBatch : creates batches
+Purchase |o--o{ Payment : paid by
+Product ||--o{ PurchaseEntry : purchased as
+Warehouse ||--o{ PurchaseEntry : received into
+PurchaseEntry |o--o{ WarehouseStockBatch : may create batches
+StockMovement |o--o{ WarehouseStockBatch : may create batch
+
+Store ||--o{ InventoryDocument : owns
+Store ||--o{ InventoryReason : defines inventory reasons
+Store ||--o{ StatusHistory : has status logs
+Store ||--o{ ProductionRecipe : owns
+Store ||--o{ ProductionOrder : owns
+
+User |o--o{ InventoryDocument : creates/updates/posts/cancels
+User |o--o{ Order : creates/updates/cancels
+User |o--o{ Purchase : creates/updates/cancels
+User |o--o{ ProductionOrder : creates/updates/starts/completes/cancels
+User |o--o{ StatusHistory : changes status
+User |o--o{ Payment : records/updates payments
+User |o--o{ Product : creates/updates
+User |o--o{ ProductPrice : creates/updates
+User |o--o{ Warehouse : creates/updates
+User |o--o{ Customer : creates/updates
+User |o--o{ Supplier : creates/updates
+User |o--o{ Unit : creates/updates
+User |o--o{ InventoryReason : creates/updates
+User |o--o{ Category : creates/updates
+StatusHistoryEntityType ||--o{ StatusHistory : classifies
+PaymentDirection ||--o{ Payment : defines direction
+PaymentType ||--o{ Payment : classifies
+PaymentStatusEnum ||--o{ Order : payment state
+PaymentStatusEnum ||--o{ Purchase : payment state
+
+Order ||--o{ InventoryDocument : generates stock docs
+Purchase ||--o{ InventoryDocument : generates stock docs
+ProductionOrder ||--o{ InventoryDocument : generates stock docs
+
+InventoryDocumentType ||--o{ InventoryDocument : classifies
+Currency |o--o{ InventoryDocument : document currency
+InventoryDocumentStatus ||--o{ InventoryDocument : controls
+InventoryReasonType ||--o{ InventoryReason : classifies
+InventoryReason |o--o{ InventoryDocument : explains
+InventoryDocument ||--o{ InventoryDocumentLine : has lines
+InventoryDocumentLine ||--o{ StockMovement : posts movements
+InventoryDirection ||--o{ InventoryDocumentLine : defines
+
+Product ||--o{ InventoryDocumentLine : moved as
+Product ||--o{ ProductionRecipe : manufactured by
+Product ||--o{ ProductionRecipeItem : used as material
+Product ||--o{ ProductionOrderMaterial : planned material
+Product ||--o{ ProductionOrder : produced as
+Warehouse ||--o{ InventoryDocumentLine : used in
+Warehouse ||--o{ ProductionOrder : receives production
+WarehouseStock ||--o{ InventoryDocumentLine : affected by
+WarehouseStock ||--o{ StockMovement : changes by
+WarehouseStockBatch |o--o{ StockMovement : batch detail
+
+OrderEntry |o--o{ InventoryDocumentLine : ships/returns
+PurchaseEntry |o--o{ InventoryDocumentLine : receives/returns
+OrderEntry ||--o{ StockReservation : reserves
+WarehouseStock ||--o{ StockReservation : reserved from
+StockReservationStatus ||--o{ StockReservation : controls
+
+ProductionRecipe ||--o{ ProductionRecipeItem : contains materials
+ProductionRecipeItem |o--o{ ProductionOrderMaterial : copied into plan
+ProductionRecipe |o--o{ ProductionOrder : used by
+ProductionOrder ||--o{ ProductionOrderMaterial : plans materials
+ProductionOrderStatus ||--o{ ProductionOrder : controls
 
 note right of Store
   Unique:
   slug
+
+  baseCurrency is the main reporting/accounting currency of the store.
+  All *Base monetary fields are stored in this currency.
+
+  costingMethod defines how cost of goods is calculated.
+  Recommended default for MVP: average_cost.
+  FIFO can be enabled later using WarehouseStockBatch
+  and batch-level StockMovement records.
+
+  allowBackorders=true means OrderEntry can be created
+  even when there is no available stock yet.
+  Reservation and shipment still cannot exceed available physical stock.
+end note
+
+
+
+note right of Currency
+  code uses ISO 4217-like values: UAH, USD, EUR.
+  Currency is a dictionary, not a per-store entity.
+end note
+
+note right of ExchangeRate
+  rate means: 1 fromCurrency = rate toCurrency.
+  Recommended use: document currency -> Store.baseCurrency.
+
+  Store can override rates manually for accounting needs.
+  If store is null, the rate can be treated as a global/reference rate.
+
+  Keep the rate snapshot on documents too, because historical
+  documents must not change when ExchangeRate is edited later.
 end note
 
 note right of User
@@ -276,6 +847,80 @@ end note
 note right of Product
   Unique:
   (store_id, code)
+
+  unit is a reference to Unit to avoid inconsistent text values like:
+  шт, шт., штук, pcs.
+
+  baseSalePrice is recommended to be stored in Store.baseCurrency.
+  It is a denormalized quick access value for the current regular sale price.
+  ProductPrice stores price history and special price types.
+end note
+
+
+note right of Product
+  Product is used as a universal stock/catalog item:
+  - material: purchased and consumed in production
+  - finished_product: manufactured and sold
+  - resale_product: purchased and sold without manufacturing
+  - semi_finished_product: produced and later consumed/finished
+  - service: can be sold, but usually should not create WarehouseStock movements
+
+  Recommended flag rules:
+  material: canBePurchased=true, canBeSold=false, canBeManufactured=false
+  finished_product: canBeSold=true, canBeManufactured=true
+  resale_product: canBePurchased=true, canBeSold=true, canBeManufactured=false
+  semi_finished_product: canBeManufactured=true and canBePurchased/canBeSold depends on business case
+  service: canBeSold=true, but should normally not be stocked
+
+  Avoid splitting Product/Material/Item at this stage.
+  Use productKind + flags to control behavior in forms and business rules.
+end note
+
+note right of ProductPrice
+  Product price history and future price support.
+
+  price is in ProductPrice.currency.
+  priceBase is in Store.baseCurrency using the exchange rate at creation/update time.
+
+  Suggested rules:
+  - regular = default catalog price
+  - sale = promotional price
+  - wholesale = wholesale price
+  - custom = manual/special price list
+
+  Only one active price interval should overlap for the same:
+  (store_id, product_id, type, currency_id).
+
+  OrderEntry.unitPrice remains the final price snapshot used in a specific order.
+end note
+
+note right of Unit
+  Unique:
+  (store_id, code)
+
+  precision defines how many decimal places are allowed for this unit.
+  Examples:
+  шт -> 0
+  кг -> 3
+  м -> 3
+  м2 -> 3
+end note
+
+note right of Customer
+  Unique suggestion:
+  (store_id, phone) where phone is not null
+  (store_id, email) where email is not null
+
+  Order keeps customer snapshots so old orders do not change
+  after editing Customer data.
+end note
+
+note right of Supplier
+  Unique suggestion:
+  (store_id, name)
+
+  Purchase keeps supplier snapshots so old purchase documents do not change
+  after editing Supplier data.
 end note
 
 note right of ProductParameter
@@ -291,16 +936,483 @@ end note
 note right of WarehouseStock
   Unique:
   (product_id, warehouse_id)
+
+  quantityOnHand and averageCost should be updated only through posted StockMovement records.
+  reservedQuantity can be stored for speed or calculated from active StockReservation rows.
+  availableQuantity should be calculated as quantityOnHand - reservedQuantity.
+end note
+
+note right of WarehouseStockBatch
+  Batch belongs to WarehouseStock, so product and warehouse are derived from WarehouseStock.
+  purchaseEntry is optional because batches can be created by purchase, production, return, adjustment, or initial stock.
+  Prefer createdByMovement as the universal source of a created batch.
+  unitCost is stored in Store.baseCurrency. Original supplier currency is kept in Purchase/PurchaseEntry.
+end note
+
+note right of Order
+  Customer is optional to allow quick one-time orders.
+  createdBy/updatedBy/canceledBy are audit fields for admin accountability.
+  canceledAt should be filled when status becomes canceled.
+  customerNameSnapshot/customerPhoneSnapshot/customerEmailSnapshot store contact data at order time.
+
+  currency stores the original sale currency.
+  exchangeRateToBase is a snapshot: 1 order currency = X Store.baseCurrency.
+  totalAmount is in original currency; totalAmountBase is in Store.baseCurrency.
+end note
+
+note right of Purchase
+  Supplier is optional to allow quick/manual purchases.
+  createdBy/updatedBy/canceledBy are audit fields for admin accountability.
+  canceledAt should be filled when status becomes canceled.
+  supplierNameSnapshot/supplierPhoneSnapshot/supplierEmailSnapshot store supplier data at purchase time.
+
+  currency stores the original purchase currency.
+  exchangeRateToBase is a snapshot: 1 purchase currency = X Store.baseCurrency.
+  totalAmount/deliveryCost are in original currency; *Base fields are in Store.baseCurrency.
+end note
+
+
+note right of OrderStatus
+  Recommended order flow:
+  draft -> confirmed -> awaiting_stock -> ready_to_ship -> partially_shipped -> shipped -> delivered -> completed.
+
+  canceled is for orders stopped before completion.
+  partially_returned/returned are post-shipment states.
+  Backorders usually use awaiting_stock until enough stock is produced, purchased or reserved.
+end note
+
+note right of PurchaseStatus
+  Recommended purchase flow:
+  draft -> ordered -> partially_received -> received -> completed.
+
+  partially_returned/returned are used when goods are returned to supplier.
+  canceled is for purchases stopped before they are completed.
+end note
+
+note right of InventoryDocumentStatus
+  draft = editable document, no stock effect.
+  posted = immutable document; stock movements were created.
+  canceled = document was canceled through reversal logic or became inactive by business flow.
+
+  Avoid editing posted documents directly.
+end note
+
+note right of ProductionOrderStatus
+  Recommended production flow:
+  draft -> planned -> materials_reserved -> in_progress -> completed.
+
+  materials_reserved means required stock was reserved but production has not started yet.
+  Actual material consumption happens through InventoryDocument(type=production) OUT lines.
+end note
+
+
+note right of Payment
+  Universal payment table for customer payments and supplier payments.
+
+  Direction:
+  - incoming: money received, usually for Order.
+  - outgoing: money paid, usually for Purchase.
+
+  Rules:
+  - exactly one of order or purchase should be filled.
+  - Order payments are usually incoming.
+  - Purchase payments are usually outgoing.
+  - refunds can use type=refund with the opposite direction.
+  - amount is in payment currency.
+  - amountBase is stored in Store.baseCurrency using exchangeRateToBase snapshot.
+
+  Do not rely only on Order.paidAt for payment state.
+  Payment records are the source of truth for paid/remaining amounts.
 end note
 
 note right of OrderEntry
-  Unique:
-  entry_id
+  Sales order line.
+  Stores snapshot of product name, code, unit code/name, quantity and sale price at the moment of order.
+  Monetary fields without Base suffix are in Order.currency. Base fields are in Store.baseCurrency.
+
+  shippedQuantity, returnedQuantity and canceledQuantity are denormalized progress/cache fields
+  for fast UI and filtering. Source of truth is InventoryDocumentLine + posted StockMovement.
+  If cache becomes inconsistent, recalculate it from posted inventory documents.
+
+  Partial shipments are allowed:
+  one OrderEntry can be linked to multiple InventoryDocumentLine rows over time.
+  Backordered quantity = quantity - shippedQuantity - canceledQuantity, with reservations handled separately.
+
+  InventoryDocumentLine is created from this line when stock is shipped or returned.
 end note
 
 note right of PurchaseEntry
+  Purchase line.
+  Stores snapshot of product name, code, unit code/name, quantity, unit cost, delivery cost and optional planned sale price.
+  Monetary fields without Base suffix are in Purchase.currency. Base fields are in Store.baseCurrency.
+
+  receivedQuantity and returnedQuantity are denormalized progress/cache fields
+  for fast UI and filtering. Source of truth is InventoryDocumentLine + posted StockMovement.
+  If cache becomes inconsistent, recalculate it from posted inventory documents.
+
+  Partial receipts are allowed:
+  one PurchaseEntry can be linked to multiple InventoryDocumentLine rows over time.
+  Open quantity = quantity - receivedQuantity + returnedQuantity, depending on final business rules.
+
+  InventoryDocumentLine and WarehouseStockBatch are created when purchase is posted/received.
+end note
+
+note right of InventoryDocument
+  createdBy/updatedBy/postedBy/canceledBy are audit fields.
+  postedBy should be filled when status becomes posted; canceledBy should be filled when status becomes canceled.
+
   Unique:
-  entry_id
+  (store_id, number)
+
+  Check constraint:
+  only one of order_id, purchase_id, production_order_id can be not null.
+
+  currency/exchangeRateToBase are optional because purely technical documents
+  like stock_adjustment may not have external monetary currency.
+  If present, amount fields without Base suffix are in document currency; Base fields are in Store.baseCurrency.
+
+  reason is optional, but recommended for write_off, stock_adjustment,
+  production_loss, return and inventory_count scenarios.
+
+  Inventory count MVP approach:
+  do not create separate StockCount/StockCountLine tables yet.
+  Use InventoryDocument(type=stock_adjustment) with InventoryReason(type=inventory_count).
+  InventoryDocumentLine.quantity stores the adjustment difference, not the counted total.
+  Example: system has 10, counted 8 => OUT line quantity 2.
+  Direct editing of WarehouseStock quantities should be avoided.
+
+  This is the main inventory operation document.
+  It replaces polymorphic source_type/source_id for stock logic.
+
+  Posted documents should not be edited directly.
+  Cancellation should create reversal document/movements instead of deleting original movements.
+
+  Only reversal documents should have reversedDocument filled.
+  reversedDocument points to the original posted document being canceled/reversed.
+  Do not add separate reversalDocument column; reverse lookup can be done by query or ORM mappedBy.
+end note
+
+note right of InventoryReason
+  Dictionary of reasons for inventory documents.
+  Useful for analytics and consistent grouping of write-offs,
+  stock adjustments, production losses, returns and inventory counts.
+
+  Unique suggestion:
+  (store_id, type, name)
+
+  Examples:
+  Брак, пошкодження, обрізки, інвентаризація, пересорт,
+  стартові залишки, повернення клієнта.
+end note
+
+
+note right of StatusHistory
+  Universal status history table for main business documents:
+  Order, Purchase, InventoryDocument, ProductionOrder.
+
+  Uses entityType + entityId intentionally for MVP flexibility.
+  Important limitation: database cannot enforce foreign key to different tables.
+  Application code must validate that entityId exists for the selected entityType.
+
+  Suggested rule:
+  create a StatusHistory row every time document status changes.
+end note
+
+note right of InventoryDocumentLine
+  One posted line creates one or more StockMovement records.
+  Monetary fields without Base suffix follow InventoryDocument.currency.
+  Base fields are in Store.baseCurrency.
+
+  Partial operations are represented by multiple lines/documents over time:
+  - one OrderEntry can have several sale_shipment/customer_return lines
+  - one PurchaseEntry can have several purchase_receipt/supplier_return lines
+  OrderEntry/PurchaseEntry progress fields are cache, not the main source of truth.
+
+  For production documents use:
+  - OUT lines for consumed materials
+  - IN lines for produced goods
+
+  For transfer documents use paired lines:
+  - OUT from source warehouse
+  - IN into destination warehouse
+end note
+
+note right of StockMovement
+  quantityChange is signed:
+  positive = stock increase
+  negative = stock decrease
+
+  Use warehouseStockBatch for FIFO/batch-level costing when needed.
+  StockMovement.unitCost is always stored in Store.baseCurrency.
+  For average_cost method, StockMovement.unitCost stores the cost snapshot used for this movement.
+
+  In average_cost mode, OUT movement unitCost usually equals WarehouseStock.averageCost at posting time.
+  In fifo mode, one InventoryDocumentLine may create multiple StockMovement rows for different batches.
+end note
+
+note right of StockReservation
+  Used when an order reserves stock before shipment.
+  WarehouseStock.reservedQuantity can be calculated from active reservations.
+end note
+
+
+note right of Payment
+  Payment records are the source of truth for financial payments.
+
+  Order.paidAmountBase / Purchase.paidAmountBase and paymentStatus are denormalized cache fields
+  for fast lists, filters, and dashboards.
+
+  They should be recalculated from Payment rows after creating, updating, deleting, or reversing payments.
+  paidAt can store the date when the document became fully paid.
+end note
+
+note right of ProductionRecipe
+  Describes bill of materials for manufactured products.
+end note
+
+note right of ProductionRecipeItem
+  material is also Product, but with canBePurchased=true
+  and usually canBeSold=false.
+end note
+
+note right of ProductionOrderMaterial
+  Planned material list for a specific ProductionOrder.
+  Usually copied from ProductionRecipeItem at the moment production is created.
+
+  This preserves the plan even if the recipe changes later.
+  Actual consumption is recorded by InventoryDocumentLine(direction=out).
+  Plan/fact comparison:
+  ProductionOrderMaterial.plannedQuantity vs actual OUT InventoryDocumentLine quantity.
+end note
+
+note right of ProductionOrder
+  ProductionOrder plans manufacturing.
+  createdBy/updatedBy/startedBy/completedBy/canceledBy are audit fields for production accountability.
+  canceledAt should be filled when status becomes canceled.
+  recipe is optional, because production can be based on a recipe or created manually.
+
+  ProductionOrderMaterial stores the planned material snapshot for this exact order.
+  InventoryDocument(type=production) posts actual stock movements.
+end note
+
+
+note bottom
+  Final cleanup decisions:
+  - ExchangeRate is a financial/reference entity and should not depend on InventoryReason.
+  - Batch-level stock attribution should be handled through StockMovement.warehouseStockBatch, not directly from InventoryDocumentLine.
+  - canceledAt is stored on Order, Purchase and ProductionOrder together with canceledBy.
+  - Payment has updatedBy because payment records can be corrected while still preserving audit information.
+  - Keep technical stock tables controlled by posting/canceling documents, not by manual admin edits.
+end note
+
+note bottom
+  Database constraints / invariants to implement in migrations and services:
+
+  Global numeric rules:
+  - All quantity fields must be >= 0, except StockMovement.quantityChange which can be positive or negative.
+  - InventoryDocumentLine.quantity > 0. Direction defines IN/OUT, not the sign.
+  - StockMovement.quantityChange != 0.
+  - Monetary amount fields should be >= 0 unless a special reversal/discount rule explicitly allows otherwise.
+  - Currency exchangeRateToBase > 0 when currency is present.
+
+  WarehouseStock:
+  - unique(store_id via warehouse, warehouse_id, product_id).
+  - quantityOnHand >= 0.
+  - reservedQuantity >= 0.
+  - reservedQuantity <= quantityOnHand.
+  - Backorders are allowed at OrderEntry level only; WarehouseStock must never go negative.
+  - averageCost >= 0.
+  - Product with productKind=service should not create WarehouseStock or StockMovement rows.
+
+  WarehouseStockBatch:
+  - initialQuantity > 0.
+  - remainingQuantity >= 0.
+  - remainingQuantity <= initialQuantity.
+  - unitCost >= 0.
+  - createdByMovement should normally reference an IN StockMovement.
+
+  InventoryDocument:
+  - unique(store_id, number).
+  - createdBy should be filled when document is created by authenticated user.
+  - postedBy is required when status=posted.
+  - canceledBy is required when status=canceled.
+  - only one of order_id, purchase_id, production_order_id can be not null.
+  - postedAt is required when status=posted.
+  - canceledAt is required when status=canceled.
+  - Only type=reversal should have reversedDocument filled.
+  - reversedDocument must point to a posted document.
+  - A document should not reverse itself.
+  - Posted documents are immutable; corrections are done by reversal documents.
+
+  InventoryDocumentLine:
+  - product.store must match inventoryDocument.store.
+  - warehouse.store must match inventoryDocument.store.
+  - warehouseStock, when filled, must match line product + warehouse.
+  - For sale_shipment lines, direction should be out.
+  - For purchase_receipt lines, direction should be in.
+  - For customer_return lines, direction should be in.
+  - For supplier_return lines, direction should be out.
+  - For transfer documents, lines should be paired: one OUT and one IN for the same product and quantity.
+
+  StockMovement:
+  - Must be created only from posted InventoryDocumentLine.
+  - quantityChange sign must match line direction: IN > 0, OUT < 0.
+  - warehouseStock must match the InventoryDocumentLine product and warehouse.
+  - OUT movement must not make WarehouseStock.quantityOnHand negative.
+  - In FIFO mode, OUT movements using batches must not exceed WarehouseStockBatch.remainingQuantity.
+
+  StockReservation:
+  - quantity > 0.
+  - active reservations must not exceed available stock: quantityOnHand - reservedQuantity.
+  - Backordered OrderEntry rows should remain unreserved until stock is available.
+  - completed/canceled/expired reservations should not be counted in WarehouseStock.reservedQuantity.
+
+  OrderEntry / PurchaseEntry:
+  - quantity > 0.
+  - OrderEntry can exist without stock when Store.allowBackorders=true.
+  - OrderEntry without stock must not automatically create StockReservation or StockMovement.
+  - progress quantities must be >= 0.
+  - shippedQuantity, returnedQuantity, canceledQuantity, receivedQuantity are denormalized cache fields.
+  - Source of truth for progress is posted InventoryDocumentLine + StockMovement.
+  - Recalculate progress cache after posting/canceling/reversing inventory documents.
+  - shippedQuantity should not exceed OrderEntry.quantity - canceledQuantity.
+  - returnedQuantity should not exceed shippedQuantity.
+  - receivedQuantity should not exceed PurchaseEntry.quantity.
+  - PurchaseEntry.returnedQuantity should not exceed receivedQuantity.
+  - Snapshot fields should be filled at creation and not overwritten automatically when Product changes.
+
+  Payment:
+  - amount > 0.
+  - amountBase > 0.
+  - exchangeRateToBase > 0.
+  - exactly one of order_id or purchase_id should be filled.
+  - incoming payments usually belong to Order; outgoing payments usually belong to Purchase.
+  - refund payments may intentionally use the opposite direction.
+  - Order/Purchase paidAmountBase and paymentStatus are cache fields.
+  - Source of truth is sum(Payment.amountBase) against document totalAmountBase.
+  - unpaid: paidAmountBase = 0.
+  - partially_paid: 0 < paidAmountBase < totalAmountBase.
+  - paid: paidAmountBase = totalAmountBase.
+  - overpaid: paidAmountBase > totalAmountBase.
+  - refunded: use when effective paid amount returns to 0 after refund, if business rules require a separate visible state.
+
+  ProductPrice / ExchangeRate:
+  - ProductPrice valid intervals should not overlap for the same store + product + type + currency.
+  - ExchangeRate valid intervals should not overlap for the same store/global + fromCurrency + toCurrency.
+  - fromCurrency and toCurrency should be different, unless explicitly storing rate=1 for the same currency.
+
+  Deletion / archiving policy:
+  - Business documents should not be physically deleted: Order, Purchase, InventoryDocument, Payment, ProductionOrder.
+  - Stock history should not be physically deleted: InventoryDocumentLine, StockMovement, WarehouseStockBatch, StockReservation.
+  - Reference data can be deactivated via status=inactive and hidden from creation forms.
+  - Reference data can use deletedAt for soft delete only when it is not needed in active workflows.
+  - Soft-deleted reference rows must remain readable from old documents and reports.
+  - Product, Customer, Supplier, Warehouse, Unit, Category, InventoryReason and ProductPrice use soft-delete/archiving behavior.
+  - Currency and ExchangeRate should normally be disabled/expired, not deleted, because old financial documents may depend on them.
+
+  Cancellation timestamps:
+  - Order.canceledAt should be filled when Order.status=canceled.
+  - Purchase.canceledAt should be filled when Purchase.status=canceled.
+  - ProductionOrder.canceledAt should be filled when ProductionOrder.status=canceled.
+
+  Status transitions:
+  - Order statuses should follow the recommended flow; do not jump to completed without delivered/shipped business confirmation.
+  - Purchase statuses should follow draft -> ordered -> partially_received/received -> completed.
+  - InventoryDocument can affect stock only when status=posted.
+  - ProductionOrder can become in_progress only after materials are reserved or an explicit override is allowed.
+  - Every status transition should create StatusHistory.
+
+  Audit fields:
+  - createdBy/updatedBy/postedBy/canceledBy/startedBy/completedBy should reference existing users.
+  - Do not use these fields as permission model; they are historical audit data.
+  - StatusHistory should still be created for each status transition.
+
+  Production:
+  - ProductionOrder.product should usually have canBeManufactured=true.
+  - ProductionRecipe.product should usually have canBeManufactured=true.
+  - ProductionRecipeItem.material and ProductionOrderMaterial.material should usually not be productKind=service.
+  - Production actual material usage is recorded via InventoryDocumentLine OUT lines, not by editing ProductionOrderMaterial.
+end note
+
+
+note bottom
+  Recommended indexes:
+  WarehouseStock(product_id, warehouse_id)
+  StockMovement(warehouse_stock_id, created_at)
+  StockMovement(inventory_document_line_id)
+  StockMovement(warehouse_stock_batch_id)
+  InventoryDocument(store_id, number)
+  InventoryDocument(store_id, status)
+  InventoryDocument(store_id, type)
+  InventoryDocument(store_id, reason_id)
+  InventoryDocument(document_date)
+  InventoryDocument(created_by_id)
+  InventoryDocument(posted_by_id)
+  InventoryDocument(canceled_by_id)
+  InventoryReason(store_id, type, name)
+  ProductPrice(store_id, product_id, type, currency_code, valid_from)
+  ProductPrice(store_id, product_id, type, valid_from, valid_to)
+  ExchangeRate(from_currency_code, to_currency_code, valid_from)
+  ExchangeRate(store_id, from_currency_code, to_currency_code, valid_from)
+  StatusHistory(store_id, entity_type, entity_id, changed_at)
+  StatusHistory(store_id, changed_at)
+  InventoryDocumentLine(inventory_document_id)
+  InventoryDocumentLine(product_id, warehouse_id)
+  Unit(store_id, code)
+  Customer(store_id, phone)
+  Customer(store_id, email)
+  Supplier(store_id, name)
+  Order(store_id, number)
+  Order(store_id, payment_status)
+  Order(store_id, status)
+  Order(created_by_id)
+  Order(canceled_by_id)
+  Order(canceled_at)
+  OrderEntry(order_id)
+  OrderEntry(product_id)
+  Purchase(store_id, number)
+  Purchase(store_id, payment_status)
+  Purchase(store_id, status)
+  Purchase(created_by_id)
+  Purchase(canceled_by_id)
+  Purchase(canceled_at)
+  PurchaseEntry(purchase_id)
+  PurchaseEntry(product_id)
+  Payment(store_id, paid_at)
+  Payment(order_id)
+  Payment(purchase_id)
+  Payment(store_id, direction, paid_at)
+  Payment(created_by_id)
+  Payment(updated_by_id)
+  ProductionOrder(store_id, status)
+  ProductionOrder(created_by_id)
+  ProductionOrder(canceled_by_id)
+  ProductionOrder(canceled_at)
+  ProductionOrderMaterial(production_order_id)
+  ProductionOrderMaterial(material_id)
+  StockReservation(order_entry_id)
+  StockReservation(warehouse_stock_id, status)
+end note
+
+
+note as DeletionPolicyNote
+Deletion / archiving rule:
+
+Do not physically delete documents, payments, stock movements or posted history.
+Use status transitions, reversal documents and refund payments instead.
+
+For reference data, prefer status=inactive for hiding from new operations.
+Use deletedAt only as soft delete; old documents must still be able to display snapshots and linked records.
+end note
+
+
+note as AuditFieldsNote
+Audit fields rule:
+createdBy/updatedBy are stored on admin-managed reference data
+(Product, ProductPrice, Warehouse, Customer, Supplier, Unit, InventoryReason, Category).
+Technical stock tables like WarehouseStock, WarehouseStockBatch and StockMovement
+should be created/updated by posting inventory documents, not manually.
+Their responsible user is traced through InventoryDocument, Payment or StatusHistory.
 end note
 
 @enduml
