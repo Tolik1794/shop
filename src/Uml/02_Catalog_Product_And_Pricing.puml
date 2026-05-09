@@ -1,0 +1,127 @@
+@startuml
+
+title 02. Catalog, product parameters and price history
+
+hide circle
+skinparam linetype ortho
+
+enum ProductKindEnum {
+	material
+	finished_product
+	resale_product
+	semi_finished_product
+	service
+}
+
+enum ProductPriceType {
+	regular
+	sale
+	wholesale
+	custom
+}
+
+entity Category {
+	* id: int
+	--
+	* name: string(255)
+	description: string(255)?
+	* level: int
+	* status: ActiveStatusEnum
+	* createdAt: DateTimeImmutable
+	* updatedAt: DateTimeImmutable
+	deletedAt: DateTimeImmutable?
+	* store: Store
+	createdBy: User?
+	updatedBy: User?
+	parent: Category?
+	firstParent: Category?
+}
+
+entity Product {
+	* id: int
+	--
+	* name: string(255)
+	* code: string(255)
+	* canBeSold: bool
+	* canBePurchased: bool
+	* canBeManufactured: bool
+	* unit: Unit
+	baseSalePrice: decimal(14,4)?
+	* status: ActiveStatusEnum
+	* productKind: ProductKindEnum
+	* category: Category
+	* store: Store
+}
+
+entity ProductPrice {
+	* id: int
+	--
+	* type: ProductPriceType
+	* price: decimal(14,4)
+	* priceBase: decimal(14,4)
+	* validFrom: DateTimeImmutable
+	validTo: DateTimeImmutable?
+	comment: text?
+	* product: Product
+	* currency: Currency
+	* store: Store
+	createdBy: User?
+	updatedBy: User?
+}
+
+entity ProductParameterName
+entity ProductParameter
+entity CategoryProductParameterName
+entity AdditionalName
+entity CategoryAdditionalName
+
+Category ||--o{ Product : classifies
+ProductKindEnum ||--o{ Product : classifies
+Unit ||--o{ Product : measures
+Product ||--o{ ProductPrice : has price history
+Currency ||--o{ ProductPrice : price currency
+ProductPriceType ||--o{ ProductPrice : classifies
+Product ||--o{ ProductParameter : has
+ProductParameterName ||--o{ ProductParameter : names
+Category ||--o{ CategoryProductParameterName : defines
+ProductParameterName ||--o{ CategoryProductParameterName : allowed
+Category ||--o{ CategoryAdditionalName : aliases
+AdditionalName ||--o{ CategoryAdditionalName : names
+
+note right of Product
+  Current project status:
+  - Category entity and CRUD exist.
+  - Product entity and CRUD exist.
+  - Unit relation, productKind, flags and baseSalePrice exist.
+  - Product parameter generation from category definitions exists.
+  - Product performance fixture creates many products.
+
+  Remaining work:
+  - Add ProductPrice entity/repository/manager.
+  - Add ProductPrice CRUD under Product show or as separate tab.
+  - Decide whether Product.baseSalePrice is only a shortcut
+    or must sync with active regular ProductPrice.
+  - Add price interval validation:
+    no overlapping active intervals for
+    (store, product, type, currency).
+  - Add UI for current price and price history.
+end note
+
+note bottom
+  Suggested implementation steps:
+
+  1. Create ProductPrice entity, repository and migration.
+  2. Add ProductPriceType enum.
+  3. Add ProductPriceManager:
+     - create/update price
+     - calculate priceBase using ExchangeRate
+     - close previous interval if needed
+  4. Add product show tab: Prices.
+  5. Add fixtures for regular product prices.
+  6. Add tests for overlap prevention and priceBase calculation.
+
+  Do this after 01_Core_Store_User_Reference_Data,
+  because ProductPrice needs Currency and ExchangeRate.
+end note
+
+@enduml

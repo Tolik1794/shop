@@ -1,0 +1,110 @@
+@startuml
+
+title 06. Purchases and receiving
+
+hide circle
+skinparam linetype ortho
+
+enum PurchaseStatus {
+	draft
+	ordered
+	partially_received
+	received
+	completed
+	canceled
+	partially_returned
+	returned
+}
+
+entity Purchase {
+	* id: int
+	--
+	* number: string(255)
+	* status: PurchaseStatus
+	* currency: Currency
+	* exchangeRateToBase: decimal(18,8)
+	supplierNameSnapshot: string(255)?
+	supplierPhoneSnapshot: string(255)?
+	supplierEmailSnapshot: string(255)?
+	invoiceNumber: string(255)?
+	documentDate: DateTimeImmutable?
+	comment: text?
+	* totalAmount: decimal(14,4)
+	* totalAmountBase: decimal(14,4)
+	deliveryCost: decimal(14,4)?
+	deliveryCostBase: decimal(14,4)?
+	* paidAmountBase: decimal(14,4)
+	* paymentStatus: PaymentStatusEnum
+	* store: Store
+	supplier: Supplier?
+}
+
+entity PurchaseEntry {
+	* id: int
+	--
+	* quantity: decimal(14,4)
+	receivedQuantity: decimal(14,4)?
+	returnedQuantity: decimal(14,4)?
+	* unitCost: decimal(14,4)
+	* unitCostBase: decimal(14,4)
+	deliveryCost: decimal(14,4)?
+	deliveryCostBase: decimal(14,4)?
+	* totalCost: decimal(14,4)
+	* totalCostBase: decimal(14,4)
+	salePrice: decimal(14,4)?
+	salePriceBase: decimal(14,4)?
+	* productNameSnapshot: string(255)
+	* productCodeSnapshot: string(255)
+	* unitCodeSnapshot: string(50)
+	* unitNameSnapshot: string(255)
+	* purchase: Purchase
+	* product: Product
+	* warehouse: Warehouse
+}
+
+Supplier |o--o{ Purchase : supplies
+Purchase ||--o{ PurchaseEntry : has
+Product ||--o{ PurchaseEntry : purchased as
+Warehouse ||--o{ PurchaseEntry : received into
+PurchaseEntry |o--o{ WarehouseStockBatch : may create batches
+Currency ||--o{ Purchase : purchase currency
+PaymentStatusEnum ||--o{ Purchase : payment state
+Purchase ||--o{ InventoryDocument : generates receipt/return docs
+
+note right of Purchase
+  Current project status:
+  - Purchase entity exists with most fields from Database.puml.
+  - PurchaseStatus enum is updated.
+  - No admin Purchase CRUD/workflow is implemented.
+  - Supplier entity/relation is not implemented yet.
+
+  Required behavior:
+  - Purchase number must be generated per store.
+  - Currency/exchange rate are snapshots.
+  - Supplier fields must be copied into snapshots.
+  - Totals and base totals must be calculated from entries.
+  - Delivery cost distribution strategy must be defined.
+end note
+
+note right of PurchaseEntry
+  Required behavior:
+  - Product name/code/unit are snapshots.
+  - unitCostBase uses exchangeRateToBase.
+  - Receiving should create InventoryDocument and StockMovement,
+    not manually update WarehouseStock in controller.
+  - receivedQuantity and returnedQuantity are cached progress fields.
+end note
+
+note bottom
+  Suggested implementation steps:
+
+  1. Complete Supplier stage first.
+  2. Add PurchaseManager:
+     create draft, add/update/remove entries, recalculate totals.
+  3. Add Purchase CRUD with entries collection.
+  4. Add receiving action later:
+     create purchase_receipt InventoryDocument.
+  5. Add tests for totals, snapshots and status transitions.
+end note
+
+@enduml

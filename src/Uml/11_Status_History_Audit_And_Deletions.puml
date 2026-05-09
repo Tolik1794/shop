@@ -1,0 +1,81 @@
+@startuml
+
+title 11. Status history, audit fields and deletion rules
+
+hide circle
+skinparam linetype ortho
+
+enum StatusHistoryEntityType {
+	order
+	purchase
+	inventory_document
+	production_order
+	payment
+}
+
+entity StatusHistory {
+	* id: int
+	--
+	* entityType: StatusHistoryEntityType
+	* entityId: int
+	fromStatus: string(255)?
+	* toStatus: string(255)
+	comment: text?
+	* changedAt: DateTimeImmutable
+	* store: Store
+	changedBy: User?
+}
+
+Store ||--o{ StatusHistory : has status logs
+User |o--o{ StatusHistory : changes status
+StatusHistoryEntityType ||--o{ StatusHistory : classifies
+
+note right of StatusHistory
+  Current project status:
+  - StatusHistory is not implemented.
+  - Many entities already have status fields and audit columns.
+  - Status changes are not logged centrally.
+
+  Required behavior:
+  - Every business status transition should create a history row.
+  - History stores entity type and entity id to avoid hard coupling.
+  - History rows are append-only.
+  - UI should show history on Order, Purchase,
+    InventoryDocument, ProductionOrder and Payment pages.
+end note
+
+note bottom
+  Shared deletion/audit policy:
+
+  Soft delete:
+  - Product, Category, Unit, Warehouse, Customer, Supplier,
+    ProductPrice, Payment and other user-managed dictionaries
+    should use deletedAt where historical rows depend on them.
+
+  Hard delete:
+  - Draft documents can usually be hard deleted
+    if they have no posted movements/payments.
+
+  Never hard delete:
+  - Posted InventoryDocument
+  - StockMovement
+  - Payment with accounting impact
+  - StatusHistory
+
+  Audit fields:
+  - createdBy/updatedBy/canceledBy/postedBy/etc.
+    should be set in services or subscribers consistently.
+end note
+
+note bottom
+  Suggested implementation steps:
+
+  1. Add StatusHistory entity, enum and repository.
+  2. Add StatusHistoryService::record().
+  3. Update Order/Purchase status transition services.
+  4. Later update InventoryDocument, ProductionOrder and Payment services.
+  5. Add reusable Twig component for status timeline.
+  6. Add tests that transition services always write history.
+end note
+
+@enduml

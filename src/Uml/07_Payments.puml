@@ -1,0 +1,93 @@
+@startuml
+
+title 07. Payments
+
+hide circle
+skinparam linetype ortho
+
+enum PaymentDirection {
+	incoming
+	outgoing
+}
+
+enum PaymentType {
+	cash
+	card
+	bank_transfer
+	online
+	refund
+	other
+}
+
+enum PaymentStatusEnum {
+	unpaid
+	partially_paid
+	paid
+	overpaid
+	refunded
+}
+
+entity Payment {
+	* id: int
+	--
+	* direction: PaymentDirection
+	* type: PaymentType
+	* amount: decimal(14,4)
+	* amountBase: decimal(14,4)
+	* currency: Currency
+	* exchangeRateToBase: decimal(18,8)
+	paidAt: DateTimeImmutable?
+	comment: text?
+	* createdAt: DateTimeImmutable
+	* updatedAt: DateTimeImmutable
+	deletedAt: DateTimeImmutable?
+	* store: Store
+	order: Order?
+	purchase: Purchase?
+	createdBy: User?
+	updatedBy: User?
+}
+
+Store ||--o{ Payment : has payments
+Currency ||--o{ Payment : payment currency
+Order |o--o{ Payment : paid by
+Purchase |o--o{ Payment : paid by
+PaymentDirection ||--o{ Payment : defines
+PaymentType ||--o{ Payment : classifies
+PaymentStatusEnum ||--o{ Order : payment state
+PaymentStatusEnum ||--o{ Purchase : payment state
+
+note right of Payment
+  Current project status:
+  - Payment entity is not implemented.
+  - PaymentDirection and PaymentType are not implemented.
+  - PaymentStatusEnum exists because Order/Purchase use it.
+  - Order/Purchase have paidAmountBase/paymentStatus fields,
+    but there is no payment recalculation service.
+
+  Required behavior:
+  - Payment can belong to Order or Purchase.
+  - Incoming payments usually apply to Order.
+  - Outgoing payments usually apply to Purchase.
+  - Refunds must be explicit payment rows,
+    not direct negative edits to totals.
+  - amountBase is calculated by exchangeRateToBase.
+end note
+
+note bottom
+  Suggested implementation steps:
+
+  1. Add Payment entity, enums, repository and manager.
+  2. Add Payment CRUD scoped by Store.
+  3. Add payments tab in Order show and Purchase show.
+  4. Add PaymentManager recalculation:
+     - Order.paidAmountBase
+     - Purchase.paidAmountBase
+     - paymentStatus
+  5. Add tests for unpaid, partially_paid, paid,
+     overpaid and refunded states.
+
+  Do this after Order/Purchase base CRUD exists.
+end note
+
+@enduml

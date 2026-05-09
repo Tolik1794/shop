@@ -1,0 +1,137 @@
+@startuml
+
+title 08. Inventory documents and stock movements
+
+hide circle
+skinparam linetype ortho
+
+enum InventoryDocumentType {
+	initial_stock
+	purchase_receipt
+	supplier_return
+	sale_shipment
+	customer_return
+	stock_adjustment
+	stock_transfer
+	production_output
+	production_consumption
+	production_loss
+	inventory_count
+}
+
+enum InventoryDocumentStatus {
+	draft
+	posted
+	canceled
+}
+
+enum InventoryDirection {
+	in
+	out
+}
+
+entity InventoryDocument {
+	* id: int
+	--
+	* number: string(255)
+	* type: InventoryDocumentType
+	* status: InventoryDocumentStatus
+	* createdAt: DateTimeImmutable
+	* updatedAt: DateTimeImmutable
+	postedAt: DateTimeImmutable?
+	canceledAt: DateTimeImmutable?
+	* store: Store
+	order: Order?
+	purchase: Purchase?
+	productionOrder: ProductionOrder?
+	reason: InventoryReason?
+}
+
+entity InventoryDocumentLine {
+	* id: int
+	--
+	* direction: InventoryDirection
+	* quantity: decimal(14,4)
+	* unitCost: decimal(14,4)
+	unitCostBase: decimal(14,4)?
+	* product: Product
+	warehouse: Warehouse?
+	warehouseStock: WarehouseStock?
+	orderEntry: OrderEntry?
+	purchaseEntry: PurchaseEntry?
+}
+
+entity StockMovement {
+	* id: int
+	--
+	* quantity: decimal(14,4)
+	* unitCost: decimal(14,4)
+	* direction: InventoryDirection
+	* occurredAt: DateTimeImmutable
+	* warehouseStock: WarehouseStock
+	batch: WarehouseStockBatch?
+	documentLine: InventoryDocumentLine?
+}
+
+entity InventoryReason
+
+Store ||--o{ InventoryDocument : owns
+InventoryDocument ||--o{ InventoryDocumentLine : has lines
+InventoryDocumentLine ||--o{ StockMovement : posts movements
+InventoryDirection ||--o{ InventoryDocumentLine : defines
+InventoryDirection ||--o{ StockMovement : defines
+Product ||--o{ InventoryDocumentLine : moved as
+Warehouse ||--o{ InventoryDocumentLine : used in
+WarehouseStock ||--o{ InventoryDocumentLine : affected by
+WarehouseStock ||--o{ StockMovement : changes by
+WarehouseStockBatch |o--o{ StockMovement : batch detail
+Order ||--o{ InventoryDocument : generates stock docs
+Purchase ||--o{ InventoryDocument : generates stock docs
+OrderEntry |o--o{ InventoryDocumentLine : ships/returns
+PurchaseEntry |o--o{ InventoryDocumentLine : receives/returns
+
+note right of InventoryDocument
+  Current project status:
+  - InventoryDocument is not implemented.
+  - InventoryDocumentLine is not implemented.
+  - StockMovement is not implemented.
+  - WarehouseStock exists, but stock changes are still manual.
+
+  Required behavior:
+  - Draft document does not affect stock.
+  - Posting creates StockMovement rows and updates WarehouseStock.
+  - Canceling reverses movements or creates reversal movements.
+  - Document lines are the source of stock changes.
+  - WarehouseStock quantities are cached state.
+end note
+
+note right of StockMovement
+  Required behavior:
+  - Movement is append-only after posting.
+  - OUT movement cannot make quantityOnHand negative,
+    except if a future explicit backorder rule allows it.
+  - average_cost method recalculates WarehouseStock.averageCost
+    on incoming movements.
+  - unitCost is always in Store.baseCurrency.
+end note
+
+note bottom
+  Suggested implementation steps:
+
+  1. Add InventoryDocument, InventoryDocumentLine,
+     StockMovement and InventoryReason entities/enums.
+  2. Add InventoryPostingService:
+     post(document), cancel(document).
+  3. Implement initial_stock and stock_adjustment first.
+  4. Add purchase_receipt from PurchaseEntry.
+  5. Add sale_shipment from OrderEntry.
+  6. Add tests for:
+     non-negative stock,
+     average cost recalculation,
+     movement immutability,
+     document canceling.
+
+  This is the central stock module.
+end note
+
+@enduml
