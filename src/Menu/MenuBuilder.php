@@ -114,6 +114,17 @@ final class MenuBuilder
 				]
 			]);
 
+			$item->addChild('Exchange rates', [
+				'route' => 'app_admin_exchange_rate_index',
+				'routeParameters' => ['store_id' => $storeId],
+				'attributes' => [
+					'class' => 'sidebar-item',
+				],
+				'linkAttributes' => [
+					'class' => 'sidebar-link'
+				]
+			]);
+
 			return $menu;
 	}
 

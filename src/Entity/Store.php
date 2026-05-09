@@ -79,6 +79,9 @@ class Store implements AvatarEntityInterface
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Unit::class)]
 	private Collection $units;
 
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: ExchangeRate::class)]
+	private Collection $exchangeRates;
+
 	public function __construct()
 	{
 		$this->managers = new ArrayCollection();
@@ -93,6 +96,7 @@ class Store implements AvatarEntityInterface
 		$this->categories = new ArrayCollection();
 		$this->products = new ArrayCollection();
 		$this->units = new ArrayCollection();
+		$this->exchangeRates = new ArrayCollection();
 	}
 
 	public function __toString(): string
@@ -451,6 +455,33 @@ class Store implements AvatarEntityInterface
 			if ($unit->getStore() === $this) {
 				$unit->setStore(null);
 			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, ExchangeRate>
+	 */
+	public function getExchangeRates(): Collection
+	{
+		return $this->exchangeRates;
+	}
+
+	public function addExchangeRate(ExchangeRate $exchangeRate): self
+	{
+		if (!$this->exchangeRates->contains($exchangeRate)) {
+			$this->exchangeRates->add($exchangeRate);
+			$exchangeRate->setStore($this);
+		}
+
+		return $this;
+	}
+
+	public function removeExchangeRate(ExchangeRate $exchangeRate): self
+	{
+		if ($this->exchangeRates->removeElement($exchangeRate) && $exchangeRate->getStore() === $this) {
+			$exchangeRate->setStore(null);
 		}
 
 		return $this;
