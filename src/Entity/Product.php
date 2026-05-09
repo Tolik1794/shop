@@ -2,9 +2,14 @@
 
 namespace App\Entity;
 
+use App\Entity\User\User;
+use App\Enum\ActiveStatusEnum;
+use App\Enum\ProductKindEnum;
 use App\Repository\ProductRepository;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ProductRepository::class)]
@@ -31,8 +36,20 @@ class Product
 	#[ORM\Column]
 	private ?bool $canBeManufactured = null;
 
-	#[ORM\Column(length: 55)]
-	private ?string $unit = null;
+	#[ORM\Column(type: Types::DECIMAL, precision: 14, scale: 4, nullable: true)]
+	private ?string $baseSalePrice = null;
+
+	#[ORM\Column(length: 255, enumType: ActiveStatusEnum::class)]
+	private ActiveStatusEnum $status;
+
+	#[ORM\Column]
+	private DateTimeImmutable $createdAt;
+
+	#[ORM\Column]
+	private DateTimeImmutable $updatedAt;
+
+	#[ORM\Column(nullable: true)]
+	private ?DateTimeImmutable $deletedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'products')]
     #[ORM\JoinColumn(nullable: false)]
@@ -44,7 +61,16 @@ class Product
 
     #[ORM\ManyToOne(inversedBy: 'products')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?ProductType $productType = null;
+    private ?Unit $unit = null;
+
+	#[ORM\ManyToOne]
+	private ?User $createdBy = null;
+
+	#[ORM\ManyToOne]
+	private ?User $updatedBy = null;
+
+	#[ORM\Column(length: 255, enumType: ProductKindEnum::class)]
+	private ProductKindEnum $productKind;
 
     #[ORM\OneToMany(mappedBy: 'product', targetEntity: WarehouseStock::class)]
     private Collection $warehouseStocks;
@@ -57,17 +83,14 @@ class Product
     )]
     private Collection $productParameters;
 
-    /**
-     * @var Collection<int, WarehouseStockBatch>
-     */
-    #[ORM\OneToMany(targetEntity: WarehouseStockBatch::class, mappedBy: 'product')]
-    private Collection $warehouseStockBatches;
-
     public function __construct()
     {
+		$this->status = ActiveStatusEnum::ACTIVE;
+		$this->createdAt = new DateTimeImmutable();
+		$this->updatedAt = new DateTimeImmutable();
+        $this->productKind = ProductKindEnum::FINISHED_PRODUCT;
         $this->warehouseStocks = new ArrayCollection();
         $this->productParameters = new ArrayCollection();
-        $this->warehouseStockBatches = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -135,19 +158,67 @@ class Product
         return $this;
     }
 
-    public function getUnit(): ?string
-    {
-        return $this->unit;
-    }
+	public function getBaseSalePrice(): ?string
+	{
+		return $this->baseSalePrice;
+	}
 
-    public function setUnit(string $unit): static
-    {
-        $this->unit = $unit;
+	public function setBaseSalePrice(?string $baseSalePrice): static
+	{
+		$this->baseSalePrice = $baseSalePrice;
 
-        return $this;
-    }
+		return $this;
+	}
 
-    public function getCategory(): ?Category
+	public function getStatus(): ActiveStatusEnum
+	{
+		return $this->status;
+	}
+
+	public function setStatus(ActiveStatusEnum $status): static
+	{
+		$this->status = $status;
+
+		return $this;
+	}
+
+	public function getCreatedAt(): DateTimeImmutable
+	{
+		return $this->createdAt;
+	}
+
+	public function setCreatedAt(DateTimeImmutable $createdAt): static
+	{
+		$this->createdAt = $createdAt;
+
+		return $this;
+	}
+
+	public function getUpdatedAt(): DateTimeImmutable
+	{
+		return $this->updatedAt;
+	}
+
+	public function setUpdatedAt(DateTimeImmutable $updatedAt): static
+	{
+		$this->updatedAt = $updatedAt;
+
+		return $this;
+	}
+
+	public function getDeletedAt(): ?DateTimeImmutable
+	{
+		return $this->deletedAt;
+	}
+
+	public function setDeletedAt(?DateTimeImmutable $deletedAt): static
+	{
+		$this->deletedAt = $deletedAt;
+
+		return $this;
+	}
+
+	public function getCategory(): ?Category
     {
         return $this->category;
     }
@@ -171,17 +242,53 @@ class Product
         return $this;
     }
 
-    public function getProductType(): ?ProductType
-    {
-        return $this->productType;
-    }
+	public function getUnit(): ?Unit
+	{
+		return $this->unit;
+	}
 
-    public function setProductType(?ProductType $productType): static
-    {
-        $this->productType = $productType;
+	public function setUnit(?Unit $unit): static
+	{
+		$this->unit = $unit;
 
-        return $this;
-    }
+		return $this;
+	}
+
+	public function getCreatedBy(): ?User
+	{
+		return $this->createdBy;
+	}
+
+	public function setCreatedBy(?User $createdBy): static
+	{
+		$this->createdBy = $createdBy;
+
+		return $this;
+	}
+
+	public function getUpdatedBy(): ?User
+	{
+		return $this->updatedBy;
+	}
+
+	public function setUpdatedBy(?User $updatedBy): static
+	{
+		$this->updatedBy = $updatedBy;
+
+		return $this;
+	}
+
+	public function getProductKind(): ProductKindEnum
+	{
+		return $this->productKind;
+	}
+
+	public function setProductKind(ProductKindEnum $productKind): static
+	{
+		$this->productKind = $productKind;
+
+		return $this;
+	}
 
     /**
      * @return Collection<int, WarehouseStock>
@@ -243,33 +350,4 @@ class Product
         return $this;
     }
 
-    /**
-     * @return Collection<int, WarehouseStockBatch>
-     */
-    public function getWarehouseStockBatches(): Collection
-    {
-        return $this->warehouseStockBatches;
-    }
-
-    public function addWarehouseStockBatch(WarehouseStockBatch $warehouseStockBatch): static
-    {
-        if (!$this->warehouseStockBatches->contains($warehouseStockBatch)) {
-            $this->warehouseStockBatches->add($warehouseStockBatch);
-            $warehouseStockBatch->setProduct($this);
-        }
-
-        return $this;
-    }
-
-    public function removeWarehouseStockBatch(WarehouseStockBatch $warehouseStockBatch): static
-    {
-        if ($this->warehouseStockBatches->removeElement($warehouseStockBatch)) {
-            // set the owning side to null (unless already changed)
-            if ($warehouseStockBatch->getProduct() === $this) {
-                $warehouseStockBatch->setProduct(null);
-            }
-        }
-
-        return $this;
-    }
 }

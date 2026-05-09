@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\WarehouseStockRepository;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -19,13 +20,19 @@ class WarehouseStock
     private ?int $id = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 14, scale: 4)]
-    private ?string $averageCostPrice = null;
+    private ?string $quantityOnHand = null;
 
-    #[ORM\Column]
-    private ?int $count = null;
+    #[ORM\Column(type: Types::DECIMAL, precision: 14, scale: 4)]
+    private ?string $reservedQuantity = null;
 
-    #[ORM\Column]
-    private ?int $reserveCount = null;
+    #[ORM\Column(type: Types::DECIMAL, precision: 14, scale: 4)]
+    private ?string $averageCost = null;
+
+	#[ORM\Column]
+	private DateTimeImmutable $createdAt;
+
+	#[ORM\Column]
+	private DateTimeImmutable $updatedAt;
 
     #[ORM\ManyToOne(inversedBy: 'warehouseStocks')]
     #[ORM\JoinColumn(nullable: false)]
@@ -35,9 +42,6 @@ class WarehouseStock
     #[ORM\JoinColumn(nullable: false)]
     private ?Product $product = null;
 
-    #[ORM\OneToMany(mappedBy: 'warehouseStock', targetEntity: Entry::class)]
-    private Collection $entries;
-
     /**
      * @var Collection<int, WarehouseStockBatch>
      */
@@ -46,7 +50,11 @@ class WarehouseStock
 
     public function __construct()
     {
-        $this->entries = new ArrayCollection();
+		$this->quantityOnHand = '0.0000';
+		$this->reservedQuantity = '0.0000';
+		$this->averageCost = '0.0000';
+		$this->createdAt = new DateTimeImmutable();
+		$this->updatedAt = new DateTimeImmutable();
         $this->warehouseStockBatches = new ArrayCollection();
     }
 
@@ -55,14 +63,14 @@ class WarehouseStock
         return $this->id;
     }
 
-    public function getAverageCostPrice(): ?string
+    public function getQuantityOnHand(): ?string
     {
-        return $this->averageCostPrice;
+        return $this->quantityOnHand;
     }
 
-    public function setAverageCostPrice(string $averageCostPrice): self
+    public function setQuantityOnHand(string $quantityOnHand): self
     {
-        $this->averageCostPrice = $averageCostPrice;
+        $this->quantityOnHand = $quantityOnHand;
 
         return $this;
     }
@@ -91,59 +99,53 @@ class WarehouseStock
         return $this;
     }
 
-    public function getCount(): ?int
+    public function getReservedQuantity(): ?string
     {
-        return $this->count;
+        return $this->reservedQuantity;
     }
 
-    public function setCount(int $count): self
+    public function setReservedQuantity(string $reservedQuantity): self
     {
-        $this->count = $count;
+        $this->reservedQuantity = $reservedQuantity;
 
         return $this;
     }
 
-    public function getReserveCount(): ?int
+    public function getAverageCost(): ?string
     {
-        return $this->reserveCount;
+        return $this->averageCost;
     }
 
-    public function setReserveCount(int $reserveCount): self
+    public function setAverageCost(string $averageCost): self
     {
-        $this->reserveCount = $reserveCount;
+        $this->averageCost = $averageCost;
 
         return $this;
     }
 
-    /**
-     * @return Collection<int, Entry>
-     */
-    public function getEntries(): Collection
-    {
-        return $this->entries;
-    }
+	public function getCreatedAt(): DateTimeImmutable
+	{
+		return $this->createdAt;
+	}
 
-    public function addEntry(Entry $entry): self
-    {
-        if (!$this->entries->contains($entry)) {
-            $this->entries->add($entry);
-            $entry->setWarehouseStock($this);
-        }
+	public function setCreatedAt(DateTimeImmutable $createdAt): self
+	{
+		$this->createdAt = $createdAt;
 
-        return $this;
-    }
+		return $this;
+	}
 
-    public function removeEntry(Entry $entry): self
-    {
-        if ($this->entries->removeElement($entry)) {
-            // set the owning side to null (unless already changed)
-            if ($entry->getWarehouseStock() === $this) {
-                $entry->setWarehouseStock(null);
-            }
-        }
+	public function getUpdatedAt(): DateTimeImmutable
+	{
+		return $this->updatedAt;
+	}
 
-        return $this;
-    }
+	public function setUpdatedAt(DateTimeImmutable $updatedAt): self
+	{
+		$this->updatedAt = $updatedAt;
+
+		return $this;
+	}
 
     /**
      * @return Collection<int, WarehouseStockBatch>

@@ -30,7 +30,7 @@
     <tr>
         <th>Product</th>
         <th>Code</th>
-        <th>Count</th>
+        <th>Quantity</th>
     </tr>
 {% endset %}
 
@@ -46,7 +46,7 @@
         >
             <td>{{ entity.product.name }}</td>
             <td>{{ entity.product.code }}</td>
-            <td>{{ entity.count }}</td>
+            <td>{{ entity.quantityOnHand }}</td>
         </tr>
     {% endfor %}
 {% endset %}

@@ -29,6 +29,30 @@
                 <th>Category</th>
                 <td>{{ entity.category }}</td>
             </tr>
+            <tr>
+                <th>Product kind</th>
+                <td>{{ entity.productKind.value }}</td>
+            </tr>
+            <tr>
+                <th>Unit</th>
+                <td>{{ entity.unit.name }}</td>
+            </tr>
+            <tr>
+                <th>Base sale price</th>
+                <td>{{ entity.baseSalePrice }}</td>
+            </tr>
+            <tr>
+                <th>Can be sold</th>
+                <td>{{ entity.canBeSold ? 'Yes' : 'No' }}</td>
+            </tr>
+            <tr>
+                <th>Can be purchased</th>
+                <td>{{ entity.canBePurchased ? 'Yes' : 'No' }}</td>
+            </tr>
+            <tr>
+                <th>Can be manufactured</th>
+                <td>{{ entity.canBeManufactured ? 'Yes' : 'No' }}</td>
+            </tr>
             </tbody>
         </table>
     </div>

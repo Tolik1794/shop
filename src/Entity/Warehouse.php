@@ -2,7 +2,10 @@
 
 namespace App\Entity;
 
+use App\Entity\User\User;
+use App\Enum\ActiveStatusEnum;
 use App\Repository\WarehouseRepository;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -19,23 +22,37 @@ class Warehouse
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
+	#[ORM\Column(length: 255, enumType: ActiveStatusEnum::class)]
+	private ActiveStatusEnum $status;
+
+	#[ORM\Column]
+	private DateTimeImmutable $createdAt;
+
+	#[ORM\Column]
+	private DateTimeImmutable $updatedAt;
+
+	#[ORM\Column(nullable: true)]
+	private ?DateTimeImmutable $deletedAt = null;
+
     #[ORM\ManyToOne(inversedBy: 'warehouses')]
     #[ORM\JoinColumn(nullable: false)]
     private ?Store $store = null;
 
+	#[ORM\ManyToOne]
+	private ?User $createdBy = null;
+
+	#[ORM\ManyToOne]
+	private ?User $updatedBy = null;
+
     #[ORM\OneToMany(mappedBy: 'warehouse', targetEntity: WarehouseStock::class)]
     private Collection $warehouseStocks;
 
-    /**
-     * @var Collection<int, WarehouseStockBatch>
-     */
-    #[ORM\OneToMany(targetEntity: WarehouseStockBatch::class, mappedBy: 'warehouse')]
-    private Collection $warehouseStockBatches;
-
     public function __construct()
     {
+		$this->status = ActiveStatusEnum::ACTIVE;
+		$this->createdAt = new DateTimeImmutable();
+		$this->updatedAt = new DateTimeImmutable();
         $this->warehouseStocks = new ArrayCollection();
-        $this->warehouseStockBatches = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -55,6 +72,54 @@ class Warehouse
         return $this;
     }
 
+	public function getStatus(): ActiveStatusEnum
+	{
+		return $this->status;
+	}
+
+	public function setStatus(ActiveStatusEnum $status): self
+	{
+		$this->status = $status;
+
+		return $this;
+	}
+
+	public function getCreatedAt(): DateTimeImmutable
+	{
+		return $this->createdAt;
+	}
+
+	public function setCreatedAt(DateTimeImmutable $createdAt): self
+	{
+		$this->createdAt = $createdAt;
+
+		return $this;
+	}
+
+	public function getUpdatedAt(): DateTimeImmutable
+	{
+		return $this->updatedAt;
+	}
+
+	public function setUpdatedAt(DateTimeImmutable $updatedAt): self
+	{
+		$this->updatedAt = $updatedAt;
+
+		return $this;
+	}
+
+	public function getDeletedAt(): ?DateTimeImmutable
+	{
+		return $this->deletedAt;
+	}
+
+	public function setDeletedAt(?DateTimeImmutable $deletedAt): self
+	{
+		$this->deletedAt = $deletedAt;
+
+		return $this;
+	}
+
     public function getStore(): ?Store
     {
         return $this->store;
@@ -66,6 +131,30 @@ class Warehouse
 
         return $this;
     }
+
+	public function getCreatedBy(): ?User
+	{
+		return $this->createdBy;
+	}
+
+	public function setCreatedBy(?User $createdBy): self
+	{
+		$this->createdBy = $createdBy;
+
+		return $this;
+	}
+
+	public function getUpdatedBy(): ?User
+	{
+		return $this->updatedBy;
+	}
+
+	public function setUpdatedBy(?User $updatedBy): self
+	{
+		$this->updatedBy = $updatedBy;
+
+		return $this;
+	}
 
     /**
      * @return Collection<int, WarehouseStock>
@@ -97,33 +186,4 @@ class Warehouse
         return $this;
     }
 
-    /**
-     * @return Collection<int, WarehouseStockBatch>
-     */
-    public function getWarehouseStockBatches(): Collection
-    {
-        return $this->warehouseStockBatches;
-    }
-
-    public function addWarehouseStockBatch(WarehouseStockBatch $warehouseStockBatch): static
-    {
-        if (!$this->warehouseStockBatches->contains($warehouseStockBatch)) {
-            $this->warehouseStockBatches->add($warehouseStockBatch);
-            $warehouseStockBatch->setWarehouse($this);
-        }
-
-        return $this;
-    }
-
-    public function removeWarehouseStockBatch(WarehouseStockBatch $warehouseStockBatch): static
-    {
-        if ($this->warehouseStockBatches->removeElement($warehouseStockBatch)) {
-            // set the owning side to null (unless already changed)
-            if ($warehouseStockBatch->getWarehouse() === $this) {
-                $warehouseStockBatch->setWarehouse(null);
-            }
-        }
-
-        return $this;
-    }
 }

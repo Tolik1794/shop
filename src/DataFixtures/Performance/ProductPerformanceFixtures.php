@@ -2,16 +2,21 @@
 
 namespace App\DataFixtures\Performance;
 
+use App\DataFixtures\StoreFixtures;
+use App\DataFixtures\UnitFixtures;
 use App\Entity\Category;
 use App\Entity\Product;
 use App\Entity\Store;
+use App\Entity\Unit;
+use App\Enum\ProductKindEnum;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Bundle\FixturesBundle\FixtureGroupInterface;
+use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
 use Faker\Factory;
 use RuntimeException;
 
-class ProductPerformanceFixtures extends Fixture implements FixtureGroupInterface
+class ProductPerformanceFixtures extends Fixture implements FixtureGroupInterface, DependentFixtureInterface
 {
 	private const DEFAULT_PRODUCTS_COUNT = 20000;
 	private const DEFAULT_BATCH_SIZE = 500;
@@ -21,13 +26,22 @@ class ProductPerformanceFixtures extends Fixture implements FixtureGroupInterfac
 		return ['performance'];
 	}
 
+	public function getDependencies(): array
+	{
+		return [
+			StoreFixtures::class,
+			UnitFixtures::class,
+		];
+	}
+
 	public function load(ObjectManager $manager): void
 	{
 		$stores = $manager->getRepository(Store::class)->findAll();
 		$categoriesByStore = $this->getCategoriesByStore($manager);
+		$unitsByStore = $this->getDefaultUnitsByStore($manager);
 
-		if (!$stores || !$categoriesByStore) {
-			throw new RuntimeException('Load StoreFixtures before ProductPerformanceFixtures.');
+		if (!$stores || !$categoriesByStore || !$unitsByStore) {
+			throw new RuntimeException('Load StoreFixtures and UnitFixtures before ProductPerformanceFixtures.');
 		}
 
 		$faker = Factory::create();
@@ -44,11 +58,21 @@ class ProductPerformanceFixtures extends Fixture implements FixtureGroupInterfac
 				continue;
 			}
 
+			$unit = $unitsByStore[$store->getId()] ?? null;
+			if (!$unit instanceof Unit) {
+				continue;
+			}
+
 			$product = (new Product())
 				->setStore($store)
 				->setCategory($faker->randomElement($storeCategories))
+				->setProductKind(ProductKindEnum::FINISHED_PRODUCT)
 				->setName($faker->words(3, true))
-				->setCode(sprintf('PERF-%s-%06d', $runId, $i));
+				->setCode(sprintf('PERF-%s-%06d', $runId, $i))
+				->setCanBeSold(true)
+				->setCanBePurchased(false)
+				->setCanBeManufactured(false)
+				->setUnit($unit);
 
 			$manager->persist($product);
 			$batch[] = $product;
@@ -79,6 +103,23 @@ class ProductPerformanceFixtures extends Fixture implements FixtureGroupInterfac
 		}
 
 		return $categoriesByStore;
+	}
+
+	private function getDefaultUnitsByStore(ObjectManager $manager): array
+	{
+		$unitsByStore = [];
+
+		foreach ($manager->getRepository(Unit::class)->findBy(['code' => 'pcs']) as $unit) {
+			$store = $unit->getStore();
+
+			if (!$store?->getId()) {
+				continue;
+			}
+
+			$unitsByStore[$store->getId()] = $unit;
+		}
+
+		return $unitsByStore;
 	}
 
 	private function getPositiveEnvInt(string $name, int $default): int

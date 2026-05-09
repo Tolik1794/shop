@@ -3,23 +3,45 @@
 namespace App\DataFixtures;
 
 use App\Entity\Category;
+use App\Entity\Currency;
 use App\Entity\Store;
 use App\Enum\ActiveStatusEnum;
 use Doctrine\Bundle\FixturesBundle\Fixture;
+use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
 use Faker\Factory;
+use RuntimeException;
 
-class StoreFixtures extends Fixture
+class StoreFixtures extends Fixture implements DependentFixtureInterface
 {
+	public function getDependencies(): array
+	{
+		return [
+			CurrencyFixtures::class,
+		];
+	}
+
 	public function load(ObjectManager $manager): void
 	{
 		$faker = Factory::create();
+		$storeRepository = $manager->getRepository(Store::class);
+		$baseCurrency = $manager->getRepository(Currency::class)->find('UAH');
+
+		if (!$baseCurrency instanceof Currency) {
+			throw new RuntimeException('Load CurrencyFixtures before StoreFixtures.');
+		}
+
+		if ($storeRepository->findOneBy(['slug' => 'my_clothing_store'])) {
+			return;
+		}
+
 		$manager->persist($myClothingStore = (new Store())
 			->setDescription($faker->text())
 			->setEmail('my.clothing.store@store.ua')
 			->setName('My Clothing Store')
 			->setPhone(380666146554)
 			->setSlug('my_clothing_store')
+			->setBaseCurrency($baseCurrency)
 			->setStatus(ActiveStatusEnum::ACTIVE));
 
 		$manager->persist($fashion = (new Category())
@@ -114,6 +136,7 @@ class StoreFixtures extends Fixture
 			->setName('My Toy Store')
 			->setPhone(380956554307)
 			->setSlug('my_toy_store')
+			->setBaseCurrency($baseCurrency)
 			->setStatus(ActiveStatusEnum::ACTIVE));
 
 		$manager->persist((new Category())

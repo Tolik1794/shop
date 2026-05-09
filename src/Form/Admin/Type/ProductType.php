@@ -6,13 +6,17 @@ use App\Entity\Category;
 use App\Entity\CategoryProductParameterName;
 use App\Entity\Product;
 use App\Entity\ProductParameter;
+use App\Entity\Unit;
+use App\Enum\ProductKindEnum;
 use App\Repository\CategoryRepository;
+use App\Repository\UnitRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -33,6 +37,23 @@ class ProductType extends AbstractType
         $builder
             ->add('name')
             ->add('code')
+	        ->add('unit', EntityType::class, [
+		        'query_builder' => fn(UnitRepository $repository)
+		            => $repository->findAvailableByStoreQB($product->getStore()),
+		        'class' => Unit::class,
+		        'choice_label' => 'name',
+		        'multiple' => false,
+		        'required' => true,
+		        'attr' => ['class' => 'select2'],
+	        ])
+	        ->add('baseSalePrice')
+	        ->add('canBeSold')
+	        ->add('canBePurchased')
+	        ->add('canBeManufactured')
+	        ->add('productKind', EnumType::class, [
+		        'class' => ProductKindEnum::class,
+		        'choice_label' => fn(ProductKindEnum $choice) => $choice->value,
+	        ])
 	        ->add('category', EntityType::class, [
 		        'query_builder' => fn(CategoryRepository $repository)
 		            => $repository->findAvailableCategoriesAsListQB($product->getStore()),

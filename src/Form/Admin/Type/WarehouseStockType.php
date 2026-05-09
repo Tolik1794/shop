@@ -28,9 +28,9 @@ class WarehouseStockType extends AbstractType
 	    $this->addProductField($builder, $options, $warehouseStock?->getProduct());
 
         $builder
-            ->add('averageCostPrice')
-            ->add('count')
-            ->add('reserveCount')
+            ->add('quantityOnHand')
+            ->add('reservedQuantity')
+            ->add('averageCost')
         ;
 
 	    $builder->addEventListener(FormEvents::PRE_SUBMIT, function (FormEvent $event) use ($options): void {
