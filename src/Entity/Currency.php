@@ -30,10 +30,18 @@ class Currency
 	#[ORM\OneToMany(mappedBy: 'baseCurrency', targetEntity: Store::class)]
 	private Collection $stores;
 
+	#[ORM\OneToMany(mappedBy: 'fromCurrency', targetEntity: ExchangeRate::class)]
+	private Collection $exchangeRatesFrom;
+
+	#[ORM\OneToMany(mappedBy: 'toCurrency', targetEntity: ExchangeRate::class)]
+	private Collection $exchangeRatesTo;
+
 	public function __construct()
 	{
 		$this->status = ActiveStatusEnum::ACTIVE;
 		$this->stores = new ArrayCollection();
+		$this->exchangeRatesFrom = new ArrayCollection();
+		$this->exchangeRatesTo = new ArrayCollection();
 	}
 
 	public function __toString(): string
@@ -123,6 +131,60 @@ class Currency
 	{
 		if ($this->stores->removeElement($store) && $store->getBaseCurrency() === $this) {
 			$store->setBaseCurrency(null);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, ExchangeRate>
+	 */
+	public function getExchangeRatesFrom(): Collection
+	{
+		return $this->exchangeRatesFrom;
+	}
+
+	public function addExchangeRatesFrom(ExchangeRate $exchangeRate): self
+	{
+		if (!$this->exchangeRatesFrom->contains($exchangeRate)) {
+			$this->exchangeRatesFrom->add($exchangeRate);
+			$exchangeRate->setFromCurrency($this);
+		}
+
+		return $this;
+	}
+
+	public function removeExchangeRatesFrom(ExchangeRate $exchangeRate): self
+	{
+		if ($this->exchangeRatesFrom->removeElement($exchangeRate) && $exchangeRate->getFromCurrency() === $this) {
+			$exchangeRate->setFromCurrency(null);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, ExchangeRate>
+	 */
+	public function getExchangeRatesTo(): Collection
+	{
+		return $this->exchangeRatesTo;
+	}
+
+	public function addExchangeRatesTo(ExchangeRate $exchangeRate): self
+	{
+		if (!$this->exchangeRatesTo->contains($exchangeRate)) {
+			$this->exchangeRatesTo->add($exchangeRate);
+			$exchangeRate->setToCurrency($this);
+		}
+
+		return $this;
+	}
+
+	public function removeExchangeRatesTo(ExchangeRate $exchangeRate): self
+	{
+		if ($this->exchangeRatesTo->removeElement($exchangeRate) && $exchangeRate->getToCurrency() === $this) {
+			$exchangeRate->setToCurrency(null);
 		}
 
 		return $this;
