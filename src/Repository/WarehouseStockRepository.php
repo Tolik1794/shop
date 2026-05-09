@@ -2,28 +2,28 @@
 
 namespace App\Repository;
 
+use App\Entity\WarehouseStock;
 use App\Entity\Warehouse;
-use App\Entity\Store;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<Warehouse>
+ * @extends ServiceEntityRepository<WarehouseStock>
  *
- * @method Warehouse|null find($id, $lockMode = null, $lockVersion = null)
- * @method Warehouse|null findOneBy(array $criteria, array $orderBy = null)
- * @method Warehouse[]    findAll()
- * @method Warehouse[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
+ * @method WarehouseStock|null find($id, $lockMode = null, $lockVersion = null)
+ * @method WarehouseStock|null findOneBy(array $criteria, array $orderBy = null)
+ * @method WarehouseStock[]    findAll()
+ * @method WarehouseStock[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
-class WarehouseRepository extends ServiceEntityRepository
+class WarehouseStockRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, Warehouse::class);
+        parent::__construct($registry, WarehouseStock::class);
     }
 
-    public function add(Warehouse $entity, bool $flush = false): void
+    public function add(WarehouseStock $entity, bool $flush = false): void
     {
         $this->getEntityManager()->persist($entity);
 
@@ -32,7 +32,7 @@ class WarehouseRepository extends ServiceEntityRepository
         }
     }
 
-    public function remove(Warehouse $entity, bool $flush = false): void
+    public function remove(WarehouseStock $entity, bool $flush = false): void
     {
         $this->getEntityManager()->remove($entity);
 
@@ -41,16 +41,17 @@ class WarehouseRepository extends ServiceEntityRepository
         }
     }
 
-	public function findAvailableByStoreQB(Store $store): QueryBuilder
+	public function findAvailableByWarehouseQB(Warehouse $warehouse): QueryBuilder
 	{
-		return $this->createQueryBuilder('warehouse')
-			->innerJoin('warehouse.store', 'store')
-			->where('store = :store')
-			->setParameter('store', $store);
+		return $this->createQueryBuilder('warehouseStock')
+			->innerJoin('warehouseStock.product', 'product')
+			->addSelect('product')
+			->where('warehouseStock.warehouse = :warehouse')
+			->setParameter('warehouse', $warehouse);
 	}
 
 //    /**
-//     * @return Warehouse[] Returns an array of Warehouse objects
+//     * @return WarehouseStock[] Returns an array of WarehouseStock objects
 //     */
 //    public function findByExampleField($value): array
 //    {
@@ -64,7 +65,7 @@ class WarehouseRepository extends ServiceEntityRepository
 //        ;
 //    }
 
-//    public function findOneBySomeField($value): ?Warehouse
+//    public function findOneBySomeField($value): ?WarehouseStock
 //    {
 //        return $this->createQueryBuilder('w')
 //            ->andWhere('w.exampleField = :val')

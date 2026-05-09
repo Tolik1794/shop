@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\ProductParameterRepository;
 use Doctrine\ORM\Mapping as ORM;
+
 #[ORM\UniqueConstraint(columns: ['product_id', 'product_parameter_name_id'])]
 #[ORM\Entity(repositoryClass: ProductParameterRepository::class)]
 class ProductParameter
@@ -13,6 +14,9 @@ class ProductParameter
     #[ORM\Column]
     private ?int $id = null;
 
+    #[ORM\Column(length: 255)]
+    private ?string $value = null;
+
     #[ORM\ManyToOne(inversedBy: 'productParameters')]
     #[ORM\JoinColumn(nullable: false)]
     private ?ProductParameterName $productParameterName = null;
@@ -21,12 +25,21 @@ class ProductParameter
     #[ORM\JoinColumn(nullable: false)]
     private ?Product $product = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $value = null;
-
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function getValue(): ?string
+    {
+        return $this->value;
+    }
+
+    public function setValue(string $value): self
+    {
+        $this->value = $value;
+
+        return $this;
     }
 
     public function getProductParameterName(): ?ProductParameterName
@@ -49,18 +62,6 @@ class ProductParameter
     public function setProduct(?Product $product): self
     {
         $this->product = $product;
-
-        return $this;
-    }
-
-    public function getValue(): ?string
-    {
-        return $this->value;
-    }
-
-    public function setValue(string $value): self
-    {
-        $this->value = $value;
 
         return $this;
     }

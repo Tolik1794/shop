@@ -49,4 +49,18 @@ class ProductRepository extends ServiceEntityRepository
 			->setParameter('store', $store);
 	}
 
+	/**
+	 * @return Product[]
+	 */
+	public function findChoicesByStoreAndSearch(Store $store, string $search, int $limit = 20): array
+	{
+		return $this->findAvailableByStoreQB($store)
+			->andWhere('product.name like :search OR product.code like :search')
+			->setParameter('search', '%' . $search . '%')
+			->orderBy('product.name', 'ASC')
+			->setMaxResults($limit)
+			->getQuery()
+			->getResult();
+	}
+
 }

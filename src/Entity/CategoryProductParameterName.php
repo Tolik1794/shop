@@ -14,6 +14,12 @@ class CategoryProductParameterName
     #[ORM\Column]
     private ?int $id = null;
 
+    #[ORM\Column]
+    private ?bool $isRequired = null;
+
+    #[ORM\Column]
+    private ?bool $isFilter = null;
+
     #[ORM\ManyToOne(inversedBy: 'categoryProductParameterNames')]
     #[ORM\JoinColumn(nullable: false)]
     private ?ProductParameterName $productParameterName = null;
@@ -21,12 +27,6 @@ class CategoryProductParameterName
     #[ORM\ManyToOne(inversedBy: 'categoryProductParameterNames')]
     #[ORM\JoinColumn(nullable: false)]
     private ?Category $category = null;
-
-    #[ORM\Column]
-    private ?bool $isRequired = null;
-
-    #[ORM\Column]
-    private ?bool $isFilter = null;
 
 	public function __toString(): string
 	{
@@ -36,30 +36,6 @@ class CategoryProductParameterName
 	public function getId(): ?int
     {
         return $this->id;
-    }
-
-    public function getProductParameterName(): ?ProductParameterName
-    {
-        return $this->productParameterName;
-    }
-
-    public function setProductParameterName(?ProductParameterName $productParameterName): self
-    {
-        $this->productParameterName = $productParameterName;
-
-        return $this;
-    }
-
-    public function getCategory(): ?Category
-    {
-        return $this->category;
-    }
-
-    public function setCategory(?Category $category): self
-    {
-        $this->category = $category;
-
-        return $this;
     }
 
     public function isIsRequired(): ?bool
@@ -82,6 +58,30 @@ class CategoryProductParameterName
     public function setIsFilter(bool $isFilter): self
     {
         $this->isFilter = $isFilter;
+
+        return $this;
+    }
+
+    public function getProductParameterName(): ?ProductParameterName
+    {
+        return $this->productParameterName;
+    }
+
+    public function setProductParameterName(?ProductParameterName $productParameterName): self
+    {
+        $this->productParameterName = $productParameterName;
+
+        return $this;
+    }
+
+    public function getCategory(): ?Category
+    {
+        return $this->category;
+    }
+
+    public function setCategory(?Category $category): self
+    {
+        $this->category = $category;
 
         return $this;
     }

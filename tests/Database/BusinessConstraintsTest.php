@@ -3,10 +3,12 @@
 namespace App\Tests\Database;
 
 use App\Entity\Category;
+use App\Entity\Currency;
 use App\Entity\Product;
 use App\Entity\Store;
+use App\Entity\Unit;
 use App\Entity\Warehouse;
-use App\Entity\WarehouseProduct;
+use App\Entity\WarehouseStock;
 use Doctrine\DBAL\Exception;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -58,23 +60,21 @@ class BusinessConstraintsTest extends KernelTestCase
 		$this->entityManager->flush();
 	}
 
-	public function testWarehouseProductCountCannotBeNegative(): void
+	public function testWarehouseStockQuantityCannotBeNegative(): void
 	{
 		$store = $this->persistStore('stock-store-' . uniqid());
 		$category = $this->persistCategory($store, 'Stock');
 		$product = $this->persistProduct($store, $category, 'SKU-' . uniqid());
 		$warehouse = $this->persistWarehouse($store, 'Main');
 
-		$warehouseProduct = (new WarehouseProduct())
+		$warehouseStock = (new WarehouseStock())
 			->setWarehouse($warehouse)
 			->setProduct($product)
-			->setPurchasePrice('10.0000')
-			->setMinimumSellingPrice('11.0000')
-			->setSellingPrice('12.0000')
-			->setCount(-1)
-			->setReserveCount(0);
+			->setAverageCost('10.0000')
+			->setQuantityOnHand('-1.0000')
+			->setReservedQuantity('0.0000');
 
-		$this->entityManager->persist($warehouseProduct);
+		$this->entityManager->persist($warehouseStock);
 
 		$this->expectException(Exception::class);
 		$this->entityManager->flush();
@@ -86,11 +86,31 @@ class BusinessConstraintsTest extends KernelTestCase
 			->setName($slug)
 			->setSlug($slug)
 			->setPhone('+380000000000')
-			->setEmail($slug . '@example.com');
+			->setEmail($slug . '@example.com')
+			->setBaseCurrency($this->persistCurrency());
 
 		$this->entityManager->persist($store);
 
 		return $store;
+	}
+
+	private function persistCurrency(): Currency
+	{
+		$currency = $this->entityManager->getRepository(Currency::class)->find('UAH');
+
+		if ($currency instanceof Currency) {
+			return $currency;
+		}
+
+		$currency = (new Currency())
+			->setCode('UAH')
+			->setName('Ukrainian hryvnia')
+			->setSymbol('UAH')
+			->setDecimalPlaces(2);
+
+		$this->entityManager->persist($currency);
+
+		return $currency;
 	}
 
 	private function persistCategory(Store $store, string $name): Category
@@ -110,12 +130,29 @@ class BusinessConstraintsTest extends KernelTestCase
 		$product = (new Product())
 			->setStore($store)
 			->setCategory($category)
+			->setUnit($this->persistUnit($store, 'pcs-' . uniqid()))
 			->setName($code)
-			->setCode($code);
+			->setCode($code)
+			->setCanBeSold(true)
+			->setCanBePurchased(false)
+			->setCanBeManufactured(false);
 
 		$this->entityManager->persist($product);
 
 		return $product;
+	}
+
+	private function persistUnit(Store $store, string $code): Unit
+	{
+		$unit = (new Unit())
+			->setStore($store)
+			->setCode($code)
+			->setName($code)
+			->setPrecision(0);
+
+		$this->entityManager->persist($unit);
+
+		return $unit;
 	}
 
 	private function persistWarehouse(Store $store, string $name): Warehouse

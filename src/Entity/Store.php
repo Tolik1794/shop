@@ -4,8 +4,10 @@ namespace App\Entity;
 
 use App\Entity\User\User;
 use App\Enum\ActiveStatusEnum;
+use App\Enum\CostingMethodEnum;
 use App\Manager\Avatar\AvatarEntityInterface;
 use App\Repository\StoreRepository;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -25,18 +27,6 @@ class Store implements AvatarEntityInterface
 	#[ORM\Column(length: 255)]
 	private ?string $slug = null;
 
-	#[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'managerStores')]
-	private Collection $managers;
-
-	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Warehouse::class)]
-	private Collection $warehouses;
-
-	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Order::class)]
-	private Collection $orders;
-
-	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Purchase::class)]
-	private Collection $purchases;
-
 	#[ORM\Column(length: 255)]
 	private ?string $phone = null;
 
@@ -52,11 +42,42 @@ class Store implements AvatarEntityInterface
 	#[ORM\Column(length: 255, enumType: ActiveStatusEnum::class)]
 	private ActiveStatusEnum $status;
 
+	#[ORM\Column(length: 255, enumType: CostingMethodEnum::class)]
+	private CostingMethodEnum $costingMethod;
+
+	#[ORM\Column]
+	private bool $allowBackorders;
+
+	#[ORM\Column]
+	private DateTimeImmutable $createdAt;
+
+	#[ORM\Column]
+	private DateTimeImmutable $updatedAt;
+
+	#[ORM\ManyToOne(inversedBy: 'stores')]
+	#[ORM\JoinColumn(name: 'base_currency_code', referencedColumnName: 'code', nullable: false)]
+	private ?Currency $baseCurrency = null;
+
+	#[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'managerStores')]
+	private Collection $managers;
+
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Warehouse::class)]
+	private Collection $warehouses;
+
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Order::class)]
+	private Collection $orders;
+
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Purchase::class)]
+	private Collection $purchases;
+
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Category::class)]
 	private Collection $categories;
 
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Product::class)]
 	private Collection $products;
+
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Unit::class)]
+	private Collection $units;
 
 	public function __construct()
 	{
@@ -65,8 +86,13 @@ class Store implements AvatarEntityInterface
 		$this->orders = new ArrayCollection();
 		$this->purchases = new ArrayCollection();
 		$this->status = ActiveStatusEnum::INACTIVE;
+		$this->costingMethod = CostingMethodEnum::AVERAGE_COST;
+		$this->allowBackorders = false;
+		$this->createdAt = new DateTimeImmutable();
+		$this->updatedAt = new DateTimeImmutable();
 		$this->categories = new ArrayCollection();
 		$this->products = new ArrayCollection();
+		$this->units = new ArrayCollection();
 	}
 
 	public function __toString(): string
@@ -99,6 +125,18 @@ class Store implements AvatarEntityInterface
 	public function setSlug(string $slug): self
 	{
 		$this->slug = $slug;
+
+		return $this;
+	}
+
+	public function getPhone(): ?string
+	{
+		return $this->phone;
+	}
+
+	public function setPhone(string $phone): self
+	{
+		$this->phone = $phone;
 
 		return $this;
 	}
@@ -220,18 +258,6 @@ class Store implements AvatarEntityInterface
 		return $this;
 	}
 
-	public function getPhone(): ?string
-	{
-		return $this->phone;
-	}
-
-	public function setPhone(string $phone): self
-	{
-		$this->phone = $phone;
-
-		return $this;
-	}
-
 	public function getEmail(): ?string
 	{
 		return $this->email;
@@ -276,6 +302,66 @@ class Store implements AvatarEntityInterface
 	public function setStatus(ActiveStatusEnum $status): self
 	{
 		$this->status = $status;
+
+		return $this;
+	}
+
+	public function getCostingMethod(): CostingMethodEnum
+	{
+		return $this->costingMethod;
+	}
+
+	public function setCostingMethod(CostingMethodEnum $costingMethod): self
+	{
+		$this->costingMethod = $costingMethod;
+
+		return $this;
+	}
+
+	public function isAllowBackorders(): bool
+	{
+		return $this->allowBackorders;
+	}
+
+	public function setAllowBackorders(bool $allowBackorders): self
+	{
+		$this->allowBackorders = $allowBackorders;
+
+		return $this;
+	}
+
+	public function getCreatedAt(): DateTimeImmutable
+	{
+		return $this->createdAt;
+	}
+
+	public function setCreatedAt(DateTimeImmutable $createdAt): self
+	{
+		$this->createdAt = $createdAt;
+
+		return $this;
+	}
+
+	public function getUpdatedAt(): DateTimeImmutable
+	{
+		return $this->updatedAt;
+	}
+
+	public function setUpdatedAt(DateTimeImmutable $updatedAt): self
+	{
+		$this->updatedAt = $updatedAt;
+
+		return $this;
+	}
+
+	public function getBaseCurrency(): ?Currency
+	{
+		return $this->baseCurrency;
+	}
+
+	public function setBaseCurrency(?Currency $baseCurrency): self
+	{
+		$this->baseCurrency = $baseCurrency;
 
 		return $this;
 	}
@@ -334,6 +420,36 @@ class Store implements AvatarEntityInterface
 			// set the owning side to null (unless already changed)
 			if ($product->getStore() === $this) {
 				$product->setStore(null);
+			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, Unit>
+	 */
+	public function getUnits(): Collection
+	{
+		return $this->units;
+	}
+
+	public function addUnit(Unit $unit): self
+	{
+		if (!$this->units->contains($unit)) {
+			$this->units->add($unit);
+			$unit->setStore($this);
+		}
+
+		return $this;
+	}
+
+	public function removeUnit(Unit $unit): self
+	{
+		if ($this->units->removeElement($unit)) {
+			// set the owning side to null (unless already changed)
+			if ($unit->getStore() === $this) {
+				$unit->setStore(null);
 			}
 		}
 

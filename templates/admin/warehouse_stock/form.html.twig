@@ -1,0 +1,58 @@
+{% extends 'admin/_store_components/layout.html.twig' %}
+
+{% block title %}Warehouse stock{% endblock %}
+
+{% block navbar_breadcrumb %}
+    {{ include('admin/_components/_breadcrumb.html.twig', {
+        breadcrumb_class: 'mb-0',
+        items: [
+            {
+                label: 'Warehouses',
+                url: path('app_admin_warehouse_index', {store_id: app.request.attributes.get('store_id')})
+            },
+            {
+                label: warehouse.name,
+                url: path('app_admin_warehouse_show', {store_id: app.request.attributes.get('store_id'), id: warehouse.id})
+            },
+            {
+                label: 'Stock',
+                url: path('app_admin_warehouse_stock_index', {store_id: app.request.attributes.get('store_id'), warehouse_id: warehouse.id})
+            },
+            {
+                label: entity.id ? entity.product.name : 'New'
+            }
+        ]
+    }) }}
+{% endblock %}
+
+{% block main_content %}
+    <main class="content">
+        <div class="container-fluid p-0">
+            <div class="row">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">{{ entity.id ? entity.product.name : 'New' }}</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ form_start(form) }}
+                        {{ form_errors(form) }}
+
+                        {% for name, widget in form %}
+                            {{ form_row(widget) }}
+                        {% endfor %}
+
+                        <div class="row">
+                            <div class="form-control-lg">
+                                <button type="submit" class="btn btn-primary btn mb-1 me-2">Сохранить</button>
+                                <button name="save" value="stay" type="submit" class="btn btn-primary mb-1 me-2">Сохранить и продолжить</button>
+                                <a href="{{ path('app_admin_warehouse_stock_index', app.request.query.all|merge({store_id: app.request.attributes.get('store_id'), warehouse_id: warehouse.id})) }}" class="btn btn-text mb-1">Отмена</a>
+                            </div>
+                        </div>
+
+                        {{ form_end(form, {'render_rest': false}) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+{% endblock %}

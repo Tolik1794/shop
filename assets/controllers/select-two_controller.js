@@ -11,12 +11,31 @@ export default class extends Controller {
 
                 let $select2 = $(select2),
                     options = ($select2.data('select2-options') ? JSON.parse($select2.data('select2-options')) : {}),
+                    ajaxUrl = $select2.data('select2-ajax-url'),
+                    minimumInputLength = $select2.data('select2-minimum-input-length'),
                     isRequired = $select2.attr('required'),
                     isMultiple = $select2.attr('multiple')
 
                 options.class = 'form-control'
                 options.allowClear = !isRequired || isMultiple
                 options.closeOnSelect = !isMultiple
+
+                if (ajaxUrl) {
+                    options.minimumInputLength = minimumInputLength || 3
+                    options.ajax = {
+                        url: ajaxUrl,
+                        dataType: 'json',
+                        delay: 250,
+                        data: function (params) {
+                            return {
+                                q: params.term
+                            }
+                        },
+                        processResults: function (data) {
+                            return data
+                        }
+                    }
+                }
 
                 $select2.select2(options)
                     .on('select2:clear', function (e) {

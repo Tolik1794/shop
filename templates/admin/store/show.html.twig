@@ -73,6 +73,18 @@
                     <span class="badge {{ entity.status|active_status_class }}">{{ entity.status.value|capitalize }}</span>
                 </td>
             </tr>
+            <tr>
+                <th>Base currency</th>
+                <td>{{ entity.baseCurrency.code }}</td>
+            </tr>
+            <tr>
+                <th>Costing method</th>
+                <td>{{ entity.costingMethod.value }}</td>
+            </tr>
+            <tr>
+                <th>Allow backorders</th>
+                <td>{{ entity.allowBackorders ? 'Yes' : 'No' }}</td>
+            </tr>
             </tbody>
         </table>
     </div>

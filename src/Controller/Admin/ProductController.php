@@ -36,7 +36,9 @@ class ProductController extends AbstractAdvancedController
 			->getRepository()
 			->findAvailableByStoreQB($store);
 
-		$filterForm = $this->createForm(ProductFilterType::class)->handleRequest($request);
+		$filterForm = $this->createForm(ProductFilterType::class, null, [
+			'store' => $store,
+		])->handleRequest($request);
 
 		if ($filterForm->isSubmitted() && $filterForm->isValid()) {
 			$filterTypeHandler->handleFilterForm($filterForm, $queryBuilder);
@@ -73,7 +75,10 @@ class ProductController extends AbstractAdvancedController
 	public function new(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store): Response
 	{
 		$product = new Product();
-		$product->setStore($store);
+		$product->setStore($store)
+			->setCanBeSold(true)
+			->setCanBePurchased(false)
+			->setCanBeManufactured(false);
 		$form = $this->createForm(ProductType::class, $product, [
 			'method' => 'POST',
 		]);

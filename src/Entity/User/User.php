@@ -55,11 +55,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarE
 	#[ORM\Column(type: 'boolean')]
 	private bool $isVerified = false;
 
-	#[ORM\ManyToMany(targetEntity: Store::class, inversedBy: 'managers')]
-	#[ORM\JoinTable(name: 'user_store')]
-	#[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
-	#[ORM\InverseJoinColumn(name: 'store_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
-	private Collection $managerStores;
+	#[ORM\Column]
+	private array $roles = [];
 
 	#[Blameable(on: 'create')]
 	#[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'children')]
@@ -69,8 +66,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarE
 	#[ORM\OneToMany(mappedBy: 'parent', targetEntity: self::class)]
 	private Collection $children;
 
-	#[ORM\Column]
-	private array $roles = [];
+	#[ORM\ManyToMany(targetEntity: Store::class, inversedBy: 'managers')]
+	#[ORM\JoinTable(name: 'user_store')]
+	#[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+	#[ORM\InverseJoinColumn(name: 'store_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+	private Collection $managerStores;
 
 	public function __construct()
 	{
@@ -152,30 +152,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarE
 		return $this;
 	}
 
-	/**
-	 * @return Collection<int, Store>
-	 */
-	public function getManagerStores(): Collection
-	{
-		return $this->managerStores;
-	}
-
-	public function addManagerStore(Store $managerStore): self
-	{
-		if (!$this->managerStores->contains($managerStore)) {
-			$this->managerStores->add($managerStore);
-		}
-
-		return $this;
-	}
-
-	public function removeManagerStore(Store $managerStore): self
-	{
-		$this->managerStores->removeElement($managerStore);
-
-		return $this;
-	}
-
 	public function getAvatar(): ?string
 	{
 		return $this->avatar;
@@ -184,48 +160,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarE
 	public function setAvatar(?string $avatar): self
 	{
 		$this->avatar = $avatar;
-
-		return $this;
-	}
-
-	public function getParent(): ?self
-	{
-		return $this->parent;
-	}
-
-	public function setParent(?self $parent): self
-	{
-		$this->parent = $parent;
-
-		return $this;
-	}
-
-	/**
-	 * @return Collection<int, self>
-	 */
-	public function getChildren(): Collection
-	{
-		return $this->children;
-	}
-
-	public function addChild(self $child): self
-	{
-		if (!$this->children->contains($child)) {
-			$this->children->add($child);
-			$child->setParent($this);
-		}
-
-		return $this;
-	}
-
-	public function removeChild(self $child): self
-	{
-		if ($this->children->removeElement($child)) {
-			// set the owning side to null (unless already changed)
-			if ($child->getParent() === $this) {
-				$child->setParent(null);
-			}
-		}
 
 		return $this;
 	}
@@ -293,5 +227,71 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarE
 	public function getUserIdentifier(): string
 	{
 		return $this->email;
+	}
+
+	public function getParent(): ?self
+	{
+		return $this->parent;
+	}
+
+	public function setParent(?self $parent): self
+	{
+		$this->parent = $parent;
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, self>
+	 */
+	public function getChildren(): Collection
+	{
+		return $this->children;
+	}
+
+	public function addChild(self $child): self
+	{
+		if (!$this->children->contains($child)) {
+			$this->children->add($child);
+			$child->setParent($this);
+		}
+
+		return $this;
+	}
+
+	public function removeChild(self $child): self
+	{
+		if ($this->children->removeElement($child)) {
+			// set the owning side to null (unless already changed)
+			if ($child->getParent() === $this) {
+				$child->setParent(null);
+			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, Store>
+	 */
+	public function getManagerStores(): Collection
+	{
+		return $this->managerStores;
+	}
+
+	public function addManagerStore(Store $managerStore): self
+	{
+		if (!$this->managerStores->contains($managerStore)) {
+			$this->managerStores->add($managerStore);
+		}
+
+		return $this;
+	}
+
+	public function removeManagerStore(Store $managerStore): self
+	{
+		$this->managerStores->removeElement($managerStore);
+
+		return $this;
 	}
 }

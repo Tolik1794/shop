@@ -2,9 +2,12 @@
 
 namespace App\Form\Admin\Type;
 
+use App\Entity\Currency;
 use App\Entity\Store;
 use App\Enum\ActiveStatusEnum;
+use App\Enum\CostingMethodEnum;
 use App\Manager\StoreManager;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
@@ -40,6 +43,16 @@ class StoreType extends AbstractType
 			->add('description')
 			->add('status', EnumType::class, [
 				'class' => ActiveStatusEnum::class
+			])
+			->add('costingMethod', EnumType::class, [
+				'class' => CostingMethodEnum::class,
+			])
+			->add('allowBackorders')
+			->add('baseCurrency', EntityType::class, [
+				'class' => Currency::class,
+				'choice_label' => 'code',
+				'required' => true,
+				'attr' => ['class' => 'select2'],
 			])
 			->setMethod($options['method']);
 	}

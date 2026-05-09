@@ -1,0 +1,45 @@
+{% set actions %}
+    <a class="dropdown-item" href="{{ path('app_admin_warehouse_stock_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id, warehouse_id: entity.warehouse.id})) }}">Edit</a>
+{% endset %}
+
+<div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+    <div class="card-header">
+        {% if actions|trim %}
+            {{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
+        {% endif %}
+        <h5 class="card-title mb-0">{{ entity.product.name }}</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-0">
+            <div class="col-sm-9 col-xl-12 col-xxl-9">
+                <strong>Product</strong>
+                <p>{{ entity.product.name }}</p>
+            </div>
+        </div>
+
+        <table class="table table-sm mt-2 mb-4">
+            <tbody>
+            <tr>
+                <th>Code</th>
+                <td>{{ entity.product.code }}</td>
+            </tr>
+            <tr>
+                <th>Warehouse</th>
+                <td>{{ entity.warehouse.name }}</td>
+            </tr>
+            <tr>
+                <th>Average cost</th>
+                <td>{{ entity.averageCost }}</td>
+            </tr>
+            <tr>
+                <th>Quantity on hand</th>
+                <td>{{ entity.quantityOnHand }}</td>
+            </tr>
+            <tr>
+                <th>Reserved quantity</th>
+                <td>{{ entity.reservedQuantity }}</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
