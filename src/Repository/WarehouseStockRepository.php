@@ -50,6 +50,27 @@ class WarehouseStockRepository extends ServiceEntityRepository
 			->setParameter('warehouse', $warehouse);
 	}
 
+	public function existsForProductAndWarehouse(WarehouseStock $warehouseStock): bool
+	{
+		if (!$warehouseStock->getWarehouse() || !$warehouseStock->getProduct()) {
+			return false;
+		}
+
+		$qb = $this->createQueryBuilder('warehouseStock')
+			->select('COUNT(warehouseStock.id)')
+			->andWhere('warehouseStock.warehouse = :warehouse')
+			->andWhere('warehouseStock.product = :product')
+			->setParameter('warehouse', $warehouseStock->getWarehouse())
+			->setParameter('product', $warehouseStock->getProduct());
+
+		if ($warehouseStock->getId()) {
+			$qb->andWhere('warehouseStock.id != :id')
+				->setParameter('id', $warehouseStock->getId());
+		}
+
+		return (int) $qb->getQuery()->getSingleScalarResult() > 0;
+	}
+
 	public function getIndexPage(WarehouseStock $warehouseStock, int $limit = 20): int
 	{
 		$product = $warehouseStock->getProduct();

@@ -13,6 +13,7 @@ use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints\GreaterThanOrEqual;
 
 class WarehouseStockType extends AbstractType
 {
@@ -28,9 +29,30 @@ class WarehouseStockType extends AbstractType
 	    $this->addProductField($builder, $options, $warehouseStock?->getProduct());
 
         $builder
-            ->add('quantityOnHand')
-            ->add('reservedQuantity')
-            ->add('averageCost')
+            ->add('quantityOnHand', null, [
+				'constraints' => [
+					new GreaterThanOrEqual([
+						'value' => 0,
+						'message' => 'Quantity on hand cannot be negative.',
+					]),
+				],
+            ])
+            ->add('reservedQuantity', null, [
+				'constraints' => [
+					new GreaterThanOrEqual([
+						'value' => 0,
+						'message' => 'Reserved quantity cannot be negative.',
+					]),
+				],
+            ])
+            ->add('averageCost', null, [
+				'constraints' => [
+					new GreaterThanOrEqual([
+						'value' => 0,
+						'message' => 'Average cost cannot be negative.',
+					]),
+				],
+            ])
         ;
 
 	    $builder->addEventListener(FormEvents::PRE_SUBMIT, function (FormEvent $event) use ($options): void {

@@ -41,5 +41,37 @@
             </tr>
             </tbody>
         </table>
+
+        <h6 class="mb-2">Batches</h6>
+        {% if batches|length > 0 %}
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                    <tr>
+                        <th>Received</th>
+                        <th>Initial</th>
+                        <th>Remaining</th>
+                        <th>Unit cost</th>
+                        <th>Sale price</th>
+                        <th>Purchase entry</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for batch in batches %}
+                        <tr>
+                            <td>{{ batch.receivedAt ? batch.receivedAt|date('Y-m-d H:i') : '' }}</td>
+                            <td>{{ batch.initialQuantity }}</td>
+                            <td>{{ batch.remainingQuantity }}</td>
+                            <td>{{ batch.unitCost }}</td>
+                            <td>{{ batch.salePrice }}</td>
+                            <td>{{ batch.purchaseEntry ? batch.purchaseEntry.id : '' }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted mb-0">No batches.</p>
+        {% endif %}
     </div>
 </div>
