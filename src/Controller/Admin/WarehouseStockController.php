@@ -23,6 +23,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/admin/store/{store_id}/warehouse/stock', name: 'app_admin_warehouse_stock_'), IsGranted('ROLE_STORE_ADMIN')]
 class WarehouseStockController extends AbstractAdvancedController
 {
+	private const DEFAULT_PAGE_LIMIT = 20;
+
 	public function __construct(
 		private readonly WarehouseManager $warehouseManager,
 		private readonly WarehouseStockManager $warehouseStockManager,
@@ -56,7 +58,7 @@ class WarehouseStockController extends AbstractAdvancedController
 		if ($page < 1) return $this->redirectToFirstPage();
 
 		$pagination = $paginator->paginate($queryBuilder, $page, options: [
-			'defaultSortFieldName' => ['product.name'],
+			'defaultSortFieldName' => ['product.name', 'warehouseStock.id'],
 			'defaultSortDirection' => 'asc',
 		]);
 
@@ -75,6 +77,7 @@ class WarehouseStockController extends AbstractAdvancedController
 
 		return $this->render('admin/warehouse_stock/index.html.twig', [
 			'warehouse' => $warehouse,
+			'warehouse_index_page' => $this->warehouseManager->getRepository()->getIndexPage($warehouse, self::DEFAULT_PAGE_LIMIT),
 			'pagination' => $pagination,
 			'first_entity' => $warehouseStock,
 			'filter_form' => $filterForm->createView()
@@ -143,6 +146,8 @@ class WarehouseStockController extends AbstractAdvancedController
 
 		return $this->render('admin/warehouse_stock/form.html.twig', [
 			'warehouse' => $warehouse,
+			'warehouse_index_page' => $this->warehouseManager->getRepository()->getIndexPage($warehouse, self::DEFAULT_PAGE_LIMIT),
+			'warehouse_stock_index_page' => $warehouseStock->getId() ? $this->warehouseStockManager->getRepository()->getIndexPage($warehouseStock, self::DEFAULT_PAGE_LIMIT) : null,
 			'entity' => $warehouseStock,
 			'form' => $form
 		]);
@@ -187,6 +192,8 @@ class WarehouseStockController extends AbstractAdvancedController
 
 		return $this->render('admin/warehouse_stock/form.html.twig', [
 			'warehouse' => $warehouse,
+			'warehouse_index_page' => $this->warehouseManager->getRepository()->getIndexPage($warehouse, self::DEFAULT_PAGE_LIMIT),
+			'warehouse_stock_index_page' => $this->warehouseStockManager->getRepository()->getIndexPage($warehouseStock, self::DEFAULT_PAGE_LIMIT),
 			'entity' => $warehouseStock,
 			'form' => $form,
 		]);

@@ -49,6 +49,20 @@ class ProductRepository extends ServiceEntityRepository
 			->setParameter('store', $store);
 	}
 
+	public function getIndexPage(Product $product, int $limit = 20): int
+	{
+		$count = (int) $this->createQueryBuilder('product')
+			->select('COUNT(product.id)')
+			->andWhere('product.store = :store')
+			->andWhere('product.id <= :id')
+			->setParameter('store', $product->getStore())
+			->setParameter('id', $product->getId())
+			->getQuery()
+			->getSingleScalarResult();
+
+		return max(1, (int) ceil($count / $limit));
+	}
+
 	/**
 	 * @return Product[]
 	 */

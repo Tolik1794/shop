@@ -44,7 +44,7 @@
                         tab_head: [
                             include('admin/_components/tab_icon/_show.html.twig'),
                             include('admin/_components/tab_icon/_filter.html.twig')
-                            ~ (app.request.query.get(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
+                            ~ (app.request.query.all(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
                         ],
                         tab_body: [
                             first_entity ? render(controller(

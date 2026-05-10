@@ -47,7 +47,7 @@ class WarehouseController extends AbstractAdvancedController
 		if ($page < 1) return $this->redirectToFirstPage();
 
 		$pagination = $paginator->paginate($queryBuilder, $page, options: [
-			'defaultSortFieldName' => ['warehouse.name'],
+			'defaultSortFieldName' => ['warehouse.name', 'warehouse.id'],
 			'defaultSortDirection' => 'desc',
 		]);
 

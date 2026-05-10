@@ -146,19 +146,6 @@ class ProductFilterType extends AbstractType
 		            }
 	            },
             ])
-            ->add('store', null, [
-				'label' => 'Store',
-	            'required' => false,
-	            'mapped' => false,
-	            'query_callback' => function (QueryBuilder $qb, mixed $value) {
-		            if ($value instanceof Store) {
-			            $rootAlias = current($qb->getRootAliases());
-
-			            $qb->andWhere(sprintf('%s.store = :filterStore', $rootAlias))
-				            ->setParameter('filterStore', $value);
-		            }
-	            },
-            ])
 	        ->setMethod('GET')
         ;
     }

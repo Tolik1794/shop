@@ -1,21 +1,21 @@
 {% extends 'admin/_store_components/layout.html.twig' %}
 
-{% block title %}Warehouse stock{% endblock %}
+{% block title %}Product prices{% endblock %}
 
 {% block navbar_breadcrumb %}
     {{ include('admin/_components/_breadcrumb.html.twig', {
         breadcrumb_class: 'mb-0',
         items: [
             {
-                label: 'Warehouses',
-                url: path('app_admin_warehouse_index', {store_id: app.request.attributes.get('store_id')})
+                label: 'Products',
+                url: path('admin_product_index', {store_id: app.request.attributes.get('store_id')})
             },
             {
-                label: warehouse.name,
-                url: path('app_admin_warehouse_index', {store_id: app.request.attributes.get('store_id'), id: warehouse.id, page: warehouse_index_page})
+                label: product.name,
+                url: path('admin_product_index', {store_id: app.request.attributes.get('store_id'), id: product.id, page: product_index_page})
             },
             {
-                label: 'Stock'
+                label: 'Prices'
             }
         ]
     }) }}
@@ -23,15 +23,17 @@
 
 {% set table_actions %}
     {% if is_granted('ROLE_STORE_ADMIN') %}
-        <a class="dropdown-item" href="{{ path('app_admin_warehouse_stock_new', {store_id: app.request.attributes.get('store_id'), warehouse_id: warehouse.id}) }}">New</a>
+        <a class="dropdown-item" href="{{ path('app_admin_product_price_new', {store_id: app.request.attributes.get('store_id'), product_id: product.id}) }}">New</a>
     {% endif %}
 {% endset %}
 
 {% set table_head %}
     <tr>
-        <th>Product</th>
-        <th>Code</th>
-        <th>Quantity</th>
+        <th>Type</th>
+        <th>Price</th>
+        <th>Currency</th>
+        <th>Base price</th>
+        <th>Valid from</th>
     </tr>
 {% endset %}
 
@@ -42,12 +44,14 @@
                 data-id-column="id"
                 class="{{ first_entity and entity.id == first_entity.id ? 'table-active' : '' }}"
                 data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
-                data-link="{{ path('app_admin_warehouse_stock_show', {store_id: app.request.attributes.get('store_id'), warehouse_id: warehouse.id, id: entity.id}) }}"
+                data-link="{{ path('app_admin_product_price_show', {store_id: app.request.attributes.get('store_id'), product_id: product.id, id: entity.id}) }}"
                 onclick="document.getElementById('first-tab').click()"
         >
-            <td>{{ entity.product.name }}</td>
-            <td>{{ entity.product.code }}</td>
-            <td>{{ entity.quantityOnHand }}</td>
+            <td>{{ entity.type.value }}</td>
+            <td>{{ entity.price }}</td>
+            <td>{{ entity.currency.code }}</td>
+            <td>{{ entity.priceBase }}</td>
+            <td>{{ entity.validFrom|date('Y-m-d H:i') }}</td>
         </tr>
     {% endfor %}
 {% endset %}
@@ -59,23 +63,20 @@
                 <div class="col-xxl-4 col-xl-5 col-lg-6">
                     {{ include('admin/_components/card/_tab_card.html.twig', {
                         tab_head: [
-                            include('admin/_components/tab_icon/_show.html.twig'),
-                            include('admin/_components/tab_icon/_filter.html.twig')
-                            ~ (app.request.query.get(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
+                            include('admin/_components/tab_icon/_show.html.twig')
                         ],
                         tab_body: [
                             first_entity ? render(controller(
-                                'App\\Controller\\Admin\\WarehouseStockController::show',
-                                { store_id: app.request.attributes.get('store_id'), warehouse_id: warehouse.id, id: first_entity.id, 'request': app.request }
-                            )) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
-                            include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
+                                'App\\Controller\\Admin\\ProductPriceController::show',
+                                { store_id: app.request.attributes.get('store_id'), product_id: product.id, id: first_entity.id }
+                            )) : '<div class="card"><div class="card-body">Nothing to show...</div></div>'
                         ]
                     }) }}
                 </div>
                 <div class="col-xxl-8 col-xl-7 col-lg-6">
                     {{ include('admin/_components/card/_table_card.html.twig', {
                         actions: table_actions,
-                        table_title: 'Warehouse stock',
+                        table_title: 'Product prices',
                         table_head: table_head,
                         table_body: table_body
                     }) }}

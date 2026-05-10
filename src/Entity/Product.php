@@ -75,6 +75,9 @@ class Product
     #[ORM\OneToMany(mappedBy: 'product', targetEntity: WarehouseStock::class)]
     private Collection $warehouseStocks;
 
+	#[ORM\OneToMany(mappedBy: 'product', targetEntity: ProductPrice::class)]
+	private Collection $productPrices;
+
     #[ORM\OneToMany(
 		targetEntity: ProductParameter::class,
 	    mappedBy: 'product',
@@ -90,6 +93,7 @@ class Product
 		$this->updatedAt = new DateTimeImmutable();
         $this->productKind = ProductKindEnum::FINISHED_PRODUCT;
         $this->warehouseStocks = new ArrayCollection();
+		$this->productPrices = new ArrayCollection();
         $this->productParameters = new ArrayCollection();
     }
 
@@ -319,6 +323,33 @@ class Product
 
         return $this;
     }
+
+	/**
+	 * @return Collection<int, ProductPrice>
+	 */
+	public function getProductPrices(): Collection
+	{
+		return $this->productPrices;
+	}
+
+	public function addProductPrice(ProductPrice $productPrice): self
+	{
+		if (!$this->productPrices->contains($productPrice)) {
+			$this->productPrices->add($productPrice);
+			$productPrice->setProduct($this);
+		}
+
+		return $this;
+	}
+
+	public function removeProductPrice(ProductPrice $productPrice): self
+	{
+		if ($this->productPrices->removeElement($productPrice) && $productPrice->getProduct() === $this) {
+			$productPrice->setProduct(null);
+		}
+
+		return $this;
+	}
 
     /**
      * @return Collection<int, ProductParameter>
