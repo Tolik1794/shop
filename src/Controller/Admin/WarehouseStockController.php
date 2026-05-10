@@ -10,8 +10,10 @@ use App\Form\Admin\Type\WarehouseStockType;
 use App\Manager\WarehouseManager;
 use App\Manager\WarehouseStockManager;
 use App\Repository\ProductRepository;
+use App\Repository\WarehouseStockBatchRepository;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
+use App\Validator\WarehouseStockBusinessValidator;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -29,6 +31,8 @@ class WarehouseStockController extends AbstractAdvancedController
 		private readonly WarehouseManager $warehouseManager,
 		private readonly WarehouseStockManager $warehouseStockManager,
 		private readonly ProductRepository $productRepository,
+		private readonly WarehouseStockBusinessValidator $warehouseStockBusinessValidator,
+		private readonly WarehouseStockBatchRepository $warehouseStockBatchRepository,
 	)
 	{
 	}
@@ -133,7 +137,7 @@ class WarehouseStockController extends AbstractAdvancedController
 		]);
 		$form->handleRequest($request);
 
-		if ($form->isSubmitted() && $form->isValid()) {
+		if ($form->isSubmitted() && $this->warehouseStockBusinessValidator->validate($warehouseStock, $form) && $form->isValid()) {
 			$this->warehouseStockManager->save($warehouseStock);
 
 			return $this->stayOrRedirect(
@@ -181,7 +185,7 @@ class WarehouseStockController extends AbstractAdvancedController
 		]);
 		$form->handleRequest($request);
 
-		if ($form->isSubmitted() && $form->isValid()) {
+		if ($form->isSubmitted() && $this->warehouseStockBusinessValidator->validate($warehouseStock, $form) && $form->isValid()) {
 			$this->warehouseStockManager->save($warehouseStock);
 
 			return $this->stayOrRedirect('app_admin_warehouse_stock_index', [
@@ -213,6 +217,7 @@ class WarehouseStockController extends AbstractAdvancedController
 
 		return $this->render('admin/warehouse_stock/show.html.twig', [
 			'entity' => $warehouseStock,
+			'batches' => $this->warehouseStockBatchRepository->findByWarehouseStock($warehouseStock),
 			'query_params' => $request->query->all()
 		]);
 	}
@@ -230,4 +235,5 @@ class WarehouseStockController extends AbstractAdvancedController
 
 		return $warehouse;
 	}
+
 }

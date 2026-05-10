@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Entity\WarehouseStock;
 use App\Entity\WarehouseStockBatch;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -15,6 +16,22 @@ class WarehouseStockBatchRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, WarehouseStockBatch::class);
     }
+
+	/**
+	 * @return WarehouseStockBatch[]
+	 */
+	public function findByWarehouseStock(WarehouseStock $warehouseStock): array
+	{
+		return $this->createQueryBuilder('warehouseStockBatch')
+			->leftJoin('warehouseStockBatch.purchaseEntry', 'purchaseEntry')
+			->addSelect('purchaseEntry')
+			->andWhere('warehouseStockBatch.warehouseStock = :warehouseStock')
+			->setParameter('warehouseStock', $warehouseStock)
+			->orderBy('warehouseStockBatch.receivedAt', 'DESC')
+			->addOrderBy('warehouseStockBatch.id', 'DESC')
+			->getQuery()
+			->getResult();
+	}
 
     //    /**
     //     * @return WarehouseStockBatch[] Returns an array of WarehouseStockBatch objects
