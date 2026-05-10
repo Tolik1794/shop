@@ -82,6 +82,9 @@ class Order
 	#[ORM\JoinColumn(nullable: false)]
 	private Store $store;
 
+	#[ORM\ManyToOne(inversedBy: 'orders')]
+	private ?Customer $customer = null;
+
 	#[ORM\ManyToOne]
 	private ?User $createdBy = null;
 
@@ -199,6 +202,24 @@ class Order
 	public function setStore(?Store $store): self
 	{
 		$this->store = $store;
+
+		return $this;
+	}
+
+	public function getCustomer(): ?Customer
+	{
+		return $this->customer;
+	}
+
+	public function setCustomer(?Customer $customer): self
+	{
+		$this->customer = $customer;
+
+		if ($customer instanceof Customer) {
+			$this->customerNameSnapshot = $customer->getName();
+			$this->customerPhoneSnapshot = $customer->getPhone();
+			$this->customerEmailSnapshot = $customer->getEmail();
+		}
 
 		return $this;
 	}

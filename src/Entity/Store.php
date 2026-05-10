@@ -70,6 +70,12 @@ class Store implements AvatarEntityInterface
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Purchase::class)]
 	private Collection $purchases;
 
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Customer::class)]
+	private Collection $customers;
+
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Supplier::class)]
+	private Collection $suppliers;
+
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Category::class)]
 	private Collection $categories;
 
@@ -91,6 +97,8 @@ class Store implements AvatarEntityInterface
 		$this->warehouses = new ArrayCollection();
 		$this->orders = new ArrayCollection();
 		$this->purchases = new ArrayCollection();
+		$this->customers = new ArrayCollection();
+		$this->suppliers = new ArrayCollection();
 		$this->status = ActiveStatusEnum::INACTIVE;
 		$this->costingMethod = CostingMethodEnum::AVERAGE_COST;
 		$this->allowBackorders = false;
@@ -261,6 +269,60 @@ class Store implements AvatarEntityInterface
 			if ($purchase->getStore() === $this) {
 				$purchase->setStore(null);
 			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, Customer>
+	 */
+	public function getCustomers(): Collection
+	{
+		return $this->customers;
+	}
+
+	public function addCustomer(Customer $customer): self
+	{
+		if (!$this->customers->contains($customer)) {
+			$this->customers->add($customer);
+			$customer->setStore($this);
+		}
+
+		return $this;
+	}
+
+	public function removeCustomer(Customer $customer): self
+	{
+		if ($this->customers->removeElement($customer) && $customer->getStore() === $this) {
+			$customer->setStore(null);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, Supplier>
+	 */
+	public function getSuppliers(): Collection
+	{
+		return $this->suppliers;
+	}
+
+	public function addSupplier(Supplier $supplier): self
+	{
+		if (!$this->suppliers->contains($supplier)) {
+			$this->suppliers->add($supplier);
+			$supplier->setStore($this);
+		}
+
+		return $this;
+	}
+
+	public function removeSupplier(Supplier $supplier): self
+	{
+		if ($this->suppliers->removeElement($supplier) && $supplier->getStore() === $this) {
+			$supplier->setStore(null);
 		}
 
 		return $this;

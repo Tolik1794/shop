@@ -66,6 +66,28 @@ final class MenuBuilder
 			]
 		]);
 
+		$menu->addChild('Customers', [
+			'route' => 'app_admin_customer_index',
+			'routeParameters' => ['store_id' => $storeId],
+			'attributes' => [
+				'class' => 'sidebar-item',
+			],
+			'linkAttributes' => [
+				'class' => 'sidebar-link'
+			],
+		]);
+
+		$menu->addChild('Suppliers', [
+			'route' => 'app_admin_supplier_index',
+			'routeParameters' => ['store_id' => $storeId],
+			'attributes' => [
+				'class' => 'sidebar-item',
+			],
+			'linkAttributes' => [
+				'class' => 'sidebar-link'
+			],
+		]);
+
 		$item = $menu->addChild('Setting', [
 			'uri' => '#',
 			'linkAttributes' => [
