@@ -84,6 +84,9 @@ class Purchase
     #[ORM\JoinColumn(nullable: false)]
     private Store $store;
 
+	#[ORM\ManyToOne(inversedBy: 'purchases')]
+	private ?Supplier $supplier = null;
+
 	#[ORM\ManyToOne]
 	private ?User $createdBy = null;
 
@@ -172,6 +175,24 @@ class Purchase
 
         return $this;
     }
+
+	public function getSupplier(): ?Supplier
+	{
+		return $this->supplier;
+	}
+
+	public function setSupplier(?Supplier $supplier): self
+	{
+		$this->supplier = $supplier;
+
+		if ($supplier instanceof Supplier) {
+			$this->supplierNameSnapshot = $supplier->getName();
+			$this->supplierPhoneSnapshot = $supplier->getPhone();
+			$this->supplierEmailSnapshot = $supplier->getEmail();
+		}
+
+		return $this;
+	}
 
 	public function getCreatedBy(): ?User { return $this->createdBy; }
 	public function setCreatedBy(?User $createdBy): self { $this->createdBy = $createdBy; return $this; }
