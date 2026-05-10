@@ -30,6 +30,9 @@ class Currency
 	#[ORM\OneToMany(mappedBy: 'baseCurrency', targetEntity: Store::class)]
 	private Collection $stores;
 
+	#[ORM\OneToMany(mappedBy: 'currency', targetEntity: ProductPrice::class)]
+	private Collection $productPrices;
+
 	#[ORM\OneToMany(mappedBy: 'fromCurrency', targetEntity: ExchangeRate::class)]
 	private Collection $exchangeRatesFrom;
 
@@ -40,6 +43,7 @@ class Currency
 	{
 		$this->status = ActiveStatusEnum::ACTIVE;
 		$this->stores = new ArrayCollection();
+		$this->productPrices = new ArrayCollection();
 		$this->exchangeRatesFrom = new ArrayCollection();
 		$this->exchangeRatesTo = new ArrayCollection();
 	}
@@ -131,6 +135,33 @@ class Currency
 	{
 		if ($this->stores->removeElement($store) && $store->getBaseCurrency() === $this) {
 			$store->setBaseCurrency(null);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, ProductPrice>
+	 */
+	public function getProductPrices(): Collection
+	{
+		return $this->productPrices;
+	}
+
+	public function addProductPrice(ProductPrice $productPrice): self
+	{
+		if (!$this->productPrices->contains($productPrice)) {
+			$this->productPrices->add($productPrice);
+			$productPrice->setCurrency($this);
+		}
+
+		return $this;
+	}
+
+	public function removeProductPrice(ProductPrice $productPrice): self
+	{
+		if ($this->productPrices->removeElement($productPrice) && $productPrice->getCurrency() === $this) {
+			$productPrice->setCurrency(null);
 		}
 
 		return $this;

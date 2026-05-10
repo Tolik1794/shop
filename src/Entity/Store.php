@@ -76,6 +76,9 @@ class Store implements AvatarEntityInterface
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Product::class)]
 	private Collection $products;
 
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: ProductPrice::class)]
+	private Collection $productPrices;
+
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Unit::class)]
 	private Collection $units;
 
@@ -95,6 +98,7 @@ class Store implements AvatarEntityInterface
 		$this->updatedAt = new DateTimeImmutable();
 		$this->categories = new ArrayCollection();
 		$this->products = new ArrayCollection();
+		$this->productPrices = new ArrayCollection();
 		$this->units = new ArrayCollection();
 		$this->exchangeRates = new ArrayCollection();
 	}
@@ -425,6 +429,33 @@ class Store implements AvatarEntityInterface
 			if ($product->getStore() === $this) {
 				$product->setStore(null);
 			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, ProductPrice>
+	 */
+	public function getProductPrices(): Collection
+	{
+		return $this->productPrices;
+	}
+
+	public function addProductPrice(ProductPrice $productPrice): self
+	{
+		if (!$this->productPrices->contains($productPrice)) {
+			$this->productPrices->add($productPrice);
+			$productPrice->setStore($this);
+		}
+
+		return $this;
+	}
+
+	public function removeProductPrice(ProductPrice $productPrice): self
+	{
+		if ($this->productPrices->removeElement($productPrice) && $productPrice->getStore() === $this) {
+			$productPrice->setStore(null);
 		}
 
 		return $this;

@@ -7,6 +7,7 @@ use App\Entity\Store;
 use App\Form\Admin\FilterType\ProductFilterType;
 use App\Form\Admin\Type\ProductType;
 use App\Manager\ProductManager;
+use App\Repository\ProductPriceRepository;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
@@ -19,7 +20,12 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/admin/store/{store_id}/product', name: 'admin_product_'), IsGranted('ROLE_STORE_ADMIN')]
 class ProductController extends AbstractAdvancedController
 {
-	public function __construct(private readonly ProductManager $productManager)
+	private const DEFAULT_PAGE_LIMIT = 20;
+
+	public function __construct(
+		private readonly ProductManager $productManager,
+		private readonly ProductPriceRepository $productPriceRepository,
+	)
 	{
 	}
 
@@ -49,8 +55,8 @@ class ProductController extends AbstractAdvancedController
 		if ($page < 1) return $this->redirectToFirstPage();
 
 		$pagination = $paginator->paginate($queryBuilder, $page, options: [
-			'defaultSortFieldName' => ['store.name'],
-			'defaultSortDirection' => 'desc',
+			'defaultSortFieldName' => ['product.id'],
+			'defaultSortDirection' => 'asc',
 		]);
 
 		if ($pagination->count() === 0 && $pagination->getTotalItemCount() > 0) {
@@ -125,6 +131,8 @@ class ProductController extends AbstractAdvancedController
 	{
 		return $this->render('admin/product/show.html.twig', [
 			'entity' => $product,
+			'current_price' => $this->productPriceRepository->findCurrentRegularPrice($product, $product->getStore()?->getBaseCurrency()),
+			'index_page' => $this->productManager->getRepository()->getIndexPage($product, self::DEFAULT_PAGE_LIMIT),
 			'query_params' => $request->query->all()
 		]);
 	}

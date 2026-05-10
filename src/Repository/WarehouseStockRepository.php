@@ -50,28 +50,21 @@ class WarehouseStockRepository extends ServiceEntityRepository
 			->setParameter('warehouse', $warehouse);
 	}
 
-//    /**
-//     * @return WarehouseStock[] Returns an array of WarehouseStock objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('w')
-//            ->andWhere('w.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('w.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
+	public function getIndexPage(WarehouseStock $warehouseStock, int $limit = 20): int
+	{
+		$product = $warehouseStock->getProduct();
 
-//    public function findOneBySomeField($value): ?WarehouseStock
-//    {
-//        return $this->createQueryBuilder('w')
-//            ->andWhere('w.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
+		$count = (int) $this->createQueryBuilder('warehouseStock')
+			->select('COUNT(warehouseStock.id)')
+			->innerJoin('warehouseStock.product', 'product')
+			->andWhere('warehouseStock.warehouse = :warehouse')
+			->andWhere('product.name < :productName OR (product.name = :productName AND warehouseStock.id <= :id)')
+			->setParameter('warehouse', $warehouseStock->getWarehouse())
+			->setParameter('productName', $product?->getName())
+			->setParameter('id', $warehouseStock->getId())
+			->getQuery()
+			->getSingleScalarResult();
+
+		return max(1, (int) ceil($count / $limit));
+	}
 }

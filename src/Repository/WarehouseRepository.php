@@ -49,28 +49,18 @@ class WarehouseRepository extends ServiceEntityRepository
 			->setParameter('store', $store);
 	}
 
-//    /**
-//     * @return Warehouse[] Returns an array of Warehouse objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('w')
-//            ->andWhere('w.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('w.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
+	public function getIndexPage(Warehouse $warehouse, int $limit = 20): int
+	{
+		$count = (int) $this->createQueryBuilder('warehouse')
+			->select('COUNT(warehouse.id)')
+			->andWhere('warehouse.store = :store')
+			->andWhere('warehouse.name > :name OR (warehouse.name = :name AND warehouse.id >= :id)')
+			->setParameter('store', $warehouse->getStore())
+			->setParameter('name', $warehouse->getName())
+			->setParameter('id', $warehouse->getId())
+			->getQuery()
+			->getSingleScalarResult();
 
-//    public function findOneBySomeField($value): ?Warehouse
-//    {
-//        return $this->createQueryBuilder('w')
-//            ->andWhere('w.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
+		return max(1, (int) ceil($count / $limit));
+	}
 }
