@@ -1,0 +1,67 @@
+@startuml
+
+title 09. Stock reservations and availability
+
+hide circle
+skinparam linetype ortho
+
+enum StockReservationStatus {
+	active
+	completed
+	canceled
+	expired
+}
+
+entity StockReservation {
+	* id: int
+	--
+	* quantity: decimal(14,4)
+	* status: StockReservationStatus
+	* reservedAt: DateTimeImmutable
+	expiresAt: DateTimeImmutable?
+	* orderEntry: OrderEntry
+	* warehouseStock: WarehouseStock
+}
+
+OrderEntry ||--o{ StockReservation : reserves
+WarehouseStock ||--o{ StockReservation : reserved from
+StockReservationStatus ||--o{ StockReservation : controls
+
+note right of StockReservation
+  Current project status:
+  - StockReservation is not implemented.
+  - WarehouseStock.reservedQuantity exists.
+  - OrderEntry exists.
+  - Store.allowBackorders exists.
+
+  Required behavior:
+  - quantity > 0.
+  - active reservations contribute to reservedQuantity.
+  - completed/canceled/expired reservations do not count.
+  - active reservations must not exceed available stock:
+    quantityOnHand - reservedQuantity.
+  - Backorders are allowed at OrderEntry level only;
+    WarehouseStock itself must never go negative.
+  - OrderEntry can remain unreserved when allowBackorders=true.
+  - Shipment posting completes matching reservations.
+end note
+
+note bottom
+  Suggested implementation steps:
+
+  1. Add StockReservation entity, enum and repository.
+  2. Add ReservationService:
+     reserve(orderEntry, warehouseStock, quantity),
+     release(reservation),
+     complete(reservation),
+     expireOldReservations().
+  3. Update Order confirmation workflow to reserve available stock.
+  4. Update Inventory shipment posting to complete reservations.
+  5. Re-evaluate awaiting_stock/ready_to_ship after reservation changes.
+  6. Add tests for over-reservation, partial reservation,
+     release, expiration, shipment completion and backorders.
+
+  Do this after InventoryDocuments and 08.1 progress synchronization.
+end note
+
+@enduml

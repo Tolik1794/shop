@@ -25,6 +25,9 @@ class Customer
 	private ?string $name = null;
 
 	#[ORM\Column(length: 255, nullable: true)]
+	private ?string $lastName = null;
+
+	#[ORM\Column(length: 255, nullable: true)]
 	private ?string $phone = null;
 
 	#[ORM\Column(length: 255, nullable: true)]
@@ -68,7 +71,7 @@ class Customer
 
 	public function __toString(): string
 	{
-		return (string) $this->name;
+		return $this->getFullName();
 	}
 
 	public function getId(): ?int
@@ -88,6 +91,26 @@ class Customer
 		return $this;
 	}
 
+	public function getLastName(): ?string
+	{
+		return $this->lastName;
+	}
+
+	public function setLastName(?string $lastName): self
+	{
+		$this->lastName = $lastName;
+
+		return $this;
+	}
+
+	public function getFullName(): string
+	{
+		return trim(implode(' ', array_filter([
+			$this->name,
+			$this->lastName,
+		])));
+	}
+
 	public function getPhone(): ?string
 	{
 		return $this->phone;
@@ -95,9 +118,34 @@ class Customer
 
 	public function setPhone(?string $phone): self
 	{
-		$this->phone = $phone;
+		$this->phone = self::normalizePhone($phone);
 
 		return $this;
+	}
+
+	public static function normalizePhone(?string $phone): ?string
+	{
+		$phone = trim((string) $phone);
+
+		if ($phone === '') {
+			return null;
+		}
+
+		$digits = preg_replace('/\D+/', '', $phone);
+
+		if ($digits === null) {
+			return $phone;
+		}
+
+		if (preg_match('/^380\d{9}$/', $digits) === 1) {
+			return '+' . $digits;
+		}
+
+		if (preg_match('/^0\d{9}$/', $digits) === 1) {
+			return '+38' . $digits;
+		}
+
+		return $phone;
 	}
 
 	public function getEmail(): ?string

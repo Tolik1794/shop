@@ -1,0 +1,106 @@
+@startuml
+
+title 07. Payments
+
+hide circle
+skinparam linetype ortho
+
+enum PaymentDirection {
+	incoming
+	outgoing
+}
+
+enum PaymentType {
+	cash
+	card
+	bank_transfer
+	online
+	refund
+	other
+}
+
+enum PaymentStatusEnum {
+	unpaid
+	partially_paid
+	paid
+	overpaid
+	refunded
+}
+
+entity Payment {
+	* id: int
+	--
+	* direction: PaymentDirection
+	* type: PaymentType
+	* amount: decimal(14,4)
+	* amountBase: decimal(14,4)
+	* paidAt: DateTimeImmutable
+	comment: text?
+	externalReference: string(255)?
+	* currency: Currency
+	* exchangeRateToBase: decimal(18,8)
+	* store: Store
+	order: Order?
+	purchase: Purchase?
+	createdBy: User?
+	updatedBy: User?
+	* createdAt: DateTimeImmutable
+	* updatedAt: DateTimeImmutable
+}
+
+Store ||--o{ Payment : has payments
+Currency ||--o{ Payment : payment currency
+Order |o--o{ Payment : paid by
+Purchase |o--o{ Payment : paid by
+PaymentDirection ||--o{ Payment : defines
+PaymentType ||--o{ Payment : classifies
+PaymentStatusEnum ||--o{ Order : payment state
+PaymentStatusEnum ||--o{ Purchase : payment state
+User |o--o{ Payment : records/updates
+
+note right of Payment
+  Current project status:
+  - Payment entity is not implemented.
+  - PaymentDirection and PaymentType are not implemented.
+  - PaymentStatusEnum already exists because Order/Purchase use it.
+  - Order/Purchase have paidAmountBase/paymentStatus cache fields,
+    but there is no recalculation service yet.
+
+  Required behavior:
+  - Exactly one of order or purchase is filled.
+  - Incoming payments usually apply to Order.
+  - Outgoing payments usually apply to Purchase.
+  - Refunds are explicit payment rows, never direct edits to totals.
+  - amount is in payment currency; amountBase uses exchangeRate snapshot.
+  - Payment rows are the financial source of truth.
+  - Order/Purchase payment fields are denormalized caches.
+end note
+
+note right of PaymentStatusEnum
+  Derived state for Order/Purchase:
+  - unpaid: paidAmountBase = 0.
+  - partially_paid: 0 < paidAmountBase < totalAmountBase.
+  - paid: paidAmountBase = totalAmountBase.
+  - overpaid: paidAmountBase > totalAmountBase.
+  - refunded: effective paid amount returned to 0 after refund,
+    when business rules need a distinct visible state.
+end note
+
+note bottom
+  Suggested implementation steps:
+
+  1. Add Payment entity, enums, repository and manager.
+  2. Add Payment CRUD scoped by Store.
+  3. Add payment sections to Order show and Purchase show.
+  4. Add PaymentRecalculationService:
+     - recalculate paidAmountBase
+     - recalculate paymentStatus
+     - set paidAt when a document first becomes fully paid.
+  5. Recalculate after create/update/delete/reversal-like corrections.
+  6. Add tests for relation exclusivity, exchange-rate snapshots,
+     unpaid/partial/paid/overpaid/refunded states and refunds.
+
+  Do this after Order/Purchase base CRUD exists.
+end note
+
+@enduml

@@ -1,0 +1,211 @@
+@startuml
+
+title 11.1. Universal status transition service architecture
+
+hide circle
+skinparam linetype ortho
+
+interface WorkflowSubjectInterface {
+	+ getWorkflowKey(): string
+	+ getStatusValue(): string
+	+ setStatusValue(status: string): void
+}
+
+class TransitionContext <<value object>> {
+	+ actor: User?
+	+ source: string
+	+ occurredAt: DateTimeImmutable
+	+ comment: string?
+	+ payload: array
+	+ correlationId: string?
+}
+
+class TransitionResult <<value object>> {
+	+ entity: object
+	+ transitionKey: string
+	+ fromStatus: string
+	+ toStatus: string
+}
+
+class StatusTransitionService <<service>> {
+	+ apply(subject, transitionKey, context): TransitionResult
+	+ can(subject, transitionKey, context): bool
+}
+
+class WorkflowRegistry <<registry>> {
+	+ getFor(subject): WorkflowDefinitionInterface
+}
+
+interface WorkflowDefinitionInterface {
+	+ supports(subject): bool
+	+ getTransition(key): TransitionDefinition
+	+ getHistoryRecorder(): HistoryRecorderInterface
+}
+
+class TransitionDefinition <<value object>> {
+	+ key: string
+	+ fromStatuses: string[]
+	+ toStatus: string
+	+ guards: TransitionGuardInterface[]
+	+ beforeActions: TransitionActionInterface[]
+	+ afterActions: TransitionActionInterface[]
+	+ historyEventKey: string
+}
+
+interface TransitionGuardInterface {
+	+ assertAllowed(subject, transition, context): void
+}
+
+interface TransitionActionInterface {
+	+ execute(subject, transition, context): void
+}
+
+interface HistoryRecorderInterface {
+	+ record(subject, transition, context, result): void
+}
+
+class DomainEventDispatcher <<service>> {
+	+ dispatch(event): void
+}
+
+class OrderWorkflowDefinition <<definition>>
+class PurchaseWorkflowDefinition <<definition>>
+class InventoryDocumentWorkflowDefinition <<definition>>
+class ProductionOrderWorkflowDefinition <<definition>>
+
+class OrderHistoryRecorder <<history>>
+class GenericStatusHistoryRecorder <<history>>
+
+class OrderHasEntriesGuard <<guard>>
+class NoPostedDocumentsGuard <<guard>>
+class NoPaymentsGuard <<guard>>
+
+class ReserveStockAction <<action>>
+class ReleaseReservationsAction <<action>>
+class RecalculateProgressAction <<action>>
+
+WorkflowSubjectInterface <|.. Order
+WorkflowSubjectInterface <|.. Purchase
+WorkflowSubjectInterface <|.. InventoryDocument
+WorkflowSubjectInterface <|.. ProductionOrder
+
+StatusTransitionService --> WorkflowRegistry : resolve workflow
+StatusTransitionService --> TransitionContext : uses
+StatusTransitionService --> TransitionResult : returns
+StatusTransitionService --> DomainEventDispatcher : dispatch after commit
+WorkflowRegistry --> WorkflowDefinitionInterface : returns
+WorkflowDefinitionInterface --> TransitionDefinition : exposes
+TransitionDefinition --> TransitionGuardInterface : checks
+TransitionDefinition --> TransitionActionInterface : before/after pipeline
+WorkflowDefinitionInterface --> HistoryRecorderInterface : selects
+
+WorkflowDefinitionInterface <|.. OrderWorkflowDefinition
+WorkflowDefinitionInterface <|.. PurchaseWorkflowDefinition
+WorkflowDefinitionInterface <|.. InventoryDocumentWorkflowDefinition
+WorkflowDefinitionInterface <|.. ProductionOrderWorkflowDefinition
+
+HistoryRecorderInterface <|.. OrderHistoryRecorder
+HistoryRecorderInterface <|.. GenericStatusHistoryRecorder
+
+TransitionGuardInterface <|.. OrderHasEntriesGuard
+TransitionGuardInterface <|.. NoPostedDocumentsGuard
+TransitionGuardInterface <|.. NoPaymentsGuard
+
+TransitionActionInterface <|.. ReserveStockAction
+TransitionActionInterface <|.. ReleaseReservationsAction
+TransitionActionInterface <|.. RecalculateProgressAction
+
+OrderWorkflowDefinition --> OrderHistoryRecorder : order timeline
+PurchaseWorkflowDefinition --> GenericStatusHistoryRecorder : generic status history
+InventoryDocumentWorkflowDefinition --> GenericStatusHistoryRecorder : generic status history
+ProductionOrderWorkflowDefinition --> GenericStatusHistoryRecorder : generic status history
+
+note right of StatusTransitionService
+  Stable orchestration core.
+
+  Responsibilities:
+  1. Resolve workflow definition by subject.
+  2. Resolve transition by key.
+  3. Check current status is allowed.
+  4. Run guard pipeline.
+  5. Run before-actions.
+  6. Change status.
+  7. Run after-actions.
+  8. Delegate history recording.
+  9. Dispatch domain event.
+
+  It must not contain entity-specific if/else branches.
+  New entities and new transitions are added through definitions
+  and handlers, not by editing this service.
+end note
+
+note right of TransitionDefinition
+  Use named transitions, not direct status assignment.
+
+  Example:
+  - confirm: draft -> confirmed
+  - return_to_draft: confirmed -> draft
+
+  Forward and backward transitions are separate business rules.
+  A reverse transition is not automatically the mirror of forward one.
+end note
+
+note right of WorkflowDefinitionInterface
+  Per-entity extension point.
+
+  A workflow definition owns:
+  - allowed transitions for one subject type
+  - selected guards/actions
+  - history recorder choice
+
+  Future entities plug in by adding a new definition class
+  and registering it in WorkflowRegistry.
+end note
+
+note right of HistoryRecorderInterface
+  History strategy extension point.
+
+  - OrderHistoryRecorder writes rich OrderHistory timeline rows.
+  - GenericStatusHistoryRecorder writes StatusHistory rows
+    for Purchase, InventoryDocument and ProductionOrder.
+
+  The core transition service does not know which table is used.
+end note
+
+note bottom
+  Execution pipeline:
+
+  apply(subject, transitionKey, context)
+    -> workflowRegistry.getFor(subject)
+    -> definition.getTransition(transitionKey)
+    -> guards.assertAllowed(...)
+    -> begin transaction
+    -> beforeActions.execute(...)
+    -> subject.setStatusValue(toStatus)
+    -> afterActions.execute(...)
+    -> historyRecorder.record(...)
+    -> commit
+    -> dispatch domain event
+
+  can(...) runs the same resolution and guard checks,
+  but never mutates the subject.
+end note
+
+note bottom
+  Suggested implementation rules:
+
+  1. Prefer explicit handler classes over anonymous callbacks
+     for business rules that matter.
+  2. Builder/DSL may be used only to assemble definitions cleanly.
+  3. Keep workflow definitions declarative;
+     put heavy business logic into guard/action services.
+  4. Keep transition keys stable once exposed to UI/API.
+  5. Every direct status write outside the service should be treated
+     as a bug unless it is object construction/default initialization.
+  6. Add tests at three levels:
+     - definition graph tests
+     - guard/action unit tests
+     - service integration tests with history assertions.
+end note
+
+@enduml

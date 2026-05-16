@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\WarehouseStock;
 use App\Entity\Warehouse;
+use App\Entity\Product;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -69,6 +70,14 @@ class WarehouseStockRepository extends ServiceEntityRepository
 		}
 
 		return (int) $qb->getQuery()->getSingleScalarResult() > 0;
+	}
+
+	public function findOneByProductAndWarehouse(Product $product, Warehouse $warehouse): ?WarehouseStock
+	{
+		return $this->findOneBy([
+			'product' => $product,
+			'warehouse' => $warehouse,
+		]);
 	}
 
 	public function getIndexPage(WarehouseStock $warehouseStock, int $limit = 20): int

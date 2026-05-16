@@ -1,7 +1,7 @@
 # Project instructions
 
 - Project run on docker.
-- Project uses Symfony 6.4
+- Project uses Symfony 7.4
 - Do not change database migrations that were already executed.
 - Do not rename routes, services, form field names, JS selectors, data attributes, or translation keys without explicit approval.
 - Prefer small, isolated changes.
@@ -36,6 +36,8 @@
 - Preserve existing validation and form behavior.
 - Use Symfony conventions for configuration, routing, services, and events.
 - When working with Twig, preserve existing block structure and variable names.
+- Always run commands through docker, if something is missing, offer to install inside the docker,
+If you need to use it more than once, but will be needed in the future, suggest adding a file to Docker
 
 ## Doctrine rules
 
@@ -87,7 +89,9 @@
 
 - src/Controller/ - HTTP-контролери.
 - src/Controller/Admin/ - адмінська частина, маршрути переважно під /admin.
+- src/Controller/Api/Admin/ - адмінська частина для ajax запитів, маршрути переважно під /api/admin.
 - src/Entity/ - Doctrine entities.
+- src/Dto/ - Dto classes,.
 - src/Repository/ - Doctrine repositories і query logic.
 - src/Form/ - Symfony forms, окремо Admin/Type, Admin/FilterType, form extensions.
 - src/Manager/ - відповідає за прикладні операції над сутностями: створити, оновити, видалити, змінити статус, зберегти зображення разом із сутністю, виконати бізнес-дію.
@@ -96,6 +100,9 @@
 - src/Menu/ - KnpMenu builders/voters.
 - src/Twig/ - Twig extensions.
 - src/EventSubscriber/ - request subscriber.
+- src/DataFixtures/ - Doctrine fixtures.
+- src/Enum/ - enum classes.
+- src/Validator/ - Symfony validators and constraints.
 - migrations/ - Doctrine migrations, їх не чіпати, якщо вони вже виконані/закомічені.
 - tests/ - PHPUnit/controller тести.
 - docker/ - docker configs

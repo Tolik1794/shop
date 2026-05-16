@@ -9,14 +9,12 @@ use App\Form\Admin\FilterType\WarehouseStockFilterType;
 use App\Form\Admin\Type\WarehouseStockType;
 use App\Manager\WarehouseManager;
 use App\Manager\WarehouseStockManager;
-use App\Repository\ProductRepository;
 use App\Repository\WarehouseStockBatchRepository;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use App\Validator\WarehouseStockBusinessValidator;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -30,7 +28,6 @@ class WarehouseStockController extends AbstractAdvancedController
 	public function __construct(
 		private readonly WarehouseManager $warehouseManager,
 		private readonly WarehouseStockManager $warehouseStockManager,
-		private readonly ProductRepository $productRepository,
 		private readonly WarehouseStockBusinessValidator $warehouseStockBusinessValidator,
 		private readonly WarehouseStockBatchRepository $warehouseStockBatchRepository,
 	)
@@ -88,30 +85,6 @@ class WarehouseStockController extends AbstractAdvancedController
 		]);
 	}
 
-	#[Route('/options', name: 'options', methods: ['GET'])]
-	public function options(
-		Request $request,
-		#[MapEntity(expr: 'repository.find(store_id)')]
-		Store $store,
-	): JsonResponse
-	{
-		$search = trim((string) $request->query->get('q', ''));
-
-		if (mb_strlen($search) < 3) {
-			return $this->json(['results' => []]);
-		}
-
-		$results = [];
-		foreach ($this->productRepository->findChoicesByStoreAndSearch($store, $search) as $product) {
-			$results[] = [
-				'id' => $product->getId(),
-				'text' => sprintf('%s (%s)', $product->getName(), $product->getCode()),
-			];
-		}
-
-		return $this->json(['results' => $results]);
-	}
-
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
 	public function new(
 		Request $request,
@@ -130,7 +103,7 @@ class WarehouseStockController extends AbstractAdvancedController
 				'data-controller' => 'select-two',
 				'data-select-two-target' => 'form',
 			],
-			'product_ajax_url' => $this->generateUrl('app_admin_warehouse_stock_options', [
+			'product_ajax_url' => $this->generateUrl('app_api_admin_warehouse_stock_search_products_for_warehouse_stock', [
 				'store_id' => $store->getId(),
 				'warehouse_id' => $warehouse->getId(),
 			]),
@@ -178,7 +151,7 @@ class WarehouseStockController extends AbstractAdvancedController
 				'data-controller' => 'select-two',
 				'data-select-two-target' => 'form',
 			],
-			'product_ajax_url' => $this->generateUrl('app_admin_warehouse_stock_options', [
+			'product_ajax_url' => $this->generateUrl('app_api_admin_warehouse_stock_search_products_for_warehouse_stock', [
 				'store_id' => $store->getId(),
 				'warehouse_id' => $warehouse->getId(),
 			]),

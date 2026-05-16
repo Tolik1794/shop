@@ -13,7 +13,8 @@ class CustomerSupplierSnapshotTest extends TestCase
 	public function testOrderCopiesCustomerSnapshot(): void
 	{
 		$customer = (new Customer())
-			->setName('John Customer')
+			->setName('John')
+			->setLastName('Customer')
 			->setPhone('+380000000001')
 			->setEmail('customer@example.com');
 
@@ -22,6 +23,15 @@ class CustomerSupplierSnapshotTest extends TestCase
 		self::assertSame('John Customer', $order->getCustomerNameSnapshot());
 		self::assertSame('+380000000001', $order->getCustomerPhoneSnapshot());
 		self::assertSame('customer@example.com', $order->getCustomerEmailSnapshot());
+	}
+
+	public function testCustomerPhoneIsNormalizedToUkrainianInternationalFormat(): void
+	{
+		$customer = (new Customer())->setPhone('050 123-45-67');
+
+		self::assertSame('+380501234567', $customer->getPhone());
+		self::assertSame('+380501234567', Customer::normalizePhone('380 (50) 123-45-67'));
+		self::assertSame('+380501234567', Customer::normalizePhone('+380501234567'));
 	}
 
 	public function testPurchaseCopiesSupplierSnapshot(): void

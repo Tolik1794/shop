@@ -1,0 +1,150 @@
+{% set entryData = entry.vars.data|default(null) %}
+{% set product = entryData ? entryData.product|default(null) : null %}
+{% set warehouse = entryData ? entryData.warehouse|default(null) : null %}
+{% set productName = product ? product.name : (entryData ? entryData.productNameSnapshot|default('') : '') %}
+{% set productCode = product ? product.code : (entryData ? entryData.productCodeSnapshot|default('') : '') %}
+{% set unitCode = product ? product.unit.code|default('') : (entryData ? entryData.unitCodeSnapshot|default('') : '') %}
+{% set unitPrecision = product ? product.unit.precision|default(4) : 4 %}
+{% set currencyCode = currency ? currency.code|default('') : (entryData and entryData.order and entryData.order.currency ? entryData.order.currency.code|default('') : '') %}
+{% set sourceLabels = {
+    stock: 'Склад',
+    production: 'Під виробництво',
+    preorder: 'Під замовлення',
+    service: 'Послуга',
+    material: 'Матеріал'
+} %}
+{% set sourceType = product ? (warehouse ? 'stock' : 'production') : '' %}
+{% set sourceLabel = sourceLabels[sourceType]|default(sourceType) %}
+{% set sourceDetail = warehouse ? warehouse.name : sourceLabel %}
+{% set available = 0 %}
+{% if product %}
+    {% for stock in product.warehouseStocks %}
+        {% set available = available + stock.quantityOnHand - stock.reservedQuantity %}
+    {% endfor %}
+{% endif %}
+{% set hasEntryErrors =
+    entry.vars.errors|length > 0
+    or entry.product.vars.errors|length > 0
+    or entry.warehouse.vars.errors|length > 0
+    or entry.quantity.vars.errors|length > 0
+    or entry.unitPrice.vars.errors|length > 0
+    or entry.discountAmount.vars.errors|length > 0
+%}
+
+<div
+        class="order-entry-item border rounded p-3 mb-3 position-relative {{ not entry.vars.valid ? 'border-danger' : '' }}"
+        data-controller="order-entry"
+        data-order-form-target="row"
+        data-order-entry-target="row"
+        data-index="{{ entry.vars.name }}"
+        data-product-id="{{ product ? product.id : '' }}"
+        data-source-type="{{ sourceType }}"
+        data-available="{{ available|number_format(4, '.', '') }}"
+        data-unit-precision="{{ unitPrecision }}"
+>
+    <button
+            type="button"
+            class="btn btn-sm btn-outline-danger order-entry-remove"
+            data-action="order-entry#remove"
+            title="Видалити позицію"
+            aria-label="Видалити позицію"
+    >
+        <i class="fa-solid fa-trash"></i>
+    </button>
+
+    <div class="row g-3 align-items-start">
+        <div class="col-12 col-xl-6">
+            <label class="form-label">Товар</label>
+            {{ form_widget(entry.product, {
+                attr: {
+                    class: 'd-none order-entry-product',
+                    'data-order-entry-target': 'product',
+                    'data-action': 'change->order-entry#changed'
+                }
+            }) }}
+            <div class="form-control-plaintext fw-semibold py-1" data-order-entry-target="productLabel">
+                {{ productName }}
+            </div>
+            <div class="text-muted small" data-order-entry-target="productMeta">
+                {{ productCode }}
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label">Джерело</label>
+            {{ form_widget(entry.warehouse, {
+                attr: {
+                    class: 'd-none',
+                    'data-order-entry-target': 'warehouse'
+                }
+            }) }}
+            <div class="form-control-plaintext py-1" data-order-entry-target="sourceLabel">
+                {{ sourceDetail ?: 'Не визначено' }}
+            </div>
+            <div class="text-muted small" data-order-entry-target="sourceMeta">
+                {{ sourceLabel }}
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <label class="form-label">Наявність</label>
+            <div class="form-control-plaintext py-1">
+                <span data-order-entry-target="available">{{ available|number_format(unitPrecision, '.', '') }}</span>
+                <span class="text-muted ms-1" data-order-entry-target="unitLabel">{{ unitCode }}</span>
+            </div>
+            <div class="text-warning small d-none" data-order-entry-target="availabilityWarning">Недостатньо на складі</div>
+        </div>
+    </div>
+
+    <div class="row g-3 align-items-start mt-0">
+        <div class="col-6 col-md-3">
+            <label class="form-label">К-сть</label>
+            {{ form_widget(entry.quantity, {
+                attr: {
+                    class: 'form-control form-control-sm order-entry-number',
+                    'data-order-entry-target': 'quantity',
+                    'data-action': 'input->order-entry#changed'
+                }
+            }) }}
+            {{ form_help(entry.quantity) }}
+        </div>
+        <div class="col-6 col-md-3">
+            <label class="form-label">Ціна</label>
+            {{ form_widget(entry.unitPrice, {
+                attr: {
+                    class: 'form-control form-control-sm order-entry-number',
+                    'data-order-entry-target': 'unitPrice',
+                    'data-action': 'input->order-entry#changed'
+                }
+            }) }}
+            {{ form_help(entry.unitPrice) }}
+        </div>
+        <div class="col-6 col-md-3">
+            <label class="form-label">Знижка</label>
+            {{ form_widget(entry.discountAmount, {
+                attr: {
+                    class: 'form-control form-control-sm order-entry-number',
+                    'data-order-entry-target': 'discount',
+                    'data-action': 'input->order-entry#changed'
+                }
+            }) }}
+            {{ form_help(entry.discountAmount) }}
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label">Сума</label>
+            <div class="form-control-plaintext fw-bold py-1">
+                <span data-order-entry-target="lineTotal">{{ entryData ? entryData.totalPrice|money : '0.00' }}</span>
+                <span class="text-muted ms-1" data-order-currency-label>{{ currencyCode }}</span>
+            </div>
+        </div>
+    </div>
+
+    {% if hasEntryErrors %}
+        <div class="form-error order-entry-errors mt-3 mb-0">
+            {{ form_errors(entry) }}
+            {{ form_errors(entry.product) }}
+            {{ form_errors(entry.warehouse) }}
+            {{ form_errors(entry.quantity) }}
+            {{ form_errors(entry.unitPrice) }}
+            {{ form_errors(entry.discountAmount) }}
+        </div>
+    {% endif %}
+</div>

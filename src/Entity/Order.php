@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Entity\User\User;
 use App\Enum\PaymentStatusEnum;
+use App\Workflow\WorkflowSubjectInterface;
 use DateTimeImmutable;
 use App\Repository\OrderRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -13,7 +14,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: OrderRepository::class)]
 #[ORM\Table(name: 'orders')]
-class Order
+class Order implements WorkflowSubjectInterface
 {
 	#[ORM\Id]
 	#[ORM\GeneratedValue]
@@ -139,6 +140,21 @@ class Order
 		return $this;
 	}
 
+	public function getWorkflowKey(): string
+	{
+		return 'order';
+	}
+
+	public function getStatusValue(): string
+	{
+		return $this->status->value;
+	}
+
+	public function setStatusValue(string $status): void
+	{
+		$this->status = OrderStatus::from($status);
+	}
+
 	public function getCurrency(): ?Currency
 	{
 		return $this->currency;
@@ -216,9 +232,13 @@ class Order
 		$this->customer = $customer;
 
 		if ($customer instanceof Customer) {
-			$this->customerNameSnapshot = $customer->getName();
+			$this->customerNameSnapshot = $customer->getFullName();
 			$this->customerPhoneSnapshot = $customer->getPhone();
 			$this->customerEmailSnapshot = $customer->getEmail();
+		} else {
+			$this->customerNameSnapshot = null;
+			$this->customerPhoneSnapshot = null;
+			$this->customerEmailSnapshot = null;
 		}
 
 		return $this;

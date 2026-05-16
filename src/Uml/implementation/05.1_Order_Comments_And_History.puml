@@ -1,0 +1,130 @@
+@startuml
+
+title 05.1. Order comments and order history
+
+hide circle
+skinparam linetype ortho
+
+enum OrderHistorySource {
+	manual
+	system
+	integration
+}
+
+entity Order {
+	* id: int
+	--
+	* number: string(255)
+	* status: OrderStatus
+}
+
+entity OrderComment {
+	* id: int
+	--
+	* body: text
+	* createdAt: DateTimeImmutable
+	updatedAt: DateTimeImmutable?
+	deletedAt: DateTimeImmutable?
+	* order: Order
+	* author: User
+}
+
+entity OrderHistory {
+	* id: int
+	--
+	* eventKey: string(100)
+	* source: OrderHistorySource
+	* title: string(255)
+	description: text?
+	changes: json?
+	payload: json?
+	relatedEntityType: string(100)?
+	relatedEntityId: int?
+	* occurredAt: DateTimeImmutable
+	actorNameSnapshot: string(255)?
+	* order: Order
+	actor: User?
+}
+
+Order ||--o{ OrderComment : has comments
+Order ||--o{ OrderHistory : has timeline
+User ||--o{ OrderComment : authors
+User |o--o{ OrderHistory : performs
+OrderHistorySource ||--o{ OrderHistory : classifies source
+
+note right of OrderComment
+  Goal:
+  replace the single Order.comment field with many comments.
+
+  Required behavior:
+  - Different users can add separate comments to the same order.
+  - Comments remain discussion records, not audit history.
+  - Comment creation/edit/deletion should also create OrderHistory rows.
+  - Soft delete can hide a comment without destroying the audit trail.
+end note
+
+note right of OrderHistory
+  Goal:
+  dedicated append-only activity timeline for Order.
+
+  Why it is separate:
+  generic StatusHistory is too narrow because Order needs to show
+  every meaningful action, not only status transitions.
+
+  Required behavior:
+  - Store manual, system and integration events.
+  - Keep eventKey stable for renderers and future automation.
+  - Keep title/description as human-readable snapshots for UI.
+  - Keep changes as structured before/after field diffs.
+  - Keep payload for future order features:
+    delivery service, declaration generation, shipping payer,
+    external integration data and similar extensions.
+  - actor can be null for automatic events.
+  - actorNameSnapshot preserves what should be shown later.
+  - relatedEntityType/relatedEntityId can point to future
+    delivery/declaration-like entities without redesigning the timeline.
+end note
+
+note bottom
+  Suggested event coverage:
+
+  Core manual events:
+  - order.created
+  - order.updated
+  - order.status_changed
+  - order.comment_added / edited / deleted
+  - order.entry_added / updated / removed
+  - order.customer_changed
+
+  Financial/warehouse events later:
+  - order.payment_registered / refunded
+  - order.reservation_created / released
+  - order.shipment_created / posted
+  - order.return_created / posted
+
+  Future extensibility examples:
+  - order.delivery_service_selected
+  - order.delivery_payer_changed
+  - order.delivery_declaration_generated
+  - order.integration_sync_succeeded / failed
+end note
+
+note bottom
+  Suggested implementation steps:
+
+  1. Add OrderComment and OrderHistory entities/repositories.
+  2. Remove the single editable Order.comment field from future forms.
+  3. Add OrderCommentManager for create/edit/soft-delete operations.
+  4. Add OrderHistoryRecorder service with small explicit helpers,
+     not ad-hoc writes from controllers.
+  5. Record order creation, status changes, comment actions
+     and entry mutations first.
+  6. Add timeline UI on Order show page with clear grouping by date
+     and readable labels for manual/system/integration events.
+  7. Add tests for append-only history, actor attribution,
+     before/after changes, comment soft delete and future-safe payloads.
+
+  Do this after the base Order CRUD from 05_Sales_Orders.
+end note
+
+@enduml

@@ -43,8 +43,9 @@ class CustomerSupplierFixtures extends Fixture implements DependentFixtureInterf
 				if (!$manager->getRepository(Customer::class)->findOneBy(['store' => $store, 'email' => $email])) {
 					$manager->persist((new Customer())
 						->setStore($store)
-						->setName($faker->name())
-						->setPhone($faker->phoneNumber())
+						->setName($faker->firstName())
+						->setLastName($faker->lastName())
+						->setPhone(sprintf('+38067%07d', (((int) $store->getId() * 10) + $i) % 10000000))
 						->setEmail($email)
 						->setComment($faker->optional()->sentence()));
 				}

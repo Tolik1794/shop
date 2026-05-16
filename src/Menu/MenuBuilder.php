@@ -57,7 +57,8 @@ final class MenuBuilder
 		]);
 
 		$menu->addChild('Orders', [
-			'uri' => '#',
+			'route' => 'app_admin_order_index',
+			'routeParameters' => ['store_id' => $storeId],
 			'attributes' => [
 				'class' => 'sidebar-item',
 			],

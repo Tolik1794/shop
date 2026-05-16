@@ -47,7 +47,7 @@ class CustomerController extends AbstractAdvancedController
 		if ($page < 1) return $this->redirectToFirstPage();
 
 		$pagination = $paginator->paginate($queryBuilder, $page, options: [
-			'defaultSortFieldName' => ['customer.name', 'customer.id'],
+			'defaultSortFieldName' => ['customer.name', 'customer.lastName', 'customer.id'],
 			'defaultSortDirection' => 'asc',
 		]);
 

@@ -1,0 +1,91 @@
+@startuml
+
+title 00. Current state and implementation roadmap
+
+hide circle
+skinparam linetype ortho
+
+rectangle "Already implemented or mostly implemented" as Done {
+	[Store, User, UserStore]
+	[Currency, Unit]
+	[Category and product parameters]
+	[Product basic card]
+	[Warehouse and WarehouseStock]
+	[Order/Purchase entities as schema only]
+}
+
+rectangle "Missing full functionality" as Todo {
+	[Exchange rates]
+	[Product price history]
+	[Customers and suppliers]
+	[Order CRUD and order workflow]
+	[Order comments and order timeline]
+	[Purchase CRUD and purchase workflow]
+	[Payments]
+	[Inventory documents and stock movements]
+	[Stock reservations]
+	[Production recipes and production orders]
+	[Status history and audit UI]
+	[Universal status transition service]
+}
+
+Done --> Todo : next tasks
+
+note right of Done
+  What is already in the project:
+
+  - Entity mappings exist for Store, User, Currency, Unit,
+    Category, Product, Warehouse, WarehouseStock,
+    Order, OrderEntry, Purchase and PurchaseEntry.
+  - Admin CRUD exists for Store, Category, Product,
+    Warehouse and WarehouseStock.
+  - Fixtures exist for users, stores, currencies, units,
+    category tree, product parameter names and many products.
+  - Database migrations were rebuilt and schema validates.
+
+  Important limitation:
+  Some entities already have fields from Database.puml,
+  but business workflows are not implemented yet.
+  Example: Order has totals/currency/status fields,
+  but no order CRUD and no stock posting logic.
+end note
+
+note right of Todo
+  Recommended execution order:
+
+  01_Core_Store_User_Reference_Data
+  02_Catalog_Product_And_Pricing
+  03_Parties_Customers_And_Suppliers
+  04_Warehouse_Stock_Base
+  05_Sales_Orders
+  05.1_Order_Comments_And_History
+  06_Purchases
+  07_Payments
+  08_Inventory_Documents_And_Movements
+  09_Stock_Reservations
+  10_Production
+  11_Status_History_Audit_And_Deletions
+  11.1_Universal_Status_Transition_Service
+
+  The order matters because later modules depend on data
+  and workflows from earlier modules.
+end note
+
+note bottom
+  Implementation rules for all stages:
+
+  1. Do not rename existing routes/selectors/form field names
+     unless the task explicitly asks for it.
+  2. Keep CRUD and business logic separate:
+     controllers stay thin, managers/services perform posting,
+     recalculation and workflow transitions.
+  3. Add fixtures only for base dictionaries and repeatable test data.
+  4. For stock and money flows, write tests before changing posting logic.
+  5. After each stage run:
+     - doctrine:schema:validate
+     - lint:container
+     - focused PHPUnit tests
+     - fixtures load when fixtures changed
+end note
+
+@enduml

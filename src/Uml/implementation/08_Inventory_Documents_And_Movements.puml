@@ -1,0 +1,204 @@
+@startuml
+
+title 08. Inventory documents and stock movements
+
+hide circle
+skinparam linetype ortho
+
+enum InventoryDocumentType {
+	purchase_receipt
+	sale_shipment
+	customer_return
+	supplier_return
+	production
+	write_off
+	stock_adjustment
+	transfer
+	reversal
+}
+
+enum InventoryDocumentStatus {
+	draft
+	posted
+	canceled
+}
+
+enum InventoryReasonType {
+	write_off
+	stock_adjustment
+	return
+	production_loss
+	transfer
+	initial_stock
+	inventory_count
+	damage
+	other
+}
+
+enum InventoryDirection {
+	in
+	out
+}
+
+entity InventoryDocument {
+	* id: int
+	--
+	* number: string(255)
+	* type: InventoryDocumentType
+	* status: InventoryDocumentStatus
+	* documentDate: DateTimeImmutable
+	currency: Currency?
+	exchangeRateToBase: decimal(18,8)?
+	totalAmount: decimal(14,4)?
+	totalAmountBase: decimal(14,4)?
+	postedAt: DateTimeImmutable?
+	canceledAt: DateTimeImmutable?
+	comment: text?
+	* createdAt: DateTimeImmutable
+	* updatedAt: DateTimeImmutable
+	* store: Store
+	createdBy: User?
+	updatedBy: User?
+	postedBy: User?
+	canceledBy: User?
+	reversedDocument: InventoryDocument?
+	order: Order?
+	purchase: Purchase?
+	productionOrder: ProductionOrder?
+	reason: InventoryReason?
+}
+
+entity InventoryReason {
+	* id: int
+	--
+	* name: string(255)
+	* type: InventoryReasonType
+	* status: ActiveStatusEnum
+	* createdAt: DateTimeImmutable
+	* updatedAt: DateTimeImmutable
+	deletedAt: DateTimeImmutable?
+	* store: Store
+	createdBy: User?
+	updatedBy: User?
+}
+
+entity InventoryDocumentLine {
+	* id: int
+	--
+	* quantity: decimal(14,4)
+	unitPrice: decimal(14,4)?
+	unitPriceBase: decimal(14,4)?
+	totalPrice: decimal(14,4)?
+	totalPriceBase: decimal(14,4)?
+	* direction: InventoryDirection
+	* inventoryDocument: InventoryDocument
+	* product: Product
+	* warehouse: Warehouse
+	warehouseStock: WarehouseStock?
+	orderEntry: OrderEntry?
+	purchaseEntry: PurchaseEntry?
+}
+
+entity StockMovement {
+	* id: int
+	--
+	* quantityChange: decimal(14,4)
+	* unitCost: decimal(14,4)
+	balanceAfter: decimal(14,4)?
+	* createdAt: DateTimeImmutable
+	* inventoryDocumentLine: InventoryDocumentLine
+	* warehouseStock: WarehouseStock
+	warehouseStockBatch: WarehouseStockBatch?
+}
+
+Store ||--o{ InventoryDocument : owns
+InventoryDocumentType ||--o{ InventoryDocument : classifies
+InventoryDocumentStatus ||--o{ InventoryDocument : controls
+InventoryReasonType ||--o{ InventoryReason : classifies
+Store ||--o{ InventoryReason : defines
+InventoryReason |o--o{ InventoryDocument : explains
+Currency |o--o{ InventoryDocument : document currency
+InventoryDocument |o--o{ InventoryDocument : reverses
+InventoryDocument ||--o{ InventoryDocumentLine : has lines
+InventoryDirection ||--o{ InventoryDocumentLine : defines
+InventoryDocumentLine ||--o{ StockMovement : posts movements
+Product ||--o{ InventoryDocumentLine : moved as
+Warehouse ||--o{ InventoryDocumentLine : used in
+WarehouseStock ||--o{ InventoryDocumentLine : affected by
+WarehouseStock ||--o{ StockMovement : changes by
+WarehouseStockBatch |o--o{ StockMovement : batch detail
+Order ||--o{ InventoryDocument : generates stock docs
+Purchase ||--o{ InventoryDocument : generates stock docs
+ProductionOrder ||--o{ InventoryDocument : generates stock docs
+OrderEntry |o--o{ InventoryDocumentLine : ships/returns
+PurchaseEntry |o--o{ InventoryDocumentLine : receives/returns
+User |o--o{ InventoryDocument : creates/updates/posts/cancels
+
+note right of InventoryDocument
+  Current project status:
+  - InventoryDocument, InventoryDocumentLine, StockMovement
+    and InventoryReason are not implemented.
+  - WarehouseStock exists, but stock changes are still manual.
+
+  Required behavior:
+  - draft = editable and has no stock effect.
+  - posted = immutable and creates movements.
+  - canceled = canceled through reversal logic, not destructive edits.
+  - only one of order, purchase or productionOrder is filled.
+  - postedBy/postedAt and canceledBy/canceledAt are filled by workflow.
+  - posted documents are corrected by reversal documents.
+  - currency fields are optional for purely technical documents.
+  - reason is strongly recommended for adjustments, write-offs,
+    returns, production loss and inventory count.
+end note
+
+note right of InventoryReason
+  Required behavior:
+  - Dictionary for consistent grouping and reporting of stock reasons.
+  - Useful examples: damage, write-off, inventory count,
+    initial stock, customer return, production loss.
+  - Suggested uniqueness: store + type + name.
+end note
+
+note right of InventoryDocumentLine
+  Required behavior:
+  - quantity > 0; direction defines IN/OUT.
+  - monetary fields follow InventoryDocument currency when present.
+  - sale_shipment uses OUT; purchase_receipt uses IN.
+  - customer_return uses IN; supplier_return uses OUT.
+  - transfer uses paired OUT/IN lines.
+  - One business line can be represented by multiple document lines
+    over time for partial operations.
+end note
+
+note right of StockMovement
+  Required behavior:
+  - Created only from posted document lines.
+  - quantityChange is signed: IN > 0, OUT < 0.
+  - Movements are append-only after posting.
+  - OUT must not make WarehouseStock.quantityOnHand negative.
+  - unitCost is stored in Store.baseCurrency.
+  - average_cost uses a posting-time cost snapshot;
+    fifo may split one line into several batch movements.
+end note
+
+note bottom
+  Suggested implementation steps:
+
+  1. Add entities/enums/repositories for documents, reasons,
+     lines and movements.
+  2. Add InventoryPostingService:
+     post(document), cancel(document), createReversal(document).
+  3. Implement stock_adjustment and inventory_count MVP first.
+  4. Then add purchase_receipt, sale_shipment,
+     customer_return and supplier_return flows.
+  5. Add transfer and production document flows later.
+  6. Add tests for:
+     immutable posted docs, reversal logic, non-negative stock,
+     average-cost/FIFO rules, reason validation and audit fields.
+  7. Continue with 08.1 to synchronize business-document progress.
+
+  This is the central stock module.
+end note
+
+@enduml
