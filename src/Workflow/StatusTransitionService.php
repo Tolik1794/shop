@@ -1,0 +1,102 @@
+<?php
+
+namespace App\Workflow;
+
+use App\Workflow\Event\StatusTransitionAppliedEvent;
+use App\Workflow\Exception\TransitionNotAllowedException;
+use App\Workflow\Exception\WorkflowException;
+
+class StatusTransitionService
+{
+	public function __construct(
+		private readonly WorkflowRegistry $workflowRegistry,
+		private readonly DomainEventDispatcher $domainEventDispatcher,
+	)
+	{
+	}
+
+	/**
+	 * Applies one named business transition and returns the completed change.
+	 */
+	public function apply(
+		WorkflowSubjectInterface $subject,
+		string $transitionKey,
+		TransitionContext $context,
+	): TransitionResult
+	{
+		[$definition, $transition, $fromStatus] = $this->resolve($subject, $transitionKey);
+		$this->assertAllowed($subject, $transition, $context, $fromStatus);
+
+		foreach ($transition->beforeActions as $beforeAction) {
+			$beforeAction->execute($subject, $transition, $context);
+		}
+
+		$subject->setStatusValue($transition->toStatus);
+
+		foreach ($transition->afterActions as $afterAction) {
+			$afterAction->execute($subject, $transition, $context);
+		}
+
+		$result = new TransitionResult(
+			entity: $subject,
+			transitionKey: $transition->key,
+			fromStatus: $fromStatus,
+			toStatus: $transition->toStatus,
+		);
+
+		$definition->getHistoryRecorder()->record($subject, $transition, $context, $result);
+		$this->domainEventDispatcher->dispatch(new StatusTransitionAppliedEvent($transition, $context, $result));
+
+		return $result;
+	}
+
+	/**
+	 * Checks the same transition rules as apply() without mutating the subject.
+	 */
+	public function can(
+		WorkflowSubjectInterface $subject,
+		string $transitionKey,
+		TransitionContext $context,
+	): bool
+	{
+		try {
+			[, $transition, $fromStatus] = $this->resolve($subject, $transitionKey);
+			$this->assertAllowed($subject, $transition, $context, $fromStatus);
+		} catch (WorkflowException) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * @return array{WorkflowDefinitionInterface, TransitionDefinition, string}
+	 */
+	private function resolve(WorkflowSubjectInterface $subject, string $transitionKey): array
+	{
+		$definition = $this->workflowRegistry->getFor($subject);
+		$transition = $definition->getTransition($transitionKey);
+
+		return [$definition, $transition, $subject->getStatusValue()];
+	}
+
+	private function assertAllowed(
+		WorkflowSubjectInterface $subject,
+		TransitionDefinition $transition,
+		TransitionContext $context,
+		string $fromStatus,
+	): void
+	{
+		if (!$transition->allowsFrom($fromStatus)) {
+			throw new TransitionNotAllowedException(sprintf(
+				'Transition "%s" is not allowed from status "%s".',
+				$transition->key,
+				$fromStatus,
+			));
+		}
+
+		foreach ($transition->guards as $guard) {
+			$guard->assertAllowed($subject, $transition, $context);
+		}
+	}
+}

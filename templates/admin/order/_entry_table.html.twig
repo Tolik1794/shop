@@ -1,0 +1,23 @@
+<div class="card order-entries-card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Позиції замовлення</h5>
+    </div>
+    <div class="card-body">
+        {{ include('admin/order/_product_search.html.twig') }}
+
+        {% if form.orderEntries.vars.errors|length > 0 %}
+            <div class="form-error">
+                {{ form_errors(form.orderEntries) }}
+            </div>
+        {% endif %}
+
+        <div class="order-entry-list" data-order-form-target="entries">
+            {% for entry in form.orderEntries %}
+                {{ include('admin/order/_entry_row.html.twig', {entry: entry, currency: form.currency.vars.data|default(null)}) }}
+            {% endfor %}
+        </div>
+        <div class="text-muted {{ form.orderEntries|length > 0 ? 'd-none' : '' }}" data-order-form-target="emptyState">
+            Позиції ще не додані.
+        </div>
+    </div>
+</div>

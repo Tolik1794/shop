@@ -4,8 +4,8 @@
 
 {% set table_actions %}
     {% if is_granted('ROLE_STORE_ADMIN') %}
-        <a class="dropdown-item"
-           href="{{ path('admin_category_new', {store_id: app.request.attributes.get('store_id')}) }}">New</a>
+        <a class="btn btn-light btn-sm"
+           href="{{ path('admin_category_new', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-plus me-1"></i>New</a>
     {% endif %}
 {% endset %}
 

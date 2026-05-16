@@ -1,9 +1,9 @@
 {% set actions %}
     {% if entity.nickname == app.user.nickname %}
-        <a class="dropdown-item" href="{{ path('admin_user_profile', query_params) }}">Edit</a>
+        <a class="btn btn-light btn-sm" href="{{ path('admin_user_profile', query_params) }}"><i class="fa-solid fa-pen me-1"></i>Edit</a>
     {% elseif is_granted('POST_EDIT', entity) %}
-        <a class="dropdown-item" href="{{ path('admin_user_edit', query_params|merge({user_id: entity.nickname})) }}">
-            Edit
+        <a class="btn btn-light btn-sm" href="{{ path('admin_user_edit', query_params|merge({user_id: entity.nickname})) }}">
+            <i class="fa-solid fa-pen me-1"></i>Edit
         </a>
     {% endif %}
 {% endset %}

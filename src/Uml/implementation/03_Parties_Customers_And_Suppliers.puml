@@ -1,0 +1,91 @@
+@startuml
+
+title 03. Customers and suppliers
+
+hide circle
+skinparam linetype ortho
+
+entity Customer {
+	* id: int
+	--
+	* name: string(255)
+	lastName: string(255)?
+	phone: string(255)?
+	email: string(255)?
+	comment: text?
+	* status: ActiveStatusEnum
+	* createdAt: DateTimeImmutable
+	* updatedAt: DateTimeImmutable
+	deletedAt: DateTimeImmutable?
+	* store: Store
+	createdBy: User?
+	updatedBy: User?
+}
+
+entity Supplier {
+	* id: int
+	--
+	* name: string(255)
+	phone: string(255)?
+	email: string(255)?
+	comment: text?
+	* status: ActiveStatusEnum
+	* createdAt: DateTimeImmutable
+	* updatedAt: DateTimeImmutable
+	deletedAt: DateTimeImmutable?
+	* store: Store
+	createdBy: User?
+	updatedBy: User?
+}
+
+Store ||--o{ Customer : has customers
+Store ||--o{ Supplier : has suppliers
+Customer |o--o{ Order : places
+Supplier |o--o{ Purchase : supplies
+User |o--o{ Customer : creates/updates
+User |o--o{ Supplier : creates/updates
+
+note right of Customer
+  Current project status:
+  - Customer entity is not implemented.
+  - Customer CRUD is not implemented.
+  - Order currently stores customer snapshot fields,
+    but has no Customer relation yet.
+
+  Required behavior:
+  - Customer belongs to one Store.
+  - Deletion should be soft delete through deletedAt.
+  - Customer can be inactive without deleting historical orders.
+  - Order must copy customer name/phone/email to snapshots.
+end note
+
+note right of Supplier
+  Current project status:
+  - Supplier entity is not implemented.
+  - Supplier CRUD is not implemented.
+  - Purchase currently stores supplier snapshot fields,
+    but has no Supplier relation yet.
+
+  Required behavior:
+  - Supplier belongs to one Store.
+  - Purchase must copy supplier name/phone/email to snapshots.
+  - Historical purchases must remain readable
+    even when supplier is edited or soft deleted.
+end note
+
+note bottom
+  Suggested implementation steps:
+
+  1. Add Customer and Supplier entities/repositories/managers.
+  2. Add unique suggestions if needed:
+     (store_id, email) where email is not null,
+     (store_id, phone) where phone is not null.
+  3. Add admin CRUD and filters for both.
+  4. Add fixtures with a few customers and suppliers.
+  5. Update Order/Purchase forms later to select customer/supplier.
+  6. Add tests for store scoping and snapshot copying.
+
+  Do this before Sales Orders and Purchases.
+end note
+
+@enduml

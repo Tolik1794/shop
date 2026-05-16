@@ -23,7 +23,7 @@ class CustomerFilterType extends AbstractType
 					if ($value) {
 						$rootAlias = current($qb->getRootAliases());
 
-						$qb->andWhere(sprintf('%s.name like :customerName', $rootAlias))
+						$qb->andWhere(sprintf('%s.name like :customerName OR %s.lastName like :customerName', $rootAlias, $rootAlias))
 							->setParameter('customerName', '%' . $value . '%');
 					}
 				},

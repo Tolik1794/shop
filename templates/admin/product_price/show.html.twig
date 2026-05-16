@@ -1,5 +1,5 @@
 {% set actions %}
-    <a class="dropdown-item" href="{{ path('app_admin_product_price_edit', {store_id: app.request.attributes.get('store_id'), product_id: entity.product.id, id: entity.id}) }}">Edit</a>
+    <a class="btn btn-light btn-sm" href="{{ path('app_admin_product_price_edit', {store_id: app.request.attributes.get('store_id'), product_id: entity.product.id, id: entity.id}) }}"><i class="fa-solid fa-pen me-1"></i>Edit</a>
 {% endset %}
 
 <div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
@@ -22,7 +22,7 @@
             </tr>
             <tr>
                 <th>Price</th>
-                <td>{{ entity.price }}</td>
+                <td>{{ entity.price|money }}</td>
             </tr>
             <tr>
                 <th>Currency</th>
@@ -30,7 +30,7 @@
             </tr>
             <tr>
                 <th>Base price</th>
-                <td>{{ entity.priceBase }}</td>
+                <td>{{ entity.priceBase|money }}</td>
             </tr>
             <tr>
                 <th>Valid from</th>

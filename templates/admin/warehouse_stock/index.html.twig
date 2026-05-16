@@ -23,7 +23,7 @@
 
 {% set table_actions %}
     {% if is_granted('ROLE_STORE_ADMIN') %}
-        <a class="dropdown-item" href="{{ path('app_admin_warehouse_stock_new', {store_id: app.request.attributes.get('store_id'), warehouse_id: warehouse.id}) }}">New</a>
+        <a class="btn btn-light btn-sm" href="{{ path('app_admin_warehouse_stock_new', {store_id: app.request.attributes.get('store_id'), warehouse_id: warehouse.id}) }}"><i class="fa-solid fa-plus me-1"></i>New</a>
     {% endif %}
 {% endset %}
 

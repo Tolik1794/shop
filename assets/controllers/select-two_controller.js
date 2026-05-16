@@ -38,8 +38,12 @@ export default class extends Controller {
                 }
 
                 $select2.select2(options)
+                    .on('select2:select', function () {
+                        this.dispatchEvent(new Event('change', {bubbles: true}))
+                    })
                     .on('select2:clear', function (e) {
                         $(this).data('is_clear', true)
+                        this.dispatchEvent(new Event('change', {bubbles: true}))
 
                         if ($(this).data('is_open')) {
                             e.preventDefault()

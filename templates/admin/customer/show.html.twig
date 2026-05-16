@@ -1,5 +1,5 @@
 {% set actions %}
-    <a class="dropdown-item" href="{{ path('app_admin_customer_edit', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}">Edit</a>
+    <a class="btn btn-light btn-sm" href="{{ path('app_admin_customer_edit', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"><i class="fa-solid fa-pen me-1"></i>Edit</a>
 {% endset %}
 
 <div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
@@ -7,14 +7,18 @@
         {% if actions|trim %}
             {{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
         {% endif %}
-        <h5 class="card-title mb-0">{{ entity.name }}</h5>
+        <h5 class="card-title mb-0">{{ entity.fullName }}</h5>
     </div>
     <div class="card-body">
         <table class="table table-sm mt-2 mb-4">
             <tbody>
             <tr>
-                <th>Name</th>
+                <th>First name</th>
                 <td>{{ entity.name }}</td>
+            </tr>
+            <tr>
+                <th>Last name</th>
+                <td>{{ entity.lastName }}</td>
             </tr>
             <tr>
                 <th>Phone</th>
