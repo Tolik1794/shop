@@ -2,14 +2,15 @@
     <ul class="nav nav-tabs" role="tablist">
         {% for key, name in tab_head %}
             <li class="nav-item" role="presentation">
+                {% set is_search_tab = tab_search_key is defined and key == tab_search_key %}
                 {% if key == 0 %}
-                    <a class="nav-link active" href="#tab-1"
+                    <a class="nav-link active{{ is_search_tab ? ' tab-search-link' : '' }}" href="#tab-1"
                        data-bs-toggle="tab" role="tab"
                        id="first-tab" aria-selected="true">
                         {{ name|raw }}
                     </a>
                 {% else %}
-                    <a class="nav-link" href="#tab-{{ key + 1 }}"
+                    <a class="nav-link{{ is_search_tab ? ' tab-search-link' : '' }}" href="#tab-{{ key + 1 }}"
                        data-bs-toggle="tab" role="tab"
                        aria-selected="false" tabindex="-1">
                         {{ name|raw }}

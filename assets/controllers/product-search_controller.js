@@ -12,6 +12,12 @@ export default class extends Controller {
         this.isLoading = false
         this.currentQuery = ''
         this.requestId = 0
+        this.currencyChangedHandler = this.currencyChanged.bind(this)
+        this.element.addEventListener('change', this.currencyChangedHandler)
+    }
+
+    disconnect() {
+        this.element.removeEventListener('change', this.currencyChangedHandler)
     }
 
     search() {
@@ -76,6 +82,11 @@ export default class extends Controller {
             page: String(this.page),
             limit: String(this.limit),
         })
+        const currency = this.currencyCode()
+
+        if (currency) {
+            params.set('currency', currency)
+        }
 
         this.excludedOptions().forEach((optionKey) => params.append('excludedOptions[]', optionKey))
 
@@ -267,6 +278,25 @@ export default class extends Controller {
 
     clearError() {
         this.errorTarget.textContent = ''
+    }
+
+    currencyChanged(event) {
+        if (!event.target || !event.target.name || !event.target.name.endsWith('[currency]')) {
+            return
+        }
+
+        if (this.queryTarget.value.trim().length >= 3) {
+            this.load(true)
+            return
+        }
+
+        this.clearResults()
+    }
+
+    currencyCode() {
+        const currencyInput = this.element.querySelector('[name$="[currency]"]')
+
+        return currencyInput ? currencyInput.value : ''
     }
 
     excludedOptions() {

@@ -10,6 +10,7 @@ use App\Repository\CustomerRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\TelType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -93,9 +94,6 @@ class OrderType extends AbstractType
 			->add('deliveryAddress', TextareaType::class, [
 				'required' => false,
 			])
-			->add('comment', TextareaType::class, [
-				'required' => false,
-			])
 			->add('orderEntries', CollectionType::class, [
 				'entry_type' => OrderEntryType::class,
 				'entry_options' => [
@@ -106,6 +104,22 @@ class OrderType extends AbstractType
 				'allow_add' => true,
 				'allow_delete' => true,
 				'by_reference' => false,
+				'label' => false,
+			])
+			->add('draftComments', CollectionType::class, [
+				'entry_type' => HiddenType::class,
+				'entry_options' => [
+					'constraints' => [
+						new NotBlank([
+							'message' => 'Order comment must not be blank.',
+							'normalizer' => 'trim',
+						]),
+					],
+				],
+				'allow_add' => true,
+				'allow_delete' => true,
+				'mapped' => false,
+				'required' => false,
 				'label' => false,
 			]);
 	}

@@ -59,6 +59,50 @@
 		border-color: rgba($primary, .25);
 	}
 
+	.order-discussion-scroll-frame {
+		position: relative;
+		border: 1px solid $gray-300;
+		border-radius: $border-radius;
+		background: mix($gray-100, $white, 45%);
+		overflow: hidden;
+
+		&::after {
+			content: "";
+			position: absolute;
+			right: 0;
+			bottom: 0;
+			left: 0;
+			height: 2rem;
+			background: linear-gradient(180deg, rgba($white, 0), rgba($white, .95));
+			pointer-events: none;
+		}
+	}
+
+	.order-discussion-scroll {
+		height: 260px;
+		overflow-y: scroll;
+		padding: .75rem 1rem .75rem .75rem;
+		scrollbar-color: rgba($primary, .45) rgba($gray-200, .75);
+		scrollbar-width: thin;
+
+		&::-webkit-scrollbar {
+			width: .5rem;
+		}
+
+		&::-webkit-scrollbar-track {
+			background: rgba($gray-200, .75);
+		}
+
+		&::-webkit-scrollbar-thumb {
+			background: rgba($primary, .45);
+			border-radius: 999px;
+		}
+	}
+
+	.order-draft-comment-body {
+		white-space: pre-line;
+	}
+
 	.order-product-search,
 	.order-customer-search {
 		position: relative;

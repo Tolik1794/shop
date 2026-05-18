@@ -61,32 +61,48 @@ yarn build
 
 ## Структура проєкту
 
-### Backend
+## Backend structure
 
-- `src/Controller/` — HTTP-контролери.
-- `src/Controller/Admin/` — адміністративна частина.
-- `src/Entity/` — Doctrine entities.
-- `src/Repository/` — запити до БД і query logic.
-- `src/Manager/` — прикладні операції над сутностями.
-- `src/Service/` — прикладні сервіси.
-- `src/Workflow/` — універсальний механізм переходів статусів.
-- `src/Form/` — Symfony forms.
-- `src/Twig/` — Twig extensions.
-- `migrations/` — Doctrine migrations.
-- `tests/` — PHPUnit tests.
+Main backend code is in `src/`:
 
-### Frontend
+- `src/Controller/` - HTTP controllers.
+- `src/Controller/Admin/` - admin area, routes usually under `/admin`.
+- `src/Controller/Api/Admin/` - admin AJAX/API endpoints, routes usually under `/api/admin`.
+- `src/Entity/` - Doctrine entities.
+- `src/Dto/` - DTO classes.
+- `src/Repository/` - Doctrine repositories and query logic.
+- `src/Form/` - Symfony forms, including Admin/Type, Admin/FilterType, and form extensions.
+- `src/Manager/` - business operations on entities.
+- `src/Service/` - application services: filters, upload, access, utility logic.
+- `src/Security/` - voters, email verifier, security-related classes.
+- `src/Menu/` - KnpMenu builders and voters.
+- `src/Twig/` - Twig extensions.
+- `src/EventSubscriber/` - event subscribers.
+- `src/DataFixtures/` - Doctrine fixtures.
+- `src/Enum/` - enum classes.
+- `src/Validator/` - Symfony validators and constraints.
+- `migrations/` - Doctrine migrations. Do not edit committed or already executed migrations.
+- `tests/` - PHPUnit and controller tests.
+- `docker/` - Docker configs.
+- `docker-compose.yml` - Docker Compose configuration.
 
-- `assets/` — JS, SCSS, Stimulus controllers і frontend entrypoints.
-- `templates/` — Twig views.
-- `templates/admin/` — адміністративний інтерфейс.
-- `public/` — публічні файли та фронт-контролер.
+## Frontend structure
 
-### Інфраструктура
+Frontend is located in `assets/` and Twig templates:
 
-- `docker-compose.yml` — основні сервіси середовища.
-- `docker/` — Docker-конфігурації PHP і Nginx.
-- `config/` — конфігурація Symfony.
+- `assets/admin/app.js` - admin-app entrypoint.
+- `assets/main/app.js` - main app entrypoint.
+- `assets/bootstrap.js` - Stimulus bootstrap.
+- `assets/controllers/` - Stimulus controllers.
+- `assets/controllers.json` - Stimulus controller config.
+- `assets/theme/admin_kit/` - AdminKit theme: SCSS, JS modules, images.
+- `assets/js/` - additional JavaScript files, including FontAwesome/Select2-related code.
+- `templates/` - Twig views.
+- `templates/admin/` - admin pages, layout, components.
+- `templates/admin/_components/` - reusable Twig components.
+- `public/images/` - public images.
+- `public/index.php` - Symfony front controller.
+- `public/build/` - generated Encore output. Do not edit manually.
 
 ## Документація та UML
 
@@ -116,7 +132,7 @@ yarn build
 - `TransitionDefinition` — опис дозволеного бізнес-переходу;
 - guards — перевірки доступності переходу;
 - actions — побічну логіку до або після зміни статусу;
-- history recorder extension point — місце для майбутнього запису історії;
+- `OrderHistoryRecorder` — запис повної часової лінії замовлення;
 - доменну подію після успішного переходу.
 
 Зараз модуль уже використовується для `Order`:

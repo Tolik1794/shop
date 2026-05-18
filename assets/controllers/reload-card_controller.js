@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['card']
+    static targets = ['card', 'commentsCard', 'historyCard']
 
     async reloadCard(event) {
         let eventTarget = event.currentTarget
@@ -14,6 +14,32 @@ export default class extends Controller {
         div.innerHTML = card
 
         this.cardTarget.replaceWith(div.firstElementChild)
+    }
+
+    async reloadOrderCards(event) {
+        const eventTarget = event.currentTarget
+
+        if (this.hasCardTarget && this.cardTarget.dataset.cardId === eventTarget.id) {
+            return
+        }
+
+        await Promise.all([
+            this.replaceCard(this.hasCardTarget ? this.cardTarget : null, eventTarget.dataset.showLink),
+            this.replaceCard(this.hasCommentsCardTarget ? this.commentsCardTarget : null, eventTarget.dataset.commentsLink),
+            this.replaceCard(this.hasHistoryCardTarget ? this.historyCardTarget : null, eventTarget.dataset.historyLink),
+        ])
+    }
+
+    async replaceCard(target, url) {
+        if (!target || !url) {
+            return
+        }
+
+        const card = await $.ajax(url + $(location).attr('search'))
+        const div = document.createElement('div')
+
+        div.innerHTML = card
+        target.replaceWith(div.firstElementChild)
     }
 
     async tableActivate(event) {

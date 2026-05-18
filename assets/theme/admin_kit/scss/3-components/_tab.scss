@@ -10,10 +10,10 @@
 }
 
 .tab-vertical .nav-tabs .nav-link {
-  border-bottom-left-radius: 0.2rem;
-  border-bottom-right-radius: 0;
-  border-top-left-radius: 0.2rem;
-  border-top-right-radius: 0;
+  align-items: center;
+  border-radius: 0;
+  display: flex;
+  justify-content: center;
 }
 
 .tab .nav-tabs .nav-link {
@@ -25,12 +25,18 @@
 }
 
 .tab-card {
+  --tab-card-tab-size: 3rem;
+  --tab-card-viewport-offset: 4.5rem;
+
   filter: drop-shadow($card-shadow);
 
   .nav-tabs .nav-link {
     background-color: $gray-200;
     color: $gray-600;
+    height: var(--tab-card-tab-size);
     margin-bottom: 0;
+    padding: 0;
+    width: var(--tab-card-tab-size);
 
     &:hover,
     &:focus {
@@ -42,6 +48,25 @@
   .nav-tabs .nav-link.active {
     background-color: $card-cap-bg;
     color: $card-title-color;
+  }
+
+  .nav-tabs .tab-search-link {
+    color: $gray-600;
+    height: calc(var(--tab-card-tab-size) * 2);
+  }
+
+  .nav-tabs .tab-search-link:not(.active) {
+    background-color: mix($danger, $white, 12%);
+
+    &:hover,
+    &:focus {
+      background-color: mix($danger, $white, 16%);
+      color: $gray-700;
+    }
+  }
+
+  .nav-tabs .tab-search-link .fa-magnifying-glass {
+    color: mix($danger, $gray-600, 72%);
   }
 
   .nav-tabs,
@@ -56,10 +81,19 @@
 
   .tab-content .card {
     background-color: $card-bg;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - var(--tab-card-viewport-offset));
   }
 
   .tab-content .card-header {
     background-color: $card-cap-bg;
+    flex: 0 0 auto;
+  }
+
+  .tab-content .card-body {
+    min-height: 0;
+    overflow-y: auto;
   }
 
   @include media-breakpoint-up(md) {
@@ -69,6 +103,14 @@
 
     .nav-tabs .nav-item:last-child .nav-link {
       border-bottom-left-radius: $card-border-radius;
+    }
+
+    .nav-tabs .nav-item:not(:first-child) .nav-link {
+      border-top-left-radius: 0;
+    }
+
+    .nav-tabs .nav-item:not(:last-child) .nav-link {
+      border-bottom-left-radius: 0;
     }
 
     .nav-tabs .nav-link:not(.active) {

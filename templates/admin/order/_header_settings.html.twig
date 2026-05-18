@@ -4,18 +4,17 @@
     </div>
     <div class="card-body">
         <div class="row g-3">
-            <div class="d-none">{{ form_widget(form.customer) }}</div>
+            <div class="d-none">{{ form_widget(form.customer, {attr: form.customer.vars.attr|merge({form: order_form_id})}) }}</div>
             <div class="col-md-6 position-relative order-customer-search">
                 {{ form_label(form.customerPhone) }}
-                {{ form_widget(form.customerPhone) }}
+                {{ form_widget(form.customerPhone, {attr: form.customerPhone.vars.attr|merge({form: order_form_id})}) }}
                 {{ form_errors(form.customerPhone) }}
                 <div class="order-customer-results d-none" data-order-form-target="customerResults"></div>
             </div>
-            <div class="col-md-6">{{ form_row(form.customerName) }}</div>
-            <div class="col-md-6">{{ form_row(form.customerLastName) }}</div>
-            <div class="col-md-6">{{ form_row(form.currency) }}</div>
-            <div class="col-md-6">{{ form_row(form.deliveryAddress) }}</div>
-            <div class="col-md-6">{{ form_row(form.comment) }}</div>
+            <div class="col-md-6">{{ form_row(form.customerName, {attr: form.customerName.vars.attr|merge({form: order_form_id})}) }}</div>
+            <div class="col-md-6">{{ form_row(form.customerLastName, {attr: form.customerLastName.vars.attr|merge({form: order_form_id})}) }}</div>
+            <div class="col-md-6">{{ form_row(form.currency, {attr: form.currency.vars.attr|merge({form: order_form_id, 'data-action': 'change->order-form#changed'})}) }}</div>
+            <div class="col-md-6">{{ form_row(form.deliveryAddress, {attr: form.deliveryAddress.vars.attr|merge({form: order_form_id})}) }}</div>
         </div>
     </div>
 </div>

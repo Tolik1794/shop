@@ -3,14 +3,18 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Order;
+use App\Entity\OrderComment;
 use App\Entity\OrderEntry;
 use App\Entity\OrderStatus;
 use App\Entity\Store;
 use App\Entity\Customer;
+use App\Entity\User\User;
 use App\Form\Admin\FilterType\OrderFilterType;
 use App\Form\Admin\Type\OrderType;
 use App\Manager\OrderManager;
+use App\Manager\OrderCommentManager;
 use App\Repository\CustomerRepository;
+use App\Repository\OrderHistoryRepository;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
@@ -26,11 +30,13 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/admin/store/{store_id}/order', name: 'app_admin_order_'), IsGranted('ROLE_STORE_ADMIN')]
 class OrderController extends AbstractAdvancedController
 {
-	private const DEFAULT_PAGE_LIMIT = 20;
+	private const int DEFAULT_PAGE_LIMIT = 20;
 
 	public function __construct(
 		private readonly OrderManager $orderManager,
+		private readonly OrderCommentManager $orderCommentManager,
 		private readonly CustomerRepository $customerRepository,
+		private readonly OrderHistoryRepository $orderHistoryRepository,
 	)
 	{
 	}
@@ -101,6 +107,7 @@ class OrderController extends AbstractAdvancedController
 		if ($form->isSubmitted() && $form->isValid()) {
 			try {
 				$this->orderManager->saveOrder($order);
+				$this->saveDraftComments($form, $order);
 			} catch (RuntimeException $exception) {
 				$form->addError(new FormError($exception->getMessage()));
 
@@ -161,6 +168,7 @@ class OrderController extends AbstractAdvancedController
 					'entity' => $order,
 					'form' => $form,
 					'order_index_page' => $this->orderManager->getRepository()->getIndexPage($order, self::DEFAULT_PAGE_LIMIT),
+					...$this->getOrderDiscussionViewData($order),
 				]);
 			}
 
@@ -171,6 +179,7 @@ class OrderController extends AbstractAdvancedController
 			'entity' => $order,
 			'form' => $form,
 			'order_index_page' => $this->orderManager->getRepository()->getIndexPage($order, self::DEFAULT_PAGE_LIMIT),
+			...$this->getOrderDiscussionViewData($order),
 		]);
 	}
 
@@ -186,7 +195,38 @@ class OrderController extends AbstractAdvancedController
 
 		return $this->render('admin/order/show.html.twig', [
 			'entity' => $order,
+			...$this->getOrderDiscussionViewData($order),
 			'query_params' => array_filter($request->query->all(), static fn ($value) => is_scalar($value)),
+		]);
+	}
+
+	#[Route('/{id}/comments', name: 'comments', methods: ['GET'])]
+	public function comments(
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Order $order,
+	): Response
+	{
+		$this->denyOrderOutsideStore($order, $store);
+
+		return $this->render('admin/order/comments.html.twig', [
+			'entity' => $order,
+			...$this->getOrderDiscussionViewData($order),
+		]);
+	}
+
+	#[Route('/{id}/history', name: 'history', methods: ['GET'])]
+	public function history(
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Order $order,
+	): Response
+	{
+		$this->denyOrderOutsideStore($order, $store);
+
+		return $this->render('admin/order/history.html.twig', [
+			'entity' => $order,
+			...$this->getOrderDiscussionViewData($order),
 		]);
 	}
 
@@ -259,6 +299,90 @@ class OrderController extends AbstractAdvancedController
 		]);
 	}
 
+	#[Route('/{id}/comment', name: 'comment_add', methods: ['POST'])]
+	public function addComment(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Order $order,
+	): Response
+	{
+		$this->denyOrderOutsideStore($order, $store);
+		$user = $this->getUser();
+		$isSaved = false;
+
+		if ($user instanceof User && $this->isCsrfTokenValid('add_order_comment_' . $order->getId(), (string) $request->request->get('_token'))) {
+			try {
+				$this->orderCommentManager->create($order, $user, (string) $request->request->get('body'));
+				$isSaved = true;
+			} catch (RuntimeException) {
+			}
+		}
+
+		if ($request->isXmlHttpRequest()) {
+			return $this->renderDiscussionCard($order, $isSaved ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->redirectToOrderIndex($store, $order);
+	}
+
+	#[Route('/{id}/comment/{commentId}/edit', name: 'comment_edit', methods: ['POST'])]
+	public function editComment(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Order $order,
+		int $commentId,
+	): Response
+	{
+		$this->denyOrderOutsideStore($order, $store);
+		$comment = $this->orderCommentManager->find($commentId);
+		$user = $this->getUser();
+		$isSaved = false;
+
+		if ($comment instanceof OrderComment && $comment->getOrder() === $order && $user instanceof User
+			&& $this->isCsrfTokenValid('edit_order_comment_' . $comment->getId(), (string) $request->request->get('_token'))) {
+			try {
+				$this->orderCommentManager->edit($comment, $user, (string) $request->request->get('body'));
+				$isSaved = true;
+			} catch (RuntimeException) {
+			}
+		}
+
+		if ($request->isXmlHttpRequest()) {
+			return $this->renderDiscussionCard($order, $isSaved ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->redirectToOrderIndex($store, $order);
+	}
+
+	#[Route('/{id}/comment/{commentId}/delete', name: 'comment_delete', methods: ['POST'])]
+	public function deleteComment(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Order $order,
+		int $commentId,
+	): Response
+	{
+		$this->denyOrderOutsideStore($order, $store);
+		$comment = $this->orderCommentManager->find($commentId);
+		$user = $this->getUser();
+		$isDeleted = false;
+
+		if ($comment instanceof OrderComment && $comment->getOrder() === $order && $user instanceof User
+			&& $this->isCsrfTokenValid('delete_order_comment_' . $comment->getId(), (string) $request->request->get('_token'))) {
+			$this->orderCommentManager->softDelete($comment, $user);
+			$isDeleted = true;
+		}
+
+		if ($request->isXmlHttpRequest()) {
+			return $this->renderDiscussionCard($order, $isDeleted ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->redirectToOrderIndex($store, $order);
+	}
+
 	private function createOrderForm(Order $order, Store $store): FormInterface
 	{
 		return $this->createForm(OrderType::class, $order, [
@@ -310,6 +434,19 @@ class OrderController extends AbstractAdvancedController
 		return trim((string) $form->get($name)->getData());
 	}
 
+	private function saveDraftComments(FormInterface $form, Order $order): void
+	{
+		$user = $this->getUser();
+
+		if (!$user instanceof User || !$form->has('draftComments')) {
+			return;
+		}
+
+		foreach ((array) $form->get('draftComments')->getData() as $body) {
+			$this->orderCommentManager->create($order, $user, (string) $body);
+		}
+	}
+
 	private function denyOrderOutsideStore(Order $order, Store $store): void
 	{
 		if ($order->getStore()?->getId() !== $store->getId()) {
@@ -322,5 +459,36 @@ class OrderController extends AbstractAdvancedController
 		if ($order->getStatus() !== OrderStatus::DRAFT) {
 			throw $this->createAccessDeniedException('Only draft order can be changed.');
 		}
+	}
+
+	private function redirectToOrderIndex(Store $store, Order $order): Response
+	{
+		return $this->redirectToRoute('app_admin_order_index', [
+			'store_id' => $store->getId(),
+			'id' => $order->getId(),
+			'page' => $this->orderManager->getRepository()->getIndexPage($order, self::DEFAULT_PAGE_LIMIT),
+		]);
+	}
+
+	/**
+	 * @return array{comments: array, history_entries: array}
+	 */
+	private function getOrderDiscussionViewData(Order $order): array
+	{
+		return [
+			'comments' => $this->orderCommentManager->getRepository()->findVisibleByOrder($order),
+			'history_entries' => $this->orderHistoryRepository->findTimelineByOrder($order),
+		];
+	}
+
+	private function renderDiscussionCard(Order $order, int $status = Response::HTTP_OK): Response
+	{
+		$response = $this->render('admin/order/_discussion_card.html.twig', [
+			'entity' => $order,
+			...$this->getOrderDiscussionViewData($order),
+		]);
+		$response->setStatusCode($status);
+
+		return $response;
 	}
 }

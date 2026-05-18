@@ -7,7 +7,7 @@ use App\Entity\OrderStatus;
 use App\Workflow\Action\MarkOrderCanceledAction;
 use App\Workflow\Exception\UnknownTransitionException;
 use App\Workflow\Guard\OrderHasEntriesGuard;
-use App\Workflow\History\NullHistoryRecorder;
+use App\Workflow\History\OrderHistoryRecorder;
 use App\Workflow\HistoryRecorderInterface;
 use App\Workflow\TransitionDefinition;
 use App\Workflow\WorkflowDefinitionInterface;
@@ -24,7 +24,7 @@ class OrderWorkflowDefinition implements WorkflowDefinitionInterface
 	public function __construct(
 		OrderHasEntriesGuard $orderHasEntriesGuard,
 		MarkOrderCanceledAction $markOrderCanceledAction,
-		private readonly NullHistoryRecorder $historyRecorder,
+		private readonly OrderHistoryRecorder $historyRecorder,
 	)
 	{
 		$this->transitions = [
