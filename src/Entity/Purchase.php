@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Entity\User\User;
 use App\Enum\PaymentStatusEnum;
 use App\Repository\PurchaseRepository;
+use App\Workflow\WorkflowSubjectInterface;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -12,7 +13,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: PurchaseRepository::class)]
-class Purchase
+class Purchase implements WorkflowSubjectInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -129,6 +130,21 @@ class Purchase
         return $this;
     }
 
+	public function getWorkflowKey(): string
+	{
+		return 'purchase';
+	}
+
+	public function getStatusValue(): string
+	{
+		return $this->status->value;
+	}
+
+	public function setStatusValue(string $status): void
+	{
+		$this->status = PurchaseStatus::from($status);
+	}
+
 	public function getCurrency(): ?Currency { return $this->currency; }
 	public function setCurrency(?Currency $currency): self { $this->currency = $currency; return $this; }
 	public function getExchangeRateToBase(): ?string { return $this->exchangeRateToBase; }
@@ -189,6 +205,10 @@ class Purchase
 			$this->supplierNameSnapshot = $supplier->getName();
 			$this->supplierPhoneSnapshot = $supplier->getPhone();
 			$this->supplierEmailSnapshot = $supplier->getEmail();
+		} else {
+			$this->supplierNameSnapshot = null;
+			$this->supplierPhoneSnapshot = null;
+			$this->supplierEmailSnapshot = null;
 		}
 
 		return $this;

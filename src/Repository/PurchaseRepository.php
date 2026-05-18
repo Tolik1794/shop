@@ -3,7 +3,9 @@
 namespace App\Repository;
 
 use App\Entity\Purchase;
+use App\Entity\Store;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -38,6 +40,45 @@ class PurchaseRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
+
+	public function findAvailableByStoreQB(Store $store): QueryBuilder
+	{
+		return $this->createQueryBuilder('purchase')
+			->leftJoin('purchase.supplier', 'supplier')
+			->addSelect('supplier')
+			->innerJoin('purchase.currency', 'currency')
+			->addSelect('currency')
+			->leftJoin('purchase.purchaseEntries', 'purchaseEntry')
+			->addSelect('purchaseEntry')
+			->andWhere('purchase.store = :store')
+			->setParameter('store', $store);
+	}
+
+	public function getNextNumber(Store $store): string
+	{
+		$count = (int) $this->createQueryBuilder('purchase')
+			->select('COUNT(purchase.id)')
+			->andWhere('purchase.store = :store')
+			->setParameter('store', $store)
+			->getQuery()
+			->getSingleScalarResult();
+
+		return sprintf('PO-%d-%06d', $store->getId(), $count + 1);
+	}
+
+	public function getIndexPage(Purchase $purchase, int $limit = 20): int
+	{
+		$count = (int) $this->createQueryBuilder('purchase')
+			->select('COUNT(purchase.id)')
+			->andWhere('purchase.store = :store')
+			->andWhere('purchase.id >= :id')
+			->setParameter('store', $purchase->getStore())
+			->setParameter('id', $purchase->getId())
+			->getQuery()
+			->getSingleScalarResult();
+
+		return max(1, (int) ceil($count / $limit));
+	}
 
 //    /**
 //     * @return Purchase[] Returns an array of Purchase objects
