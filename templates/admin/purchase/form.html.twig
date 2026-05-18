@@ -1,0 +1,111 @@
+{% extends 'admin/_store_components/layout.html.twig' %}
+
+{% block title %}Purchase{% endblock %}
+
+{% block navbar_breadcrumb %}
+	{{ include('admin/_components/_breadcrumb.html.twig', {
+		breadcrumb_class: 'mb-0',
+		items: [
+			{
+				label: 'Purchases',
+				url: entity.id
+					? path('app_admin_purchase_index', {store_id: app.request.attributes.get('store_id'), id: entity.id, page: purchase_index_page})
+					: path('app_admin_purchase_index', {store_id: app.request.attributes.get('store_id')})
+			},
+			{label: entity.id ? entity.number : 'New'}
+		]
+	}) }}
+{% endblock %}
+
+{% block main_content %}
+	<main class="content" {{ stimulus_controller('purchase-form select-two') }}>
+		<div class="container-fluid p-0">
+			<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+				<div>
+					<h1 class="h3 mb-1">{{ entity.id ? 'Редагування закупівлі' : 'Нова закупівля' }}</h1>
+					<div class="text-muted">{{ entity.number }}</div>
+				</div>
+				<div class="d-flex flex-wrap gap-2">
+					<button form="purchase-form" type="submit" class="btn btn-primary">Зберегти</button>
+					<button form="purchase-form" name="save" value="stay" type="submit" class="btn btn-outline-primary">Зберегти як чернетку</button>
+					<a href="{{ path('app_admin_purchase_index', app.request.query.all|merge({store_id: app.request.attributes.get('store_id'), id: entity.id, page: purchase_index_page})) }}" class="btn btn-light">Скасувати</a>
+				</div>
+			</div>
+
+			{% if form.vars.errors|length > 0 %}
+				<div class="form-error mb-3">
+					{{ form_errors(form) }}
+				</div>
+			{% endif %}
+
+			{{ form_start(form, {attr: {id: 'purchase-form', 'data-select-two-target': 'form'}}) }}
+				<div class="row g-3">
+					<div class="col-12 col-xl-4">
+						<div class="card">
+							<div class="card-header">
+								<h5 class="card-title mb-0">Загальні налаштування</h5>
+							</div>
+							<div class="card-body">
+								{{ form_row(form.supplier) }}
+								{{ form_row(form.currency) }}
+								{{ form_row(form.invoiceNumber) }}
+								{{ form_row(form.documentDate) }}
+								{{ form_row(form.deliveryCost) }}
+								{{ form_row(form.comment) }}
+							</div>
+						</div>
+					</div>
+
+					<div class="col-12 col-xl-8">
+						<div class="card">
+							<div class="card-header d-flex justify-content-between align-items-center">
+								<h5 class="card-title mb-0">Позиції закупівлі</h5>
+								<button type="button" class="btn btn-light btn-sm" data-action="purchase-form#addEntry">
+									<i class="fa-solid fa-plus me-1"></i>Додати позицію
+								</button>
+							</div>
+							<div class="card-body">
+								{% if form.purchaseEntries.vars.errors|length > 0 %}
+									<div class="form-error">
+										{{ form_errors(form.purchaseEntries) }}
+									</div>
+								{% endif %}
+
+								<div data-purchase-form-target="entries">
+									{% for entry in form.purchaseEntries %}
+										{{ include('admin/purchase/_entry_row.html.twig', {entry: entry, currency: form.currency.vars.data|default(null)}) }}
+									{% endfor %}
+								</div>
+
+								<div class="text-muted {{ form.purchaseEntries|length > 0 ? 'd-none' : '' }}" data-purchase-form-target="emptyState">
+									Позиції ще не додані.
+								</div>
+
+								<template data-purchase-form-target="prototype">
+									{{ include('admin/purchase/_entry_row.html.twig', {entry: form.purchaseEntries.vars.prototype, currency: form.currency.vars.data|default(null)}) }}
+								</template>
+							</div>
+						</div>
+
+						{% if entity.id %}
+							<div class="card mt-3">
+								<div class="card-header">
+									<h5 class="card-title mb-0">Підсумки</h5>
+								</div>
+								<div class="card-body">
+									<div>Total: <strong>{{ entity.totalAmount|money }} {{ entity.currency.code }}</strong></div>
+									<div>Total base: <strong>{{ entity.totalAmountBase|money }}</strong></div>
+									<div>Delivery: <strong>{{ entity.deliveryCost|money }} {{ entity.currency.code }}</strong></div>
+								</div>
+							</div>
+						{% endif %}
+					</div>
+				</div>
+
+				{% if form._token is defined %}
+					{{ form_widget(form._token) }}
+				{% endif %}
+			{{ form_end(form, {'render_rest': false}) }}
+		</div>
+	</main>
+{% endblock %}

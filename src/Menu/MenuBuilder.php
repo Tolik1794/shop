@@ -67,6 +67,17 @@ final class MenuBuilder
 			]
 		]);
 
+		$menu->addChild('Purchases', [
+			'route' => 'app_admin_purchase_index',
+			'routeParameters' => ['store_id' => $storeId],
+			'attributes' => [
+				'class' => 'sidebar-item',
+			],
+			'linkAttributes' => [
+				'class' => 'sidebar-link'
+			]
+		]);
+
 		$menu->addChild('Customers', [
 			'route' => 'app_admin_customer_index',
 			'routeParameters' => ['store_id' => $storeId],
