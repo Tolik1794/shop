@@ -42,4 +42,27 @@ class TransitionContext
 			correlationId: $correlationId,
 		);
 	}
+
+	/**
+	 * Creates a context for user-driven transitions.
+	 *
+	 * @param array<string, mixed> $payload
+	 */
+	public static function manual(
+		User $actor,
+		array $payload = [],
+		?string $comment = null,
+		?DateTimeImmutable $occurredAt = null,
+		?string $correlationId = null,
+	): self
+	{
+		return new self(
+			actor: $actor,
+			source: 'manual',
+			occurredAt: $occurredAt ?? new DateTimeImmutable(),
+			comment: $comment,
+			payload: $payload,
+			correlationId: $correlationId,
+		);
+	}
 }

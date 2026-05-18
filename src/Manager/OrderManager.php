@@ -6,25 +6,31 @@ use App\Entity\Order;
 use App\Entity\OrderEntry;
 use App\Entity\OrderStatus;
 use App\Entity\Product;
-use App\Entity\ProductPrice;
 use App\Entity\Store;
+use App\Entity\User\User;
 use App\Repository\OrderRepository;
-use App\Repository\ProductPriceRepository;
 use App\Service\ExchangeRateResolver;
+use App\Service\Order\OrderEntryPricingService;
+use App\Service\Order\OrderEntrySnapshotter;
 use App\Service\OrderCalculator;
+use App\Workflow\History\OrderHistoryChangeSetBuilder;
+use App\Workflow\History\OrderHistoryRecorder;
 use App\Workflow\StatusTransitionService;
 use App\Workflow\TransitionContext;
 use Doctrine\ORM\EntityManagerInterface;
-use RuntimeException;
 
 class OrderManager extends AbstractManager
 {
 	public function __construct(
 		private readonly EntityManagerInterface $entityManager,
-		private readonly ProductPriceRepository $productPriceRepository,
 		private readonly ExchangeRateResolver $exchangeRateResolver,
+		private readonly OrderEntrySnapshotter $orderEntrySnapshotter,
+		private readonly OrderEntryPricingService $orderEntryPricingService,
 		private readonly OrderCalculator $orderCalculator,
 		private readonly StatusTransitionService $statusTransitionService,
+		private readonly OrderHistoryChangeSetBuilder $orderHistoryChangeSetBuilder,
+		private readonly OrderHistoryRecorder $orderHistoryRecorder,
+		private readonly UserManager $userManager,
 	)
 	{
 	}
@@ -40,6 +46,8 @@ class OrderManager extends AbstractManager
 
 	public function saveOrder(Order $order, iterable $removedEntries = []): void
 	{
+		$isNew = $order->getId() === null;
+		$actor = $this->currentActor();
 		$this->prepareOrder($order);
 		foreach ($removedEntries as $removedEntry) {
 			if ($removedEntry instanceof OrderEntry) {
@@ -52,12 +60,52 @@ class OrderManager extends AbstractManager
 			$this->entityManager->persist($orderEntry);
 		}
 		$this->recalculate($order);
+
+		if ($isNew) {
+			$this->orderHistoryRecorder->recordCreated($order, $actor);
+		} else {
+			$orderChanges = $this->orderHistoryChangeSetBuilder->buildOrderChanges($order);
+			$this->orderHistoryRecorder->recordUpdated($order, $orderChanges, $actor);
+
+			if (array_key_exists('customer', $orderChanges)) {
+				$this->orderHistoryRecorder->recordCustomerChanged($order, [
+					'customer' => $orderChanges['customer'],
+				], $actor);
+			}
+		}
+
+		foreach ($order->getOrderEntries() as $orderEntry) {
+			if ($orderEntry->getId() === null) {
+				$this->orderHistoryRecorder->recordEntryAdded($order, $this->orderHistoryChangeSetBuilder->buildEntryPayload($orderEntry), $actor);
+
+				continue;
+			}
+
+			$this->orderHistoryRecorder->recordEntryUpdated(
+				$order,
+				$this->orderHistoryChangeSetBuilder->buildEntryChanges($orderEntry),
+				$actor,
+				$orderEntry->getId(),
+			);
+		}
+
+		foreach ($removedEntries as $removedEntry) {
+			if ($removedEntry instanceof OrderEntry) {
+				$this->orderHistoryRecorder->recordEntryRemoved(
+					$order,
+					$this->orderHistoryChangeSetBuilder->buildEntryPayload($removedEntry),
+					$actor,
+					$removedEntry->getId(),
+				);
+			}
+		}
+
 		$this->save($order);
 	}
 
 	public function confirm(Order $order): void
 	{
-		$this->statusTransitionService->apply($order, 'confirm', TransitionContext::system());
+		$this->statusTransitionService->apply($order, 'confirm', $this->transitionContext());
 		$this->saveOrder($order);
 	}
 
@@ -67,13 +115,13 @@ class OrderManager extends AbstractManager
 			return;
 		}
 
-		$this->statusTransitionService->apply($order, 'cancel', TransitionContext::system());
+		$this->statusTransitionService->apply($order, 'cancel', $this->transitionContext());
 		$this->saveOrder($order);
 	}
 
 	public function returnToDraft(Order $order): void
 	{
-		$this->statusTransitionService->apply($order, 'return_to_draft', TransitionContext::system());
+		$this->statusTransitionService->apply($order, 'return_to_draft', $this->transitionContext());
 		$this->saveOrder($order);
 	}
 
@@ -118,42 +166,24 @@ class OrderManager extends AbstractManager
 			return;
 		}
 
-		$orderEntry
-			->setProductNameSnapshot((string) $product->getName())
-			->setProductCodeSnapshot((string) $product->getCode())
-			->setUnitCodeSnapshot((string) $product->getUnit()?->getCode())
-			->setUnitNameSnapshot((string) $product->getUnit()?->getName());
-
-		if ((float) $orderEntry->getUnitPrice() <= 0) {
-			$this->setEntryPriceFromProduct($orderEntry, $product, $order);
-		}
-
+		$this->orderEntrySnapshotter->snapshot($orderEntry);
+		$this->orderEntryPricingService->initializeUnitPrice($orderEntry, $order);
 	}
 
-	private function setEntryPriceFromProduct(OrderEntry $orderEntry, Product $product, Order $order): void
+	private function currentActor(): ?User
 	{
-		$productPrice = $this->productPriceRepository->findCurrentRegularPrice($product, $order->getCurrency());
+		$user = $this->userManager->getCurrentUser();
 
-		if ($productPrice instanceof ProductPrice) {
-			$orderEntry->setUnitPrice($productPrice->getPrice());
-
-			return;
-		}
-
-		if ($product->getBaseSalePrice() === null) {
-			throw new RuntimeException(sprintf('Product "%s" has no sale price.', $product->getName()));
-		}
-
-		$exchangeRateToBase = (float) $order->getExchangeRateToBase();
-		$unitPrice = $exchangeRateToBase > 0
-			? (float) $product->getBaseSalePrice() / $exchangeRateToBase
-			: (float) $product->getBaseSalePrice();
-
-		$orderEntry->setUnitPrice($this->formatMoney($unitPrice));
+		return $user instanceof User ? $user : null;
 	}
 
-	private function formatMoney(float $value): string
+	private function transitionContext(): TransitionContext
 	{
-		return number_format($value, 4, '.', '');
+		$actor = $this->currentActor();
+
+		return $actor instanceof User
+			? TransitionContext::manual($actor)
+			: TransitionContext::system();
 	}
+
 }

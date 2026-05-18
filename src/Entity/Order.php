@@ -46,9 +46,6 @@ class Order implements WorkflowSubjectInterface
 	#[ORM\Column(type: Types::TEXT, nullable: true)]
 	private ?string $deliveryAddress = null;
 
-	#[ORM\Column(type: Types::TEXT, nullable: true)]
-	private ?string $comment = null;
-
 	#[ORM\Column(type: Types::DECIMAL, precision: 14, scale: 4)]
 	private ?string $totalAmount = null;
 
@@ -98,6 +95,12 @@ class Order implements WorkflowSubjectInterface
 	#[ORM\OneToMany(mappedBy: 'order', targetEntity: OrderEntry::class)]
 	private Collection $orderEntries;
 
+	#[ORM\OneToMany(mappedBy: 'order', targetEntity: OrderComment::class)]
+	private Collection $comments;
+
+	#[ORM\OneToMany(mappedBy: 'order', targetEntity: OrderHistory::class)]
+	private Collection $historyEntries;
+
 	public function __construct()
 	{
 		$this->status = OrderStatus::DRAFT;
@@ -109,6 +112,8 @@ class Order implements WorkflowSubjectInterface
 		$this->createdAt = new DateTimeImmutable();
 		$this->updatedAt = new DateTimeImmutable();
 		$this->orderEntries = new ArrayCollection();
+		$this->comments = new ArrayCollection();
+		$this->historyEntries = new ArrayCollection();
 	}
 
 	public function getId(): ?int
@@ -187,8 +192,6 @@ class Order implements WorkflowSubjectInterface
 	public function setCustomerEmailSnapshot(?string $customerEmailSnapshot): self { $this->customerEmailSnapshot = $customerEmailSnapshot; return $this; }
 	public function getDeliveryAddress(): ?string { return $this->deliveryAddress; }
 	public function setDeliveryAddress(?string $deliveryAddress): self { $this->deliveryAddress = $deliveryAddress; return $this; }
-	public function getComment(): ?string { return $this->comment; }
-	public function setComment(?string $comment): self { $this->comment = $comment; return $this; }
 	public function getTotalAmount(): ?string { return $this->totalAmount; }
 	public function setTotalAmount(string $totalAmount): self { $this->totalAmount = $totalAmount; return $this; }
 	public function getTotalAmountBase(): ?string { return $this->totalAmountBase; }
@@ -279,5 +282,21 @@ class Order implements WorkflowSubjectInterface
 		}
 
 		return $this;
+	}
+
+	/**
+	 * @return Collection<int, OrderComment>
+	 */
+	public function getComments(): Collection
+	{
+		return $this->comments;
+	}
+
+	/**
+	 * @return Collection<int, OrderHistory>
+	 */
+	public function getHistoryEntries(): Collection
+	{
+		return $this->historyEntries;
 	}
 }

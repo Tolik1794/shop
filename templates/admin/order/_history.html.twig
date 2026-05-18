@@ -1,0 +1,36 @@
+<h5 class="card-title mb-3">History</h5>
+<div class="order-discussion-scroll-frame">
+    <div class="order-discussion-scroll order-discussion-history">
+        {% set current_history_date = null %}
+        {% for history in history_entries %}
+            {% set history_date = history.occurredAt|date('Y-m-d') %}
+            {% if history_date != current_history_date %}
+                {% set current_history_date = history_date %}
+                <div class="text-muted small fw-semibold mt-3 mb-2">{{ history.occurredAt|date('Y-m-d') }}</div>
+            {% endif %}
+            <div class="border-start ps-3 mb-3">
+                <div class="d-flex justify-content-between gap-2">
+                    <strong>{{ history.title }}</strong>
+                    <span class="text-muted small">{{ history.occurredAt|date('H:i') }}</span>
+                </div>
+                <div class="text-muted small">
+                    {{ history.source.value }}
+                    {% if history.actorNameSnapshot %} · {{ history.actorNameSnapshot }}{% endif %}
+                    · {{ history.eventKey }}
+                </div>
+                {% if history.description %}
+                    <div>{{ history.description }}</div>
+                {% endif %}
+                {% if history.changes %}
+                    <ul class="small mb-0 mt-1">
+                        {% for field, change in history.changes %}
+                            <li>{{ field }}: {{ change.from is iterable ? change.from|json_encode : change.from }} → {{ change.to is iterable ? change.to|json_encode : change.to }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        {% else %}
+            <p class="text-muted mb-0">No history yet.</p>
+        {% endfor %}
+    </div>
+</div>

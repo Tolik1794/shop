@@ -4,10 +4,14 @@ namespace App\Controller\Api\Admin;
 
 use App\Dto\Api\Admin\Order\ProductSearchProductDto;
 use App\Dto\Api\Admin\Order\ProductSearchResponseDto;
+use App\Entity\Currency;
 use App\Entity\Store;
+use App\Repository\CurrencyRepository;
 use App\Repository\CustomerRepository;
 use App\Repository\ProductRepository;
 use App\Service\OrderCalculator;
+use App\Service\Pricing\CatalogPriceResolver;
+use RuntimeException;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -20,8 +24,10 @@ class OrderController extends AbstractController
 {
 	public function __construct(
 		private readonly ProductRepository $productRepository,
+		private readonly CurrencyRepository $currencyRepository,
 		private readonly CustomerRepository $customerRepository,
 		private readonly OrderCalculator $orderCalculator,
+		private readonly CatalogPriceResolver $catalogPriceResolver,
 	)
 	{
 	}
@@ -40,12 +46,13 @@ class OrderController extends AbstractController
 			$request->query->all('excludedOptions'),
 			static fn(mixed $value): bool => is_string($value) && $value !== '',
 		);
+		$currency = $this->resolveSearchCurrency($request, $store);
 
 		if (mb_strlen($search) < 3) {
 			return $this->json(new ProductSearchResponseDto([], $page, false));
 		}
 
-		$filteredProducts = $this->findProductsForOrderEntrySearch($store, $search, $excludedOptionKeys, $page, $limit);
+		$filteredProducts = $this->findProductsForOrderEntrySearch($store, $currency, $search, $excludedOptionKeys, $page, $limit);
 
 		return $this->json(new ProductSearchResponseDto(
 			products: $filteredProducts['products'],
@@ -90,7 +97,7 @@ class OrderController extends AbstractController
 	 * @param string[] $excludedOptionKeys
 	 * @return array{products: ProductSearchProductDto[], hasMore: bool}
 	 */
-	private function findProductsForOrderEntrySearch(Store $store, string $search, array $excludedOptionKeys, int $page, int $limit): array
+	private function findProductsForOrderEntrySearch(Store $store, Currency $currency, string $search, array $excludedOptionKeys, int $page, int $limit): array
 	{
 		$chunkSize = 50;
 		$offset = 0;
@@ -101,7 +108,12 @@ class OrderController extends AbstractController
 			$foundProducts = $this->productRepository->findChoicesByStoreAndSearch($store, $search, $chunkSize, $offset);
 
 			foreach ($foundProducts as $product) {
-				$productDto = ProductSearchProductDto::fromProduct($product, $store, $excludedOptionKeys);
+				$productDto = ProductSearchProductDto::fromProduct(
+					$product,
+					$store,
+					$this->catalogPriceResolver->tryResolve($product, $store, $currency)?->getAmount(),
+					$excludedOptionKeys,
+				);
 
 				if ($productDto instanceof ProductSearchProductDto) {
 					$products[] = $productDto;
@@ -121,5 +133,23 @@ class OrderController extends AbstractController
 			'products' => array_slice($products, $pageOffset, $limit),
 			'hasMore' => count($products) > $pageOffset + $limit,
 		];
+	}
+
+	private function resolveSearchCurrency(Request $request, Store $store): Currency
+	{
+		$currencyCode = trim((string) $request->query->get('currency', ''));
+		$currency = $currencyCode !== '' ? $this->currencyRepository->find($currencyCode) : null;
+
+		if ($currency instanceof Currency) {
+			return $currency;
+		}
+
+		$baseCurrency = $store->getBaseCurrency();
+
+		if (!$baseCurrency instanceof Currency) {
+			throw new RuntimeException('Store has no base currency.');
+		}
+
+		return $baseCurrency;
 	}
 }

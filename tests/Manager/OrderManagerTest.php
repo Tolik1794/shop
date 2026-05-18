@@ -4,13 +4,16 @@ namespace App\Tests\Manager;
 
 use App\Entity\Category;
 use App\Entity\Currency;
+use App\Entity\ExchangeRate;
 use App\Entity\OrderEntry;
+use App\Entity\OrderHistory;
 use App\Entity\OrderStatus;
 use App\Entity\Product;
 use App\Entity\Store;
 use App\Entity\Unit;
 use App\Enum\ProductKindEnum;
 use App\Manager\OrderManager;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -56,6 +59,31 @@ class OrderManagerTest extends KernelTestCase
 		self::assertSame('5.0000', $order->getDiscountAmount());
 		self::assertSame($product->getName(), $orderEntry->getProductNameSnapshot());
 		self::assertSame($product->getUnit()?->getCode(), $orderEntry->getUnitCodeSnapshot());
+
+		$eventKeys = array_map(
+			static fn (OrderHistory $history): string => $history->getEventKey(),
+			$this->entityManager->getRepository(OrderHistory::class)->findBy(['order' => $order]),
+		);
+
+		self::assertContains('order.created', $eventKeys);
+		self::assertContains('order.entry_added', $eventKeys);
+	}
+
+	public function testSaveOrderInitializesMissingEntryPriceInOrderCurrency(): void
+	{
+		$baseCurrency = $this->persistCurrency('B' . substr(uniqid(), -2), 'Base currency');
+		$orderCurrency = $this->persistCurrency('D' . substr(uniqid(), -2), 'Document currency');
+		$store = $this->persistStore('order-price-' . uniqid(), $baseCurrency);
+		$product = $this->persistProduct($store);
+		$this->persistExchangeRate($orderCurrency, $baseCurrency, $store, '2.00000000');
+		$order = $this->orderManager->createDraft($store)->setCurrency($orderCurrency);
+		$order->addOrderEntry((new OrderEntry())
+			->setProduct($product)
+			->setQuantity('1.0000'));
+
+		$this->orderManager->saveOrder($order);
+
+		self::assertSame('5.0000', $order->getOrderEntries()->first()->getUnitPrice());
 	}
 
 	public function testConfirmMovesDraftOrderToConfirmed(): void
@@ -75,6 +103,10 @@ class OrderManagerTest extends KernelTestCase
 		$this->orderManager->confirm($order);
 
 		self::assertSame(OrderStatus::CONFIRMED, $order->getStatus());
+		self::assertNotNull($this->entityManager->getRepository(OrderHistory::class)->findOneBy([
+			'order' => $order,
+			'eventKey' => 'order.status_changed',
+		]));
 	}
 
 	public function testCancelMovesOrderToCanceledAndStoresTransitionTime(): void
@@ -121,6 +153,46 @@ class OrderManagerTest extends KernelTestCase
 		$this->expectException(RuntimeException::class);
 
 		$this->orderManager->returnToDraft($order);
+	}
+
+	public function testSaveOrderRecordsOnlyRealDecimalEntryChanges(): void
+	{
+		$currency = $this->persistCurrency('D' . substr(uniqid(), -2), 'Decimal history currency');
+		$store = $this->persistStore('order-decimal-history-' . uniqid(), $currency);
+		$product = $this->persistProduct($store);
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setQuantity('1.0000')
+			->setUnitPrice('99.0000')
+			->setDiscountAmount('0.0000');
+		$order->addOrderEntry($orderEntry);
+		$this->orderManager->saveOrder($order);
+
+		$orderEntry
+			->setUnitPrice('99')
+			->setDiscountAmount('0');
+		$this->orderManager->saveOrder($order);
+
+		self::assertCount(0, $this->entityManager->getRepository(OrderHistory::class)->findBy([
+			'order' => $order,
+			'eventKey' => 'order.entry_updated',
+		]));
+
+		$orderEntry->setUnitPrice('100');
+		$this->orderManager->saveOrder($order);
+
+		$entryUpdatedHistory = $this->entityManager->getRepository(OrderHistory::class)->findOneBy([
+			'order' => $order,
+			'eventKey' => 'order.entry_updated',
+		]);
+
+		self::assertInstanceOf(OrderHistory::class, $entryUpdatedHistory);
+		self::assertSame([
+			'unitPrice' => ['from' => '99', 'to' => '100'],
+		], $entryUpdatedHistory->getChanges());
 	}
 
 	private function persistCurrency(string $code, string $name): Currency
@@ -187,5 +259,20 @@ class OrderManagerTest extends KernelTestCase
 		$this->entityManager->flush();
 
 		return $product;
+	}
+
+	private function persistExchangeRate(Currency $fromCurrency, Currency $toCurrency, Store $store, string $rate): ExchangeRate
+	{
+		$exchangeRate = (new ExchangeRate())
+			->setFromCurrency($fromCurrency)
+			->setToCurrency($toCurrency)
+			->setStore($store)
+			->setRate($rate)
+			->setValidFrom(new DateTimeImmutable('2026-01-01 00:00:00'));
+
+		$this->entityManager->persist($exchangeRate);
+		$this->entityManager->flush();
+
+		return $exchangeRate;
 	}
 }

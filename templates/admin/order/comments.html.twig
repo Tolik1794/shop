@@ -1,0 +1,16 @@
+<div
+        class="card"
+        {{ stimulus_controller('order-discussion', {
+            refreshCommentsUrl: path('app_admin_order_comments', {store_id: app.request.attributes.get('store_id'), id: entity.id}),
+            refreshHistoryUrl: path('app_admin_order_history', {store_id: app.request.attributes.get('store_id'), id: entity.id})
+        }) }}
+        {{ stimulus_target('reload-card', 'commentsCard') }}
+        data-card-id="{{ entity.id }}"
+>
+    <div class="card-header">
+        <h5 class="card-title mb-0">{{ entity.number }} · Comments</h5>
+    </div>
+    <div class="card-body">
+        {{ include('admin/order/_comments.html.twig') }}
+    </div>
+</div>

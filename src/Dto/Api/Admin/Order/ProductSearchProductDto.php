@@ -29,7 +29,7 @@ class ProductSearchProductDto implements JsonSerializable
 	/**
 	 * @param string[] $excludedOptionKeys
 	 */
-	public static function fromProduct(Product $product, Store $store, array $excludedOptionKeys = []): ?self
+	public static function fromProduct(Product $product, Store $store, ?string $price, array $excludedOptionKeys = []): ?self
 	{
 		$availableQuantity = 0.0;
 		$stockOptions = [];
@@ -51,13 +51,13 @@ class ProductSearchProductDto implements JsonSerializable
 				warehouseId: $warehouseStock->getWarehouse()?->getId(),
 				warehouseName: $warehouseStock->getWarehouse()?->getName(),
 				available: self::formatQuantity($available),
-				price: self::formatMoney($product->getBaseSalePrice()),
+				price: $price,
 			);
 		}
 
 		$productionOption = $product->isCanBeManufactured()
 			&& !in_array(self::productionOptionKey($product), $excludedOptionKeys, true)
-				? new ProductSearchProductionOptionDto(self::formatMoney($product->getBaseSalePrice()))
+				? new ProductSearchProductionOptionDto($price)
 				: null;
 		$hasFallbackOption = $allStockOptionCount === 0 && !$product->isCanBeManufactured();
 
@@ -76,7 +76,7 @@ class ProductSearchProductDto implements JsonSerializable
 			code: $product->getCode(),
 			unit: $product->getUnit()?->getCode(),
 			unitPrecision: max(0, (int) ($product->getUnit()?->getPrecision() ?? 4)),
-			price: self::formatMoney($product->getBaseSalePrice()),
+			price: $price,
 			available: self::formatQuantity(max(0, $availableQuantity)),
 			stockOptions: $stockOptions,
 			productionOption: $productionOption,
@@ -102,11 +102,6 @@ class ProductSearchProductDto implements JsonSerializable
 	private static function formatQuantity(float $value): string
 	{
 		return number_format($value, 4, '.', '');
-	}
-
-	private static function formatMoney(?string $value): string
-	{
-		return number_format((float) str_replace(',', '.', (string) $value), 2, '.', '');
 	}
 
 	private static function stockOptionKey(Product $product, ?int $warehouseId): string

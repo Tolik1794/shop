@@ -17,9 +17,10 @@
                 id="{{ entity.id }}"
                 data-id-column="id"
                 class="{{ first_entity and entity.id == first_entity.id ? 'table-active' : '' }}"
-                data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
-                data-link="{{ path('app_admin_order_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
-                onclick="document.getElementById('first-tab').click()"
+                data-action="click->reload-card#reloadOrderCards click->reload-card#tableActivate"
+                data-show-link="{{ path('app_admin_order_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+                data-comments-link="{{ path('app_admin_order_comments', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+                data-history-link="{{ path('app_admin_order_history', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
         >
             <td>
                 <table class="table table-sm mb-2">
@@ -87,8 +88,11 @@
             <div class="row">
                 <div class="col-xxl-4 col-xl-5 col-lg-6">
                     {{ include('admin/_components/card/_tab_card.html.twig', {
+                        tab_search_key: 3,
                         tab_head: [
                             include('admin/_components/tab_icon/_show.html.twig'),
+                            include('admin/_components/tab_icon/_comments.html.twig'),
+                            include('admin/_components/tab_icon/_history.html.twig'),
                             include('admin/_components/tab_icon/_filter.html.twig')
                             ~ (app.request.query.all(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
                         ],
@@ -96,6 +100,14 @@
                             first_entity ? render(controller(
                                 'App\\Controller\\Admin\\OrderController::show',
                                 { store_id: app.request.attributes.get('store_id'), id: first_entity.id, 'request': app.request }
+                            )) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
+                            first_entity ? render(controller(
+                                'App\\Controller\\Admin\\OrderController::comments',
+                                { store_id: app.request.attributes.get('store_id'), id: first_entity.id }
+                            )) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
+                            first_entity ? render(controller(
+                                'App\\Controller\\Admin\\OrderController::history',
+                                { store_id: app.request.attributes.get('store_id'), id: first_entity.id }
                             )) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
                             include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
                         ]

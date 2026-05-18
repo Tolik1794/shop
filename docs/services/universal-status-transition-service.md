@@ -131,12 +131,11 @@ Actions виконують побічну бізнес-логіку до або 
 
 Точка розширення для історії переходів.
 
-Зараз використовується `NullHistoryRecorder`, бо сутності `OrderHistory` / `StatusHistory` ще не реалізовані в коді. Це тимчасова реалізація без запису в БД.
+Для `Order` вже використовується реальний `OrderHistoryRecorder`, який пише повну часову лінію замовлення.
 
-Коли історія буде додана, саме recorder треба замінити на реальну реалізацію:
+Для майбутніх сутностей зі звичайною історією зміни статусів ще потрібно буде додати:
 
-- `OrderHistoryRecorder` для повної часової лінії замовлення;
-- `GenericStatusHistoryRecorder` для інших сутностей зі звичайною історією зміни статусів.
+- `GenericStatusHistoryRecorder`.
 
 Ядро `StatusTransitionService` при цьому змінювати не потрібно.
 
@@ -285,7 +284,6 @@ class Purchase implements WorkflowSubjectInterface
 
 Ще не реалізовано:
 
-- реальний запис `OrderHistory`;
 - загальний `StatusHistory` для інших сутностей;
 - workflow definitions для `Purchase`, `InventoryDocument`, `ProductionOrder`;
 - транзакційна обгортка всередині самого сервісу.

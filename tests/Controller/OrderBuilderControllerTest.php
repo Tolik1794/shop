@@ -5,7 +5,9 @@ namespace App\Tests\Controller;
 use App\Entity\Category;
 use App\Entity\Currency;
 use App\Entity\Customer;
+use App\Entity\ExchangeRate;
 use App\Entity\Order;
+use App\Entity\OrderComment;
 use App\Entity\Product;
 use App\Entity\Store;
 use App\Entity\Unit;
@@ -15,6 +17,7 @@ use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
 use App\Enum\ProductKindEnum;
 use DateTime;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -41,6 +44,7 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertResponseIsSuccessful();
 		self::assertSelectorTextContains('body', 'Нове замовлення');
 		self::assertSelectorExists('[data-controller~="order-form"]');
+		self::assertSelectorExists('[data-controller~="draft-order-comments"]');
 		self::assertSelectorExists('[data-order-form-target="prototype"]');
 	}
 
@@ -58,13 +62,47 @@ class OrderBuilderControllerTest extends WebTestCase
 			'order[customerLastName]' => $customer->getLastName(),
 			'order[currency]' => $store->getBaseCurrency()?->getCode(),
 			'order[deliveryAddress]' => 'Test delivery address',
-			'order[comment]' => 'Test comment',
 		]);
 
 		self::assertResponseRedirects(sprintf('/admin/store/%d/order/', $store->getId()));
 		self::assertNotNull($this->entityManager->getRepository(Order::class)->findOneBy([
 			'store' => $store,
 			'customer' => $customer,
+		]));
+	}
+
+	public function testNewOrderBuilderFormSavesDraftCommentsWithOrder(): void
+	{
+		$this->client->loginUser($this->createUser('order-builder-comment-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-builder-comment-store-' . uniqid());
+		$customer = $this->createCustomer($store);
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
+		$token = $crawler->filter('input[name="order[_token]"]')->attr('value');
+
+		$this->client->request('POST', sprintf('/admin/store/%d/order/new', $store->getId()), [
+			'order' => [
+				'customer' => $customer->getId(),
+				'customerPhone' => $customer->getPhone(),
+				'customerName' => $customer->getName(),
+				'customerLastName' => $customer->getLastName(),
+				'currency' => $store->getBaseCurrency()?->getCode(),
+				'draftComments' => ['Created with the order'],
+				'_token' => $token,
+			],
+		]);
+
+		self::assertResponseRedirects(sprintf('/admin/store/%d/order/', $store->getId()));
+
+		$order = $this->entityManager->getRepository(Order::class)->findOneBy([
+			'store' => $store,
+			'customer' => $customer,
+		]);
+
+		self::assertInstanceOf(Order::class, $order);
+		self::assertNotNull($this->entityManager->getRepository(OrderComment::class)->findOneBy([
+			'order' => $order,
+			'body' => 'Created with the order',
 		]));
 	}
 
@@ -259,6 +297,53 @@ class OrderBuilderControllerTest extends WebTestCase
 
 		self::assertContains($currentProduct->getId(), $ids);
 		self::assertNotContains($otherProduct->getId(), $ids);
+	}
+
+	public function testProductSearchUsesRequestedOrderCurrencyForPrice(): void
+	{
+		$this->client->loginUser($this->createUser('order-builder-currency-search-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-builder-currency-search-store-' . uniqid());
+		$orderCurrency = $this->createCurrencyWithCode('D' . substr(uniqid(), -2), 'Document currency');
+		$product = $this->createProduct($store, 'Currency search product');
+		$product->setBaseSalePrice('410.0000');
+		$this->createExchangeRate($orderCurrency, $store->getBaseCurrency(), $store, '41.00000000');
+		$this->entityManager->flush();
+
+		$this->client->request('GET', sprintf(
+			'/api/admin/store/%d/order/product-search?q=Currency%%20search&currency=%s',
+			$store->getId(),
+			$orderCurrency->getCode(),
+		));
+
+		self::assertResponseIsSuccessful();
+
+		$data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+		self::assertCount(1, $data['products']);
+		self::assertSame($product->getId(), $data['products'][0]['id']);
+		self::assertSame('10.0000', $data['products'][0]['price']);
+	}
+
+	public function testProductSearchKeepsProductWithoutResolvablePriceAvailableForManualPricing(): void
+	{
+		$this->client->loginUser($this->createUser('order-builder-no-price-search-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-builder-no-price-search-store-' . uniqid());
+		$product = $this->createProduct($store, 'Manual price product');
+		$product->setBaseSalePrice(null);
+		$this->entityManager->flush();
+
+		$this->client->request('GET', sprintf(
+			'/api/admin/store/%d/order/product-search?q=Manual%%20price',
+			$store->getId(),
+		));
+
+		self::assertResponseIsSuccessful();
+
+		$data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+		self::assertCount(1, $data['products']);
+		self::assertSame($product->getId(), $data['products'][0]['id']);
+		self::assertNull($data['products'][0]['price']);
 	}
 
 	public function testCustomerSearchReturnsOnlyCurrentStoreCustomersByPhone(): void
@@ -523,6 +608,178 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSame($product->getId(), $order->getOrderEntries()->first()->getProduct()?->getId());
 	}
 
+	public function testEditPageShowsCommentsAndHistory(): void
+	{
+		$user = $this->createUser('order-builder-edit-history-admin-' . uniqid() . '@example.com');
+		$this->client->loginUser($user);
+		$store = $this->createStore('order-builder-edit-history-store-' . uniqid());
+		$customer = $this->createCustomer($store);
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
+		$this->client->submitForm('Зберегти', [
+			'order[customer]' => $customer->getId(),
+			'order[customerPhone]' => $customer->getPhone(),
+			'order[customerName]' => $customer->getName(),
+			'order[customerLastName]' => $customer->getLastName(),
+			'order[currency]' => $store->getBaseCurrency()?->getCode(),
+		]);
+
+		$order = $this->entityManager->getRepository(Order::class)->findOneBy([
+			'store' => $store,
+			'customer' => $customer,
+		]);
+		self::assertInstanceOf(Order::class, $order);
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/edit', $store->getId(), $order->getId()));
+		$commentForm = $crawler->selectButton('Add comment')->form([
+			'body' => 'Visible on edit page',
+		]);
+		$this->client->submit($commentForm);
+		self::assertResponseRedirects(sprintf('/admin/store/%d/order/?id=%d&page=1', $store->getId(), $order->getId()));
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/%d/edit', $store->getId(), $order->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('body', 'Visible on edit page');
+		self::assertSelectorTextContains('body', 'History');
+		self::assertSelectorTextContains('body', 'Order created');
+	}
+
+	public function testCommentsCardOnIndexPageIsPreparedForAjaxRefresh(): void
+	{
+		$user = $this->createUser('order-builder-index-comments-admin-' . uniqid() . '@example.com');
+		$this->client->loginUser($user);
+		$store = $this->createStore('order-builder-index-comments-store-' . uniqid());
+		$customer = $this->createCustomer($store);
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
+		$this->client->submitForm('Зберегти', [
+			'order[customer]' => $customer->getId(),
+			'order[customerPhone]' => $customer->getPhone(),
+			'order[customerName]' => $customer->getName(),
+			'order[customerLastName]' => $customer->getLastName(),
+			'order[currency]' => $store->getBaseCurrency()?->getCode(),
+		]);
+
+		$order = $this->entityManager->getRepository(Order::class)->findOneBy([
+			'store' => $store,
+			'customer' => $customer,
+		]);
+		self::assertInstanceOf(Order::class, $order);
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/%d/comments', $store->getId(), $order->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorExists('[data-controller~="order-discussion"]');
+		self::assertSelectorExists('[data-order-discussion-refresh-comments-url-value]');
+		self::assertSelectorExists('[data-order-discussion-refresh-history-url-value]');
+	}
+
+	public function testEditPageAddsCommentWithoutRedirectForXmlHttpRequest(): void
+	{
+		$user = $this->createUser('order-builder-edit-ajax-comment-admin-' . uniqid() . '@example.com');
+		$this->client->loginUser($user);
+		$store = $this->createStore('order-builder-edit-ajax-comment-store-' . uniqid());
+		$customer = $this->createCustomer($store);
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
+		$this->client->submitForm('Зберегти', [
+			'order[customer]' => $customer->getId(),
+			'order[customerPhone]' => $customer->getPhone(),
+			'order[customerName]' => $customer->getName(),
+			'order[customerLastName]' => $customer->getLastName(),
+			'order[currency]' => $store->getBaseCurrency()?->getCode(),
+		]);
+
+		$order = $this->entityManager->getRepository(Order::class)->findOneBy([
+			'store' => $store,
+			'customer' => $customer,
+		]);
+		self::assertInstanceOf(Order::class, $order);
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/edit', $store->getId(), $order->getId()));
+		$commentForm = $crawler->selectButton('Add comment')->form([
+			'body' => 'Added without page reload',
+		]);
+
+		$this->client->request(
+			$commentForm->getMethod(),
+			$commentForm->getUri(),
+			$commentForm->getValues(),
+			[],
+			['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest'],
+		);
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('body', 'Added without page reload');
+		self::assertSelectorExists('[data-controller~="order-discussion"]');
+		self::assertSelectorTextContains('body', 'order.comment_added');
+	}
+
+	public function testEditPageEditsAndDeletesCommentWithoutRedirectForXmlHttpRequest(): void
+	{
+		$user = $this->createUser('order-builder-edit-ajax-update-comment-admin-' . uniqid() . '@example.com');
+		$this->client->loginUser($user);
+		$store = $this->createStore('order-builder-edit-ajax-update-comment-store-' . uniqid());
+		$customer = $this->createCustomer($store);
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
+		$this->client->submitForm('Зберегти', [
+			'order[customer]' => $customer->getId(),
+			'order[customerPhone]' => $customer->getPhone(),
+			'order[customerName]' => $customer->getName(),
+			'order[customerLastName]' => $customer->getLastName(),
+			'order[currency]' => $store->getBaseCurrency()?->getCode(),
+		]);
+
+		$order = $this->entityManager->getRepository(Order::class)->findOneBy([
+			'store' => $store,
+			'customer' => $customer,
+		]);
+		self::assertInstanceOf(Order::class, $order);
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/edit', $store->getId(), $order->getId()));
+		$commentForm = $crawler->selectButton('Add comment')->form([
+			'body' => 'Comment before edit',
+		]);
+		$crawler = $this->client->request(
+			$commentForm->getMethod(),
+			$commentForm->getUri(),
+			$commentForm->getValues(),
+			[],
+			['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest'],
+		);
+
+		$editForm = $crawler->filter('[data-order-discussion-target~="editForm"]')->form([
+			'body' => 'Comment after edit',
+		]);
+		$crawler = $this->client->request(
+			$editForm->getMethod(),
+			$editForm->getUri(),
+			$editForm->getValues(),
+			[],
+			['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest'],
+		);
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('body', 'Comment after edit');
+		self::assertSelectorTextContains('body', 'order.comment_edited');
+
+		$deleteForm = $crawler->filter('form[data-confirm="Delete comment?"]')->form();
+		$this->client->request(
+			$deleteForm->getMethod(),
+			$deleteForm->getUri(),
+			$deleteForm->getValues(),
+			[],
+			['HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest'],
+		);
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('body', 'No comments.');
+		self::assertSelectorNotExists('[data-order-discussion-comment]');
+		self::assertSelectorTextContains('body', 'order.comment_deleted');
+	}
+
 	private function createUser(string $email): User
 	{
 		$user = (new User())
@@ -557,22 +814,42 @@ class OrderBuilderControllerTest extends WebTestCase
 
 	private function createCurrency(): Currency
 	{
-		$currency = $this->entityManager->getRepository(Currency::class)->find('UAH');
+		return $this->createCurrencyWithCode('UAH', 'Ukrainian hryvnia');
+	}
+
+	private function createCurrencyWithCode(string $code, string $name): Currency
+	{
+		$currency = $this->entityManager->getRepository(Currency::class)->find($code);
 
 		if ($currency instanceof Currency) {
 			return $currency;
 		}
 
 		$currency = (new Currency())
-			->setCode('UAH')
-			->setName('Ukrainian hryvnia')
-			->setSymbol('UAH')
+			->setCode($code)
+			->setName($name)
+			->setSymbol($code)
 			->setDecimalPlaces(2);
 
 		$this->entityManager->persist($currency);
 		$this->entityManager->flush();
 
 		return $currency;
+	}
+
+	private function createExchangeRate(Currency $fromCurrency, ?Currency $toCurrency, Store $store, string $rate): ExchangeRate
+	{
+		$exchangeRate = (new ExchangeRate())
+			->setFromCurrency($fromCurrency)
+			->setToCurrency($toCurrency)
+			->setStore($store)
+			->setRate($rate)
+			->setValidFrom(new DateTimeImmutable('2026-01-01 00:00:00'));
+
+		$this->entityManager->persist($exchangeRate);
+		$this->entityManager->flush();
+
+		return $exchangeRate;
 	}
 
 	private function createCustomer(Store $store): Customer

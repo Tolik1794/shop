@@ -49,6 +49,7 @@
 - `Definition/OrderWorkflowDefinition.php`
 - `Guard/OrderHasEntriesGuard.php`
 - `Action/MarkOrderCanceledAction.php`
+- `History/OrderHistoryRecorder.php`
 
 ## Як додати новий workflow
 
@@ -73,6 +74,6 @@
 
 ## Тимчасовий стан
 
-`History/NullHistoryRecorder.php` зараз використовується як тимчасова реалізація, поки в коді ще не з’явилися реальні сутності `OrderHistory` / `StatusHistory`.
+Для `Order` уже використовується постійний `History/OrderHistoryRecorder.php`.
 
-Коли історія буде реалізована, recorder слід замінити на постійну реалізацію без зміни ядра сервісу.
+`History/NullHistoryRecorder.php` залишається тимчасовою реалізацією для майбутніх workflow, якщо вони будуть підключені раніше, ніж з’явиться відповідна постійна історія.

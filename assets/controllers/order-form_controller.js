@@ -587,7 +587,7 @@ export default class extends Controller {
     }
 
     currentCurrency() {
-        const currency = this.formTarget.querySelector('[name$="[currency]"]')
+        const currency = Array.from(this.formTarget.elements).find((field) => field.name && field.name.endsWith('[currency]'))
 
         if (!currency) {
             return ''
