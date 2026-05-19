@@ -4,7 +4,13 @@ namespace App\Tests\Service;
 
 use App\Entity\InventoryDocument;
 use App\Entity\InventoryDocumentLine;
+use App\Entity\Order;
+use App\Entity\OrderEntry;
+use App\Entity\OrderStatus;
 use App\Entity\Product;
+use App\Entity\Purchase;
+use App\Entity\PurchaseEntry;
+use App\Entity\PurchaseStatus;
 use App\Entity\Store;
 use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
@@ -14,6 +20,9 @@ use App\Enum\InventoryDocumentType;
 use App\Enum\ProductKindEnum;
 use App\Exception\StockOperationException;
 use App\Manager\UserManager;
+use App\Repository\WarehouseStockRepository;
+use App\Service\BusinessDocumentStatusSynchronizer;
+use App\Service\DocumentProgressRecalculator;
 use App\Service\InventoryPostingService;
 use App\Service\WarehouseStockService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -24,6 +33,7 @@ class InventoryPostingServiceTest extends TestCase
 {
 	private EntityManagerInterface&MockObject $entityManager;
 	private WarehouseStockService&MockObject $warehouseStockService;
+	private WarehouseStockRepository&MockObject $warehouseStockRepository;
 	private UserManager&MockObject $userManager;
 	private InventoryPostingService $inventoryPostingService;
 
@@ -31,15 +41,19 @@ class InventoryPostingServiceTest extends TestCase
 	{
 		$this->entityManager = $this->createMock(EntityManagerInterface::class);
 		$this->warehouseStockService = $this->createMock(WarehouseStockService::class);
+		$this->warehouseStockRepository = $this->createMock(WarehouseStockRepository::class);
 		$this->userManager = $this->createMock(UserManager::class);
 		$this->userManager->method('getCurrentUser')->willReturn(null);
 		$this->entityManager->method('persist');
 		$this->entityManager->method('flush');
+		$this->entityManager->method('wrapInTransaction')
+			->willReturnCallback(static fn (callable $callback): mixed => $callback());
 
 		$this->inventoryPostingService = new InventoryPostingService(
 			$this->entityManager,
 			$this->warehouseStockService,
 			$this->userManager,
+			new DocumentProgressRecalculator(new BusinessDocumentStatusSynchronizer($this->warehouseStockRepository)),
 		);
 	}
 
@@ -119,6 +133,140 @@ class InventoryPostingServiceTest extends TestCase
 		self::assertSame(InventoryDocumentStatus::POSTED, $document->getStatus());
 		self::assertCount(0, $line->getStockMovements());
 		self::assertNull($line->getWarehouseStock());
+	}
+
+	public function testDocumentTypeDirectionMismatchIsBlocked(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$document = $this->document($store)
+			->setType(InventoryDocumentType::PURCHASE_RECEIPT)
+			->addLine($this->line($product, $warehouse, InventoryDirection::OUT, '3.0000', '4.0000'));
+
+		$this->warehouseStockService->expects($this->never())->method('findOrCreate');
+
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('Inventory document type "purchase_receipt" requires "in" line direction.');
+
+		$this->inventoryPostingService->post($document);
+	}
+
+	public function testPurchaseReceiptUpdatesEntryProgressAndPurchaseStatus(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$purchase = (new Purchase())
+			->setStore($store)
+			->setNumber('PO-' . uniqid())
+			->setStatus(PurchaseStatus::ORDERED);
+		$purchaseEntry = (new PurchaseEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('5.0000')
+			->setUnitCost('4.0000')
+			->setUnitCostBase('4.0000')
+			->setTotalCost('20.0000')
+			->setTotalCostBase('20.0000');
+		$purchase->addPurchaseEntry($purchaseEntry);
+		$warehouseStock = $this->warehouseStock($warehouse, $product, '0.0000', '0.0000');
+		$document = $this->document($store)
+			->setType(InventoryDocumentType::PURCHASE_RECEIPT)
+			->setPurchase($purchase)
+			->addLine($this->line($product, $warehouse, InventoryDirection::IN, '5.0000', '4.0000')
+				->setPurchaseEntry($purchaseEntry));
+
+		$this->warehouseStockService->method('findOrCreate')->willReturn($warehouseStock);
+
+		$this->inventoryPostingService->post($document);
+
+		self::assertSame('5.0000', $purchaseEntry->getReceivedQuantity());
+		self::assertSame('0.0000', $purchaseEntry->getReturnedQuantity());
+		self::assertSame(PurchaseStatus::RECEIVED, $purchase->getStatus());
+	}
+
+	public function testOrderShipmentUpdatesEntryProgressAndOrderStatus(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$order = (new Order())
+			->setStore($store)
+			->setNumber('SO-' . uniqid())
+			->setStatus(OrderStatus::CONFIRMED);
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('2.0000')
+			->setUnitPrice('10.0000')
+			->setUnitPriceBase('10.0000')
+			->setTotalPrice('20.0000')
+			->setTotalPriceBase('20.0000')
+			->setProductNameSnapshot('Inventory product')
+			->setProductCodeSnapshot('inventory-product')
+			->setUnitCodeSnapshot('pc')
+			->setUnitNameSnapshot('Piece');
+		$order->addOrderEntry($orderEntry);
+		$warehouseStock = $this->warehouseStock($warehouse, $product, '2.0000', '6.0000');
+		$document = $this->document($store)
+			->setType(InventoryDocumentType::SALE_SHIPMENT)
+			->setOrder($order)
+			->addLine($this->line($product, $warehouse, InventoryDirection::OUT, '2.0000', '10.0000')
+				->setOrderEntry($orderEntry));
+
+		$this->warehouseStockService->method('findOrCreate')->willReturn($warehouseStock);
+
+		$this->inventoryPostingService->post($document);
+
+		self::assertSame('2.0000', $orderEntry->getShippedQuantity());
+		self::assertSame('0.0000', $orderEntry->getReturnedQuantity());
+		self::assertSame(OrderStatus::SHIPPED, $order->getStatus());
+		self::assertSame('6.0000', $document->getLines()->first()->getStockMovements()->first()->getUnitCost());
+	}
+
+	public function testDirectReversalPostingIsBlocked(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$document = $this->document($store)
+			->setStatus(InventoryDocumentStatus::POSTED)
+			->setPostedAt(new \DateTimeImmutable())
+			->addLine($this->line($product, $warehouse, InventoryDirection::IN, '2.0000', '5.0000'));
+		$reversal = $this->inventoryPostingService->createReversal($document);
+
+		$this->warehouseStockService->expects($this->never())->method('findOrCreate');
+
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('Reversal inventory documents can only be posted through cancel flow.');
+
+		$this->inventoryPostingService->post($reversal);
+	}
+
+	public function testCancelPostedPurchaseReceiptDowngradesProgressAndStatus(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$purchase = (new Purchase())
+			->setStore($store)
+			->setNumber('PO-' . uniqid())
+			->setStatus(PurchaseStatus::ORDERED);
+		$purchaseEntry = (new PurchaseEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('5.0000')
+			->setUnitCost('4.0000')
+			->setUnitCostBase('4.0000')
+			->setTotalCost('20.0000')
+			->setTotalCostBase('20.0000');
+		$purchase->addPurchaseEntry($purchaseEntry);
+		$warehouseStock = $this->warehouseStock($warehouse, $product, '0.0000', '0.0000');
+		$document = $this->document($store)
+			->setType(InventoryDocumentType::PURCHASE_RECEIPT)
+			->setPurchase($purchase)
+			->addLine($this->line($product, $warehouse, InventoryDirection::IN, '5.0000', '4.0000')
+				->setPurchaseEntry($purchaseEntry));
+
+		$this->warehouseStockService->method('findOrCreate')->willReturn($warehouseStock);
+
+		$this->inventoryPostingService->post($document);
+		$this->inventoryPostingService->cancel($document);
+
+		self::assertSame('0.0000', $purchaseEntry->getReceivedQuantity());
+		self::assertSame(PurchaseStatus::ORDERED, $purchase->getStatus());
+		self::assertSame('0.0000', $warehouseStock->getQuantityOnHand());
 	}
 
 	/**

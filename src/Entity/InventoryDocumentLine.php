@@ -52,10 +52,10 @@ class InventoryDocumentLine
 	#[ORM\ManyToOne(inversedBy: 'inventoryDocumentLines')]
 	private ?WarehouseStock $warehouseStock = null;
 
-	#[ORM\ManyToOne]
+	#[ORM\ManyToOne(inversedBy: 'inventoryDocumentLines')]
 	private ?OrderEntry $orderEntry = null;
 
-	#[ORM\ManyToOne]
+	#[ORM\ManyToOne(inversedBy: 'inventoryDocumentLines')]
 	private ?PurchaseEntry $purchaseEntry = null;
 
 	/**
@@ -93,9 +93,27 @@ class InventoryDocumentLine
 	public function getWarehouseStock(): ?WarehouseStock { return $this->warehouseStock; }
 	public function setWarehouseStock(?WarehouseStock $warehouseStock): self { $this->warehouseStock = $warehouseStock; return $this; }
 	public function getOrderEntry(): ?OrderEntry { return $this->orderEntry; }
-	public function setOrderEntry(?OrderEntry $orderEntry): self { $this->orderEntry = $orderEntry; return $this; }
+	public function setOrderEntry(?OrderEntry $orderEntry): self
+	{
+		$this->orderEntry = $orderEntry;
+
+		if ($orderEntry instanceof OrderEntry && !$orderEntry->getInventoryDocumentLines()->contains($this)) {
+			$orderEntry->addInventoryDocumentLine($this);
+		}
+
+		return $this;
+	}
 	public function getPurchaseEntry(): ?PurchaseEntry { return $this->purchaseEntry; }
-	public function setPurchaseEntry(?PurchaseEntry $purchaseEntry): self { $this->purchaseEntry = $purchaseEntry; return $this; }
+	public function setPurchaseEntry(?PurchaseEntry $purchaseEntry): self
+	{
+		$this->purchaseEntry = $purchaseEntry;
+
+		if ($purchaseEntry instanceof PurchaseEntry && !$purchaseEntry->getInventoryDocumentLines()->contains($this)) {
+			$purchaseEntry->addInventoryDocumentLine($this);
+		}
+
+		return $this;
+	}
 
 	/**
 	 * @return Collection<int, StockMovement>

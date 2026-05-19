@@ -26,62 +26,23 @@ class InventoryPostingService
 		private readonly EntityManagerInterface $entityManager,
 		private readonly WarehouseStockService $warehouseStockService,
 		private readonly UserManager $userManager,
+		private readonly DocumentProgressRecalculator $documentProgressRecalculator,
 	)
 	{
 	}
 
 	public function post(InventoryDocument $document): void
 	{
-		if ($document->getStatus() !== InventoryDocumentStatus::DRAFT) {
-			throw new RuntimeException('Only draft inventory documents can be posted.');
-		}
-
-		$this->assertDocumentCanBePosted($document);
-		$actor = $this->currentActor();
-		$postedAt = new DateTimeImmutable();
-
-		foreach ($document->getLines() as $line) {
-			$this->postLine($line);
-		}
-
-		$document
-			->setStatus(InventoryDocumentStatus::POSTED)
-			->setPostedAt($postedAt)
-			->setPostedBy($actor)
-			->setUpdatedAt($postedAt)
-			->setUpdatedBy($actor);
-
-		$this->entityManager->persist($document);
-		$this->entityManager->flush();
+		$this->entityManager->wrapInTransaction(function () use ($document): void {
+			$this->postDocument($document);
+		});
 	}
 
 	public function cancel(InventoryDocument $document): ?InventoryDocument
 	{
-		if ($document->getStatus() === InventoryDocumentStatus::CANCELED) {
-			return null;
-		}
-
-		$actor = $this->currentActor();
-		$canceledAt = new DateTimeImmutable();
-		$reversal = null;
-
-		if ($document->getStatus() === InventoryDocumentStatus::POSTED) {
-			$reversal = $this->createReversal($document);
-			$this->entityManager->persist($reversal);
-			$this->post($reversal);
-		}
-
-		$document
-			->setStatus(InventoryDocumentStatus::CANCELED)
-			->setCanceledAt($canceledAt)
-			->setCanceledBy($actor)
-			->setUpdatedAt($canceledAt)
-			->setUpdatedBy($actor);
-
-		$this->entityManager->persist($document);
-		$this->entityManager->flush();
-
-		return $reversal;
+		return $this->entityManager->wrapInTransaction(function () use ($document): ?InventoryDocument {
+			return $this->cancelDocument($document);
+		});
 	}
 
 	public function createReversal(InventoryDocument $document): InventoryDocument
@@ -109,7 +70,7 @@ class InventoryPostingService
 				->setQuantity((string) $line->getQuantity())
 				->setDirection($this->oppositeDirection($line->getDirection()))
 				->setUnitPrice($line->getUnitPrice())
-				->setUnitPriceBase($line->getUnitPriceBase())
+				->setUnitPriceBase($this->reversalUnitCostBase($line))
 				->setTotalPrice($line->getTotalPrice())
 				->setTotalPriceBase($line->getTotalPriceBase())
 				->setProduct($line->getProduct())
@@ -117,6 +78,64 @@ class InventoryPostingService
 				->setOrderEntry($line->getOrderEntry())
 				->setPurchaseEntry($line->getPurchaseEntry()));
 		}
+
+		return $reversal;
+	}
+
+	private function postDocument(InventoryDocument $document, bool $allowReversal = false): void
+	{
+		if ($document->getStatus() !== InventoryDocumentStatus::DRAFT) {
+			throw new RuntimeException('Only draft inventory documents can be posted.');
+		}
+
+		if ($document->getType() === InventoryDocumentType::REVERSAL && !$allowReversal) {
+			throw new RuntimeException('Reversal inventory documents can only be posted through cancel flow.');
+		}
+
+		$this->assertDocumentCanBePosted($document);
+		$actor = $this->currentActor();
+		$postedAt = new DateTimeImmutable();
+
+		foreach ($document->getLines() as $line) {
+			$this->postLine($line);
+		}
+
+		$document
+			->setStatus(InventoryDocumentStatus::POSTED)
+			->setPostedAt($postedAt)
+			->setPostedBy($actor)
+			->setUpdatedAt($postedAt)
+			->setUpdatedBy($actor);
+
+		$this->documentProgressRecalculator->recalculateForInventoryDocument($document);
+		$this->entityManager->persist($document);
+	}
+
+	private function cancelDocument(InventoryDocument $document): ?InventoryDocument
+	{
+		if ($document->getStatus() === InventoryDocumentStatus::CANCELED) {
+			return null;
+		}
+
+		$actor = $this->currentActor();
+		$canceledAt = new DateTimeImmutable();
+		$reversal = null;
+
+		if ($document->getStatus() === InventoryDocumentStatus::POSTED) {
+			$reversal = $this->createReversal($document);
+			$this->entityManager->persist($reversal);
+			$this->postDocument($reversal, true);
+		}
+
+		$document
+			->setStatus(InventoryDocumentStatus::CANCELED)
+			->setCanceledAt($canceledAt)
+			->setCanceledBy($actor)
+			->setUpdatedAt($canceledAt)
+			->setUpdatedBy($actor);
+
+		$this->documentProgressRecalculator->recalculateForInventoryDocument($document);
+		$this->entityManager->persist($document);
 
 		return $reversal;
 	}
@@ -206,6 +225,7 @@ class InventoryPostingService
 
 	private function assertLineCanBePosted(InventoryDocumentLine $line, Store $store): void
 	{
+		$document = $line->getInventoryDocument();
 		$product = $line->getProduct();
 		$warehouse = $line->getWarehouse();
 		$quantity = $this->numberValue($line->getQuantity());
@@ -221,11 +241,24 @@ class InventoryPostingService
 		if (!$warehouse || $warehouse->getStore()?->getId() !== $store->getId()) {
 			throw new RuntimeException('Inventory document line warehouse must belong to document store.');
 		}
+
+		if ($document instanceof InventoryDocument) {
+			$this->assertLineDirectionMatchesDocumentType($document, $line);
+		}
 	}
 
 	private function lineUnitCost(InventoryDocumentLine $line, WarehouseStock $warehouseStock): float
 	{
+		$document = $line->getInventoryDocument();
 		$value = $line->getUnitPriceBase() ?? $line->getUnitPrice() ?? $warehouseStock->getAverageCost() ?? '0';
+
+		if (
+			$line->getDirection() === InventoryDirection::OUT
+			&& $document?->getType() !== InventoryDocumentType::REVERSAL
+		) {
+			$value = $warehouseStock->getAverageCost() ?? '0';
+		}
+
 		$unitCost = $this->numberValue($value);
 
 		if ($unitCost < 0) {
@@ -235,9 +268,43 @@ class InventoryPostingService
 		return $unitCost;
 	}
 
+	private function assertLineDirectionMatchesDocumentType(InventoryDocument $document, InventoryDocumentLine $line): void
+	{
+		$expectedDirection = match ($document->getType()) {
+			InventoryDocumentType::PURCHASE_RECEIPT,
+			InventoryDocumentType::CUSTOMER_RETURN => InventoryDirection::IN,
+			InventoryDocumentType::SALE_SHIPMENT,
+			InventoryDocumentType::SUPPLIER_RETURN,
+			InventoryDocumentType::WRITE_OFF => InventoryDirection::OUT,
+			InventoryDocumentType::STOCK_ADJUSTMENT,
+			InventoryDocumentType::TRANSFER,
+			InventoryDocumentType::PRODUCTION,
+			InventoryDocumentType::REVERSAL => null,
+		};
+
+		if ($expectedDirection !== null && $line->getDirection() !== $expectedDirection) {
+			throw new RuntimeException(sprintf(
+				'Inventory document type "%s" requires "%s" line direction.',
+				$document->getType()->value,
+				$expectedDirection->value,
+			));
+		}
+	}
+
 	private function oppositeDirection(InventoryDirection $direction): InventoryDirection
 	{
 		return $direction === InventoryDirection::IN ? InventoryDirection::OUT : InventoryDirection::IN;
+	}
+
+	private function reversalUnitCostBase(InventoryDocumentLine $line): ?string
+	{
+		$movement = $line->getStockMovements()->first();
+
+		if ($movement instanceof StockMovement) {
+			return $movement->getUnitCost();
+		}
+
+		return $line->getUnitPriceBase();
 	}
 
 	private function reversalNumber(InventoryDocument $document): string
