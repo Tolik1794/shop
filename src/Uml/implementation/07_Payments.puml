@@ -42,6 +42,7 @@ entity Payment {
 	* store: Store
 	order: Order?
 	purchase: Purchase?
+	reversesPayment: Payment?
 	createdBy: User?
 	updatedBy: User?
 	* createdAt: DateTimeImmutable
@@ -52,6 +53,7 @@ Store ||--o{ Payment : has payments
 Currency ||--o{ Payment : payment currency
 Order |o--o{ Payment : paid by
 Purchase |o--o{ Payment : paid by
+Payment |o--o| Payment : reversal of
 PaymentDirection ||--o{ Payment : defines
 PaymentType ||--o{ Payment : classifies
 PaymentStatusEnum ||--o{ Order : payment state
@@ -60,17 +62,19 @@ User |o--o{ Payment : records/updates
 
 note right of Payment
   Current project status:
-  - Payment entity is not implemented.
-  - PaymentDirection and PaymentType are not implemented.
+  - Payment entity is implemented.
+  - PaymentDirection and PaymentType are implemented.
   - PaymentStatusEnum already exists because Order/Purchase use it.
-  - Order/Purchase have paidAmountBase/paymentStatus cache fields,
-    but there is no recalculation service yet.
+  - Order/Purchase have paidAmountBase/paymentStatus/paidAt cache fields,
+    maintained by PaymentRecalculationService.
 
   Required behavior:
   - Exactly one of order or purchase is filled.
   - Incoming payments usually apply to Order.
   - Outgoing payments usually apply to Purchase.
   - Refunds are explicit payment rows, never direct edits to totals.
+  - Corrections use linked reversal rows; recorded payments are not edited.
+  - Every reversal requires an explicit business reason on the refund row.
   - amount is in payment currency; amountBase uses exchangeRate snapshot.
   - Payment rows are the financial source of truth.
   - Order/Purchase payment fields are denormalized caches.
@@ -96,7 +100,7 @@ note bottom
      - recalculate paidAmountBase
      - recalculate paymentStatus
      - set paidAt when a document first becomes fully paid.
-  5. Recalculate after create/update/delete/reversal-like corrections.
+  5. Recalculate after create and explicit reversal corrections.
   6. Add tests for relation exclusivity, exchange-rate snapshots,
      unpaid/partial/paid/overpaid/refunded states and refunds.
 

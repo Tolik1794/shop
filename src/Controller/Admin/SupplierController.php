@@ -133,7 +133,7 @@ class SupplierController extends AbstractAdvancedController
 
 		return $this->render('admin/supplier/show.html.twig', [
 			'entity' => $supplier,
-			'query_params' => array_filter($request->query->all(), static fn ($value) => is_scalar($value)),
+			'query_params' => $request->query->all(),
 		]);
 	}
 

@@ -1,0 +1,84 @@
+{% set is_fully_paid = entity.paymentStatus.value in ['paid', 'overpaid'] %}
+{% set actions %}
+	<a class="btn btn-light btn-sm" href="{{ full_payment_form_url }}"><i class="fa-solid fa-file-pen me-1"></i>Full form</a>
+{% endset %}
+
+<div class="card" {{ stimulus_target('reload-card', 'paymentsCard') }} data-card-id="{{ entity.id }}">
+	<div class="card-header">
+		{{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
+		<h5 class="card-title mb-0">Payments</h5>
+	</div>
+	<div class="card-body" data-controller="select-two">
+		{% if payments|length > 0 %}
+			<div class="table-responsive">
+				<table class="table table-sm mb-3">
+					<thead>
+					<tr>
+						<th>Date</th>
+						<th>Direction</th>
+						<th>Type</th>
+						<th>Amount</th>
+						<th>Amount base</th>
+						<th>Correction</th>
+						<th>Reason</th>
+					</tr>
+					</thead>
+					<tbody>
+					{% for payment in payments %}
+						{% set correction = payment.reversesPayment
+							? 'Reversal of #' ~ payment.reversesPayment.id
+							: (payment.reversedByPayment ? 'Reversed by #' ~ payment.reversedByPayment.id : '') %}
+						{% set reversalReason = payment.reversesPayment
+							? payment.comment
+							: (payment.reversedByPayment ? payment.reversedByPayment.comment : '') %}
+						<tr>
+							<td>{{ payment.paidAt|date('Y-m-d H:i') }}</td>
+							<td>{{ payment.direction.value }}</td>
+							<td>{{ payment.type.value }}</td>
+							<td>{{ payment.amount|money }} {{ payment.currency.code }}</td>
+							<td>{{ payment.amountBase|money }}</td>
+							<td>{{ correction ?: '—' }}</td>
+							<td>{{ reversalReason ?: '—' }}</td>
+						</tr>
+					{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		{% else %}
+			<p class="text-muted">No payments.</p>
+		{% endif %}
+
+		{% if is_fully_paid %}
+			<div class="alert alert-success mb-0">
+				This document is fully paid.
+			</div>
+		{% else %}
+			<h6 class="mb-2">Add payment</h6>
+
+			{{ form_start(payment_form, {attr: {'data-select-two-target': 'form'}}) }}
+			{% if payment_form.vars.errors|length > 0 %}
+				<div class="form-error">
+					{{ form_errors(payment_form) }}
+				</div>
+			{% endif %}
+
+			{{ form_row(payment_form.direction) }}
+			{{ form_row(payment_form.type) }}
+			{{ form_row(payment_form.amount) }}
+			{{ form_row(payment_form.paidAt) }}
+			{{ form_row(payment_form.currency) }}
+			{{ form_row(payment_form.externalReference) }}
+			{{ form_row(payment_form.comment) }}
+
+			<button type="submit" class="btn btn-primary btn-sm">
+				<i class="fa-solid fa-plus me-1"></i>Add payment
+			</button>
+
+			{% if payment_form._token is defined %}
+				{{ form_widget(payment_form._token) }}
+			{% endif %}
+
+			{{ form_end(payment_form, {'render_rest': false}) }}
+		{% endif %}
+	</div>
+</div>

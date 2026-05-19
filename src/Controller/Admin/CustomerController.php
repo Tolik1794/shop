@@ -133,7 +133,7 @@ class CustomerController extends AbstractAdvancedController
 
 		return $this->render('admin/customer/show.html.twig', [
 			'entity' => $customer,
-			'query_params' => array_filter($request->query->all(), static fn ($value) => is_scalar($value)),
+			'query_params' => $request->query->all(),
 		]);
 	}
 

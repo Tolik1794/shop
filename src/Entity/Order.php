@@ -101,6 +101,9 @@ class Order implements WorkflowSubjectInterface
 	#[ORM\OneToMany(mappedBy: 'order', targetEntity: OrderHistory::class)]
 	private Collection $historyEntries;
 
+	#[ORM\OneToMany(mappedBy: 'order', targetEntity: Payment::class)]
+	private Collection $payments;
+
 	public function __construct()
 	{
 		$this->status = OrderStatus::DRAFT;
@@ -114,6 +117,7 @@ class Order implements WorkflowSubjectInterface
 		$this->orderEntries = new ArrayCollection();
 		$this->comments = new ArrayCollection();
 		$this->historyEntries = new ArrayCollection();
+		$this->payments = new ArrayCollection();
 	}
 
 	public function getId(): ?int
@@ -279,6 +283,33 @@ class Order implements WorkflowSubjectInterface
 			if ($orderEntry->getOrder() === $this) {
 				$orderEntry->setOrder(null);
 			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, Payment>
+	 */
+	public function getPayments(): Collection
+	{
+		return $this->payments;
+	}
+
+	public function addPayment(Payment $payment): self
+	{
+		if (!$this->payments->contains($payment)) {
+			$this->payments->add($payment);
+			$payment->setOrder($this);
+		}
+
+		return $this;
+	}
+
+	public function removePayment(Payment $payment): self
+	{
+		if ($this->payments->removeElement($payment) && $payment->getOrder() === $this) {
+			$payment->setOrder(null);
 		}
 
 		return $this;

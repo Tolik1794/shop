@@ -17,6 +17,7 @@ export default class extends Controller {
                     isMultiple = $select2.attr('multiple')
 
                 options.class = 'form-control'
+                options.width = '100%'
                 options.allowClear = !isRequired || isMultiple
                 options.closeOnSelect = !isMultiple
 

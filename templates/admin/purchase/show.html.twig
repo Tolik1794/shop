@@ -26,6 +26,8 @@
 			<tr><th>Total</th><td>{{ entity.totalAmount|money }} {{ entity.currency.code }}</td></tr>
 			<tr><th>Total base</th><td>{{ entity.totalAmountBase|money }}</td></tr>
 			<tr><th>Payment</th><td>{{ entity.paymentStatus.value }}</td></tr>
+			<tr><th>Paid amount base</th><td>{{ entity.paidAmountBase|money }}</td></tr>
+			<tr><th>Paid at</th><td>{{ entity.paidAt ? entity.paidAt|date('Y-m-d H:i') : '' }}</td></tr>
 			<tr><th>Comment</th><td>{{ entity.comment }}</td></tr>
 			</tbody>
 		</table>

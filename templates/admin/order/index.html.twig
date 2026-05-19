@@ -21,6 +21,8 @@
                 data-show-link="{{ path('app_admin_order_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
                 data-comments-link="{{ path('app_admin_order_comments', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
                 data-history-link="{{ path('app_admin_order_history', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+                data-payments-link="{{ path('app_admin_payment_order_document', {store_id: app.request.attributes.get('store_id'), order_id: entity.id}) }}"
+                data-payment-complete="{{ entity.paymentStatus.value in ['paid', 'overpaid'] ? '1' : '0' }}"
         >
             <td>
                 <table class="table table-sm mb-2">
@@ -88,9 +90,13 @@
             <div class="row">
                 <div class="col-xxl-4 col-xl-5 col-lg-6">
                     {{ include('admin/_components/card/_tab_card.html.twig', {
-                        tab_search_key: 3,
+                        active_tab_key: app.request.query.get('active_tab') == 'payments' ? 1 : 0,
+                        tab_search_key: 4,
                         tab_head: [
                             include('admin/_components/tab_icon/_show.html.twig'),
+                            include('admin/_components/tab_icon/_payment.html.twig', {
+                                is_paid: first_entity and first_entity.paymentStatus.value in ['paid', 'overpaid']
+                            }),
                             include('admin/_components/tab_icon/_comments.html.twig'),
                             include('admin/_components/tab_icon/_history.html.twig'),
                             include('admin/_components/tab_icon/_filter.html.twig')
@@ -100,6 +106,10 @@
                             first_entity ? render(controller(
                                 'App\\Controller\\Admin\\OrderController::show',
                                 { store_id: app.request.attributes.get('store_id'), id: first_entity.id, 'request': app.request }
+                            )) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
+                            first_entity ? render(controller(
+                                'App\\Controller\\Admin\\PaymentController::orderDocument',
+                                { store_id: app.request.attributes.get('store_id'), order_id: first_entity.id, 'request': app.request }
                             )) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
                             first_entity ? render(controller(
                                 'App\\Controller\\Admin\\OrderController::comments',

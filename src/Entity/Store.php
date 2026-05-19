@@ -70,6 +70,9 @@ class Store implements AvatarEntityInterface
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Purchase::class)]
 	private Collection $purchases;
 
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Payment::class)]
+	private Collection $payments;
+
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Customer::class)]
 	private Collection $customers;
 
@@ -97,6 +100,7 @@ class Store implements AvatarEntityInterface
 		$this->warehouses = new ArrayCollection();
 		$this->orders = new ArrayCollection();
 		$this->purchases = new ArrayCollection();
+		$this->payments = new ArrayCollection();
 		$this->customers = new ArrayCollection();
 		$this->suppliers = new ArrayCollection();
 		$this->status = ActiveStatusEnum::INACTIVE;
@@ -269,6 +273,33 @@ class Store implements AvatarEntityInterface
 			if ($purchase->getStore() === $this) {
 				$purchase->setStore(null);
 			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, Payment>
+	 */
+	public function getPayments(): Collection
+	{
+		return $this->payments;
+	}
+
+	public function addPayment(Payment $payment): self
+	{
+		if (!$this->payments->contains($payment)) {
+			$this->payments->add($payment);
+			$payment->setStore($this);
+		}
+
+		return $this;
+	}
+
+	public function removePayment(Payment $payment): self
+	{
+		if ($this->payments->removeElement($payment) && $payment->getStore() === $this) {
+			$payment->setStore(null);
 		}
 
 		return $this;

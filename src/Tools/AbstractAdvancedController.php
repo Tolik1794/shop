@@ -17,23 +17,23 @@ abstract class AbstractAdvancedController extends AbstractController
 	): RedirectResponse
 	{
 		$request = $this->getCurrentRequest();
-		$referer = $this->getRefererRequest($request);
+		$listContextParameters = $this->getListContextParameters($request);
 
 		if ($request->request->get('save') && $request->request->get('save') === 'stay') {
 			if ($stayRoute) return $this->redirectToRoute(
 				route: $stayRoute,
-				parameters: $referer->query->all() + $stayParameters
+				parameters: $listContextParameters + $stayParameters
 			);
 
 			return $this->redirectToRoute(
 				route: $request->attributes->get('_route'),
-				parameters: $referer->query->all() + $request->attributes->get('_route_params', [])
+				parameters: $listContextParameters + $request->attributes->get('_route_params', [])
 			);
 		}
 
 		return $this->redirectToRoute(
 			route: $route,
-			parameters: $referer->query->all() + $request->attributes->get('_route_params', []) + $parameters
+			parameters: $listContextParameters + $request->attributes->get('_route_params', []) + $parameters
 		);
 	}
 
@@ -71,5 +71,16 @@ abstract class AbstractAdvancedController extends AbstractController
 	public function getRefererRequest(Request $request): Request
 	{
 		return Request::create($request->headers->get('referer'));
+	}
+
+	private function getListContextParameters(Request $request): array
+	{
+		$queryParameters = $request->query->all();
+
+		if ($queryParameters !== []) {
+			return $queryParameters;
+		}
+
+		return $this->getRefererRequest($request)->query->all();
 	}
 }

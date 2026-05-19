@@ -171,6 +171,7 @@ class ProductPriceController extends AbstractAdvancedController
 
 	#[Route('/{id}/show', name: 'show')]
 	public function show(
+		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
 		Store $store,
 		ProductPrice $productPrice,
@@ -182,6 +183,7 @@ class ProductPriceController extends AbstractAdvancedController
 
 		return $this->render('admin/product_price/show.html.twig', [
 			'entity' => $productPrice,
+			'query_params' => $request->query->all(),
 		]);
 	}
 

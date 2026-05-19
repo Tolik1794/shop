@@ -175,7 +175,7 @@ class PurchaseController extends AbstractAdvancedController
 
 		return $this->render('admin/purchase/show.html.twig', [
 			'entity' => $purchase,
-			'query_params' => array_filter($request->query->all(), static fn ($value) => is_scalar($value)),
+			'query_params' => $request->query->all(),
 		]);
 	}
 

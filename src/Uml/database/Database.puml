@@ -409,6 +409,7 @@ entity Payment {
     * store: Store
     order: Order?
     purchase: Purchase?
+    reversesPayment: Payment?
     createdBy: User?
     updatedBy: User?
     * createdAt: DateTimeImmutable
@@ -651,6 +652,7 @@ entity Purchase {
     canceledAt: DateTimeImmutable?
     * paidAmountBase: decimal(14, 4)
     * paymentStatus: PaymentStatusEnum
+    paidAt: DateTimeImmutable?
     * createdAt: DateTimeImmutable
     * updatedAt: DateTimeImmutable
     * store: Store
@@ -748,6 +750,7 @@ Warehouse |o--o{ OrderEntry : ships from
 Supplier |o--o{ Purchase : supplies
 Purchase ||--o{ PurchaseEntry : has
 Purchase |o--o{ Payment : paid by
+Payment |o--o| Payment : reversal of
 Product ||--o{ PurchaseEntry : purchased as
 Warehouse ||--o{ PurchaseEntry : received into
 PurchaseEntry |o--o{ WarehouseStockBatch : may create batches
@@ -1093,6 +1096,8 @@ note right of Payment
   - Order payments are usually incoming.
   - Purchase payments are usually outgoing.
   - refunds can use type=refund with the opposite direction.
+  - reversal corrections are linked to the original payment and keep its snapshot.
+  - every reversal stores an explicit business reason in comment.
   - amount is in payment currency.
   - amountBase is stored in Store.baseCurrency using exchangeRateToBase snapshot.
 
@@ -1241,7 +1246,7 @@ note right of Payment
   Order.paidAmountBase / Purchase.paidAmountBase and paymentStatus are denormalized cache fields
   for fast lists, filters, and dashboards.
 
-  They should be recalculated from Payment rows after creating, updating, deleting, or reversing payments.
+  They should be recalculated from Payment rows after creating payments or explicit linked reversals.
   paidAt can store the date when the document became fully paid.
 end note
 
