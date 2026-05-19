@@ -1,0 +1,97 @@
+@startuml
+
+title 04. Warehouse and stock base
+
+hide circle
+skinparam linetype ortho
+
+entity Warehouse {
+	* id: int
+	--
+	* name: string(255)
+	* status: ActiveStatusEnum
+	* createdAt: DateTimeImmutable
+	* updatedAt: DateTimeImmutable
+	deletedAt: DateTimeImmutable?
+	* store: Store
+	createdBy: User?
+	updatedBy: User?
+}
+
+entity WarehouseStock {
+	* id: int
+	--
+	* quantityOnHand: decimal(14,4)
+	* reservedQuantity: decimal(14,4)
+	* averageCost: decimal(14,4)
+	* createdAt: DateTimeImmutable
+	* updatedAt: DateTimeImmutable
+	* warehouse: Warehouse
+	* product: Product
+}
+
+entity WarehouseStockBatch {
+	* id: int
+	--
+	* initialQuantity: decimal(14,4)
+	* remainingQuantity: decimal(14,4)
+	* unitCost: decimal(14,4)
+	salePrice: decimal(14,4)?
+	* receivedAt: DateTimeImmutable
+	* createdAt: DateTimeImmutable
+	* warehouseStock: WarehouseStock
+	purchaseEntry: PurchaseEntry?
+	createdByMovement: StockMovement?
+}
+
+Store ||--o{ Warehouse : owns
+Warehouse ||--o{ WarehouseStock : contains
+Product ||--o{ WarehouseStock : stocked as
+WarehouseStock ||--o{ WarehouseStockBatch : split by batches
+PurchaseEntry |o--o{ WarehouseStockBatch : may create
+StockMovement |o--o{ WarehouseStockBatch : may create
+
+note right of WarehouseStock
+  Current project status:
+  - Warehouse entity and CRUD exist.
+  - WarehouseStock entity and CRUD exist.
+  - WarehouseStock fields were renamed to:
+    quantityOnHand, reservedQuantity, averageCost.
+  - Basic non-negative DB checks exist.
+
+  Remaining work:
+  - WarehouseStock should not normally be edited manually
+    after InventoryDocument/StockMovement is implemented.
+  - Add service to find or create stock row by product+warehouse.
+  - Add rules:
+    quantityOnHand >= 0,
+    reservedQuantity >= 0,
+    reservedQuantity <= quantityOnHand unless backorder rules allow otherwise.
+  - Hide service-only fields from manual forms when posting exists.
+end note
+
+note right of WarehouseStockBatch
+  Current project status:
+  - Entity exists.
+  - No CRUD/workflow is implemented for batches.
+
+  Required behavior:
+  - Batches are created by purchase receipt, production,
+    return, stock adjustment or initial stock.
+  - For average_cost, batches are optional for costing
+    but useful for traceability.
+  - remainingQuantity must not exceed initialQuantity.
+end note
+
+note bottom
+  Suggested implementation steps:
+
+  1. Keep current Warehouse and WarehouseStock CRUD as admin tools.
+  2. Add WarehouseStockService:
+     findOrCreate(warehouse, product),
+     increase/decrease/reserve/release.
+  3. Add tests for non-negative and unique product+warehouse.
+  4. Defer automatic stock changes until Inventory Documents stage.
+end note
+
+@enduml

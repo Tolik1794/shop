@@ -1,0 +1,52 @@
+{% use 'bootstrap_5_layout.html.twig' %}
+
+{%- block password_widget -%}
+    {%- set type = type|default('password') -%}
+    {{ block('form_widget_password') }}
+{%- endblock password_widget -%}
+
+{%- block form_widget_password -%}
+    {%- set type = type|default('text') -%}
+    {%- set widget_class = ' form-control' %}
+    {%- set attr = attr|merge({class: (attr.class|default('') ~ widget_class)|trim}) -%}
+    <div data-controller="password-visibility" class="position-relative">
+        <input data-password-visibility-target="input"
+               type="{{ type }}" {{ block('widget_attributes') }} {% if value is not empty %}value="{{ value }}" {% endif %}/>
+        <button type="button" class="eye-password" data-action="password-visibility#toggle">
+            <span data-password-visibility-target="icon" class="fa fa-fw fa-eye-slash"></span>
+            <span data-password-visibility-target="icon" class="fa fa-fw fa-eye hidden"></span>
+        </button>
+    </div>
+{%- endblock form_widget_password -%}
+
+{%- block flatpickr_datetime_widget -%}
+    {% if widget == 'single_text' %}
+        {{- block('form_widget_date') -}}
+    {%- else -%}
+        <div {{ block('widget_container_attributes') }}>
+            {{- form_errors(form.date) -}}
+            {{- form_errors(form.time) -}}
+            {{- form_widget(form.date) -}}
+            {{- form_widget(form.time) -}}
+        </div>
+    {%- endif -%}
+{%- endblock flatpickr_datetime_widget -%}
+
+{%- block flatpickr_date_widget -%}
+    {%- set attr = attr|merge({'data-flatpickr-target': 'date'}) -%}
+    {%- set attr = attr|merge({class: (attr.class|default('') ~ ' form-control')|trim}) -%}
+    <div data-controller="flatpickr">
+        <input type="{{ type }}" {{ block('widget_attributes') }} {% if value is not empty %}value="{{ value }}" {% endif %}/>
+    </div>
+{%- endblock flatpickr_date_widget -%}
+
+{%- block flatpickr_time_widget -%}
+    {%- if widget == 'single_text' -%}
+        {{ block('form_widget_simple') }}
+    {%- else -%}
+        {%- set vars = widget == 'text' ? { 'attr': { 'size': 1 }} : {} -%}
+        <div {{ block('widget_container_attributes') }}>
+            {{ form_widget(form.hour, vars) }}{% if with_minutes %}:{{ form_widget(form.minute, vars) }}{% endif %}{% if with_seconds %}:{{ form_widget(form.second, vars) }}{% endif %}
+        </div>
+    {%- endif -%}
+{%- endblock flatpickr_time_widget -%}

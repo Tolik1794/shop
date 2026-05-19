@@ -1,0 +1,38 @@
+<div class="sticky-top tab tab-vertical tab-card">
+    {% set active_tab_key = active_tab_key|default(0) %}
+    <ul class="nav nav-tabs" role="tablist">
+        {% for key, name in tab_head %}
+            <li class="nav-item" role="presentation">
+                {% set is_search_tab = tab_search_key is defined and key == tab_search_key %}
+                {% set is_active_tab = key == active_tab_key %}
+                {% if key == 0 %}
+                    <a class="nav-link{{ is_active_tab ? ' active' : '' }}{{ is_search_tab ? ' tab-search-link' : '' }}" href="#tab-1"
+                       data-bs-toggle="tab" role="tab"
+                       id="first-tab" aria-selected="{{ is_active_tab ? 'true' : 'false' }}"{{ is_active_tab ? '' : ' tabindex="-1"' }}>
+                        {{ name|raw }}
+                    </a>
+                {% else %}
+                    <a class="nav-link{{ is_active_tab ? ' active' : '' }}{{ is_search_tab ? ' tab-search-link' : '' }}" href="#tab-{{ key + 1 }}"
+                       data-bs-toggle="tab" role="tab"
+                       aria-selected="{{ is_active_tab ? 'true' : 'false' }}"{{ is_active_tab ? '' : ' tabindex="-1"' }}>
+                        {{ name|raw }}
+                    </a>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+    <div class="tab-content">
+        {% for key, value in  tab_body %}
+            {% set is_active_tab = key == active_tab_key %}
+            {% if key == 0 %}
+                <div class="tab-pane{{ is_active_tab ? ' active' : '' }}" id="tab-1" role="tabpanel">
+                    {{ value|raw }}
+                </div>
+            {% else %}
+                <div class="tab-pane{{ is_active_tab ? ' active' : '' }}" id="tab-{{ key + 1 }}" role="tabpanel">
+                    {{ value|raw }}
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>

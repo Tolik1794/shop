@@ -1,0 +1,67 @@
+{% extends 'admin/_store_components/layout.html.twig' %}
+
+{% block title %}Payment{% endblock %}
+
+{% block main_content %}
+	{% set document_type = entity.order
+		? 'order'
+		: (entity.purchase ? 'purchase' : form.documentType.vars.data) %}
+	{% set is_manual_document_selection = not entity.order and not entity.purchase %}
+
+	<main class="content" data-controller="select-two payment-form">
+		<div class="container-fluid p-0">
+			<div class="row">
+				<div class="card">
+					<div class="card-header">
+						<h5 class="card-title mb-0">Payment</h5>
+					</div>
+					<div class="card-body">
+						{{ form_start(form, {attr: {'data-select-two-target': 'form'}}) }}
+						{% if form.vars.errors|length > 0 %}
+							<div class="form-error">
+								{{ form_errors(form) }}
+							</div>
+						{% endif %}
+
+						<div class="row">
+							<div class="col-lg-6">
+								{{ form_row(form.direction) }}
+								{{ form_row(form.type) }}
+								{{ form_row(form.amount) }}
+								{{ form_row(form.paidAt) }}
+								{{ form_row(form.currency) }}
+							</div>
+							<div class="col-lg-6">
+								{% if is_manual_document_selection %}
+									{{ form_row(form.documentType) }}
+								{% endif %}
+								<div data-payment-form-target="orderGroup" class="{{ document_type != 'order' ? 'd-none' }}">
+									{{ form_row(form.order) }}
+								</div>
+								<div data-payment-form-target="purchaseGroup" class="{{ document_type != 'purchase' ? 'd-none' }}">
+									{{ form_row(form.purchase) }}
+								</div>
+								{{ form_row(form.externalReference) }}
+								{{ form_row(form.comment) }}
+							</div>
+						</div>
+
+						<div class="row">
+							<div class="form-control-lg">
+								<button type="submit" class="btn btn-primary btn mb-1 me-2">Сохранить</button>
+								<button name="save" value="stay" type="submit" class="btn btn-primary mb-1 me-2">Сохранить и продолжить</button>
+								<a href="{{ path('app_admin_payment_index', app.request.query.all|merge(app.request.attributes.get('_route_params'))) }}" class="btn btn-text mb-1">Отмена</a>
+							</div>
+						</div>
+
+						{% if form._token is defined %}
+							{{ form_widget(form._token) }}
+						{% endif %}
+
+						{{ form_end(form, {'render_rest': false}) }}
+					</div>
+				</div>
+			</div>
+		</div>
+	</main>
+{% endblock %}

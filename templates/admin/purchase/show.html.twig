@@ -1,0 +1,93 @@
+{% set actions %}
+	{% if entity.status.value == 'draft' %}
+		<a class="btn btn-light btn-sm" href="{{ path('app_admin_purchase_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>Edit</a>
+	{% endif %}
+{% endset %}
+
+<div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+	<div class="card-header">
+		{% if actions|trim %}
+			{{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
+		{% endif %}
+		<h5 class="card-title mb-0">{{ entity.number }}</h5>
+	</div>
+	<div class="card-body">
+		<table class="table table-sm mt-2 mb-4">
+			<tbody>
+			<tr><th>Status</th><td>{{ entity.status.value }}</td></tr>
+			<tr><th>Supplier</th><td>{{ entity.supplierNameSnapshot }}</td></tr>
+			<tr><th>Phone</th><td>{{ entity.supplierPhoneSnapshot }}</td></tr>
+			<tr><th>Email</th><td>{{ entity.supplierEmailSnapshot }}</td></tr>
+			<tr><th>Currency</th><td>{{ entity.currency.code }}</td></tr>
+			<tr><th>Exchange rate</th><td>{{ entity.exchangeRateToBase }}</td></tr>
+			<tr><th>Invoice</th><td>{{ entity.invoiceNumber }}</td></tr>
+			<tr><th>Document date</th><td>{{ entity.documentDate ? entity.documentDate|date('Y-m-d') : '' }}</td></tr>
+			<tr><th>Delivery</th><td>{{ entity.deliveryCost|money }} {{ entity.currency.code }}</td></tr>
+			<tr><th>Total</th><td>{{ entity.totalAmount|money }} {{ entity.currency.code }}</td></tr>
+			<tr><th>Total base</th><td>{{ entity.totalAmountBase|money }}</td></tr>
+			<tr><th>Payment</th><td>{{ entity.paymentStatus.value }}</td></tr>
+			<tr><th>Paid amount base</th><td>{{ entity.paidAmountBase|money }}</td></tr>
+			<tr><th>Paid at</th><td>{{ entity.paidAt ? entity.paidAt|date('Y-m-d H:i') : '' }}</td></tr>
+			<tr><th>Comment</th><td>{{ entity.comment }}</td></tr>
+			</tbody>
+		</table>
+
+		<h6 class="mb-2">Products</h6>
+		{% if entity.purchaseEntries|length > 0 %}
+			<div class="table-responsive">
+				<table class="table table-sm mb-3">
+					<thead>
+					<tr>
+						<th>Product</th>
+						<th>Warehouse</th>
+						<th>Qty</th>
+						<th>Unit</th>
+						<th>Unit cost</th>
+						<th>Delivery</th>
+						<th>Total</th>
+					</tr>
+					</thead>
+					<tbody>
+					{% for entry in entity.purchaseEntries %}
+						<tr>
+							<td>
+								{{ entry.productNameSnapshot }}
+								<div class="text-muted small">{{ entry.productCodeSnapshot }}</div>
+							</td>
+							<td>{{ entry.warehouse.name }}</td>
+							<td>{{ entry.quantity }}</td>
+							<td>{{ entry.unitCodeSnapshot }}</td>
+							<td>{{ entry.unitCost|money }}</td>
+							<td>{{ entry.deliveryCost|money }}</td>
+							<td>{{ entry.totalCost|money }}</td>
+						</tr>
+					{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		{% else %}
+			<p class="text-muted">No products.</p>
+		{% endif %}
+
+		{% if entity.status.value == 'draft' %}
+			<form method="post" action="{{ path('app_admin_purchase_order', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline">
+				<input type="hidden" name="_token" value="{{ csrf_token('order_purchase_' ~ entity.id) }}">
+				<button class="btn btn-success btn-sm" type="submit" {{ entity.purchaseEntries|length == 0 ? 'disabled' : '' }}>Order</button>
+			</form>
+		{% endif %}
+
+		{% if entity.status.value == 'ordered' %}
+			<form method="post" action="{{ path('app_admin_purchase_return_to_draft', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" onsubmit="return confirm('Return purchase to draft?');">
+				<input type="hidden" name="_token" value="{{ csrf_token('return_to_draft_purchase_' ~ entity.id) }}">
+				<button class="btn btn-light btn-sm" type="submit">Return to draft</button>
+			</form>
+		{% endif %}
+
+		{% if entity.status.value in ['draft', 'ordered'] %}
+			<form method="post" action="{{ path('app_admin_purchase_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" onsubmit="return confirm('Cancel purchase?');">
+				<input type="hidden" name="_token" value="{{ csrf_token('cancel_purchase_' ~ entity.id) }}">
+				<button class="btn btn-danger btn-sm" type="submit">Cancel</button>
+			</form>
+		{% endif %}
+	</div>
+</div>

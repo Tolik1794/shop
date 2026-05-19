@@ -1,0 +1,124 @@
+{% extends 'admin/_store_components/layout.html.twig' %}
+
+{% block title %}Purchases{% endblock %}
+
+{% set table_actions %}
+	{% if is_granted('ROLE_STORE_ADMIN') %}
+		<a class="btn btn-light btn-sm" href="{{ path('app_admin_purchase_new', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-plus me-1"></i>New</a>
+	{% endif %}
+{% endset %}
+
+{% set table_head %}
+{% endset %}
+
+{% set table_body %}
+	{% for entity in pagination %}
+		<tr
+				id="{{ entity.id }}"
+				data-id-column="id"
+				class="{{ first_entity and entity.id == first_entity.id ? 'table-active' : '' }}"
+				data-action="click->reload-card#reloadDocumentCards click->reload-card#tableActivate"
+				data-show-link="{{ path('app_admin_purchase_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+				data-payments-link="{{ path('app_admin_payment_purchase_document', {store_id: app.request.attributes.get('store_id'), purchase_id: entity.id}) }}"
+				data-payment-complete="{{ entity.paymentStatus.value in ['paid', 'overpaid'] ? '1' : '0' }}"
+		>
+			<td>
+				<table class="table table-sm mb-2">
+					<thead>
+					<tr>
+						<th>Number</th>
+						<th>Supplier</th>
+						<th>Status</th>
+						<th>Total</th>
+						<th>Payment</th>
+					</tr>
+					</thead>
+					<tbody>
+					<tr>
+						<td><strong>{{ entity.number }}</strong></td>
+						<td><strong>{{ entity.supplierNameSnapshot }}</strong></td>
+						<td>{{ entity.status.value }}</td>
+						<td><strong>{{ entity.totalAmount|money }} {{ entity.currency.code }}</strong></td>
+						<td>{{ entity.paymentStatus.value }}</td>
+					</tr>
+					</tbody>
+				</table>
+
+				{% if entity.purchaseEntries|length > 0 %}
+					<table class="table table-sm mb-0">
+						<thead>
+						<tr>
+							<th>Product</th>
+							<th>Qty</th>
+							<th>Unit</th>
+							<th>Unit cost</th>
+							<th>Total</th>
+						</tr>
+						</thead>
+						<tbody>
+						{% for entry in entity.purchaseEntries %}
+							<tr>
+								<td>
+									<strong>{{ entry.productNameSnapshot }}</strong>
+									{% if entry.productCodeSnapshot %}
+										<div class="text-muted small">{{ entry.productCodeSnapshot }}</div>
+									{% endif %}
+								</td>
+								<td>{{ entry.quantity|number_format(2, '.', '') }}</td>
+								<td>{{ entry.unitCodeSnapshot }}</td>
+								<td>{{ entry.unitCost|money }}</td>
+								<td><strong>{{ entry.totalCost|money }} {{ entity.currency.code }}</strong></td>
+							</tr>
+						{% endfor %}
+						</tbody>
+					</table>
+				{% else %}
+					<span class="text-muted small">No items</span>
+				{% endif %}
+			</td>
+		</tr>
+	{% endfor %}
+{% endset %}
+
+{% block main_content %}
+	<main class="content" {{ stimulus_controller('reload-card') }}>
+		<div class="container-fluid p-0">
+			<div class="row">
+				<div class="col-xxl-4 col-xl-5 col-lg-6">
+					{{ include('admin/_components/card/_tab_card.html.twig', {
+						active_tab_key: app.request.query.get('active_tab') == 'payments' ? 1 : 0,
+						tab_search_key: 2,
+						tab_head: [
+							include('admin/_components/tab_icon/_show.html.twig'),
+							include('admin/_components/tab_icon/_payment.html.twig', {
+								is_paid: first_entity and first_entity.paymentStatus.value in ['paid', 'overpaid']
+							}),
+							include('admin/_components/tab_icon/_filter.html.twig')
+							~ (app.request.query.all(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
+						],
+						tab_body: [
+							first_entity ? render(controller(
+								'App\\Controller\\Admin\\PurchaseController::show',
+								{ store_id: app.request.attributes.get('store_id'), id: first_entity.id, 'request': app.request }
+							)) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
+							first_entity ? render(controller(
+								'App\\Controller\\Admin\\PaymentController::purchaseDocument',
+								{ store_id: app.request.attributes.get('store_id'), purchase_id: first_entity.id, 'request': app.request }
+							)) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
+							include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
+						]
+					}) }}
+				</div>
+				<div class="col-xxl-8 col-xl-7 col-lg-6">
+					{{ include('admin/_components/card/_table_card.html.twig', {
+						actions: table_actions,
+						table_title: 'Purchases',
+						table_class: 'purchase-index-table',
+						table_head: table_head,
+						table_body: table_body
+					}) }}
+				</div>
+			</div>
+		</div>
+	</main>
+{% endblock %}

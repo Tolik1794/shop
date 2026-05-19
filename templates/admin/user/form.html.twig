@@ -1,0 +1,44 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Hello MainController!{% endblock %}
+
+{% block main_content %}
+    <main class="content">
+        <div class="container-fluid p-0">
+            <div class="row">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Private info</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if avatar %}
+                            <img alt="Avatar"
+                                 class="article-img"
+                                 src="{{ avatar|trim_full_path|imagine_filter('squared_thumbnail_small') }}">
+                        {% endif %}
+
+                        <div class="form-control-lg">
+                            {{ form_start(form) }}
+                            {{ form_errors(form) }}
+
+                            {{ include('admin/_components/_form_widgets.html.twig', {form: form}) }}
+
+                            <div class="row">
+                                <div class="form-control-lg">
+                                    <button type="submit" class="btn btn-primary btn mb-1 me-2">Сохранить</button>
+                                    <button name="save" value="stay" type="submit" class="btn btn-primary mb-1 me-2">
+                                        Сохранить и продолжить
+                                    </button>
+                                    <a href="{{ path('admin_user_index', app.request.query.all|merge(app.request.attributes.get('_route_params'))) }}"
+                                       class="btn btn-text mb-1">Отмена</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{ form_end(form, {'render_rest': false}) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+{% endblock %}

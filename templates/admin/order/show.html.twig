@@ -1,0 +1,125 @@
+{% set actions %}
+    {% if entity.status.value == 'draft' %}
+        <a class="btn btn-light btn-sm" href="{{ path('app_admin_order_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>Edit</a>
+    {% endif %}
+{% endset %}
+
+<div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+    <div class="card-header">
+        {% if actions|trim %}
+            {{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
+        {% endif %}
+        <h5 class="card-title mb-0">{{ entity.number }}</h5>
+    </div>
+    <div class="card-body">
+        <table class="table table-sm mt-2 mb-4">
+            <tbody>
+            <tr>
+                <th>Status</th>
+                <td>{{ entity.status.value }}</td>
+            </tr>
+            <tr>
+                <th>Customer</th>
+                <td>{{ entity.customerNameSnapshot }}</td>
+            </tr>
+            <tr>
+                <th>Phone</th>
+                <td>{{ entity.customerPhoneSnapshot }}</td>
+            </tr>
+            <tr>
+                <th>Email</th>
+                <td>{{ entity.customerEmailSnapshot }}</td>
+            </tr>
+            <tr>
+                <th>Currency</th>
+                <td>{{ entity.currency.code }}</td>
+            </tr>
+            <tr>
+                <th>Exchange rate</th>
+                <td>{{ entity.exchangeRateToBase }}</td>
+            </tr>
+            <tr>
+                <th>Total</th>
+                <td>{{ entity.totalAmount|money }} {{ entity.currency.code }}</td>
+            </tr>
+            <tr>
+                <th>Total base</th>
+                <td>{{ entity.totalAmountBase|money }}</td>
+            </tr>
+            <tr>
+                <th>Payment</th>
+                <td>{{ entity.paymentStatus.value }}</td>
+            </tr>
+            <tr>
+                <th>Paid amount base</th>
+                <td>{{ entity.paidAmountBase|money }}</td>
+            </tr>
+            <tr>
+                <th>Paid at</th>
+                <td>{{ entity.paidAt ? entity.paidAt|date('Y-m-d H:i') : '' }}</td>
+            </tr>
+            <tr>
+                <th>Delivery address</th>
+                <td>{{ entity.deliveryAddress }}</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <h6 class="mb-2">Products</h6>
+        {% if entity.orderEntries|length > 0 %}
+            <div class="table-responsive">
+                <table class="table table-sm mb-3">
+                    <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Qty</th>
+                        <th>Unit</th>
+                        <th>Price</th>
+                        <th>Discount</th>
+                        <th>Total</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for entry in entity.orderEntries %}
+                        <tr>
+                            <td>
+                                {{ entry.productNameSnapshot }}
+                                <div class="text-muted small">{{ entry.productCodeSnapshot }}</div>
+                            </td>
+                            <td>{{ entry.quantity }}</td>
+                            <td>{{ entry.unitCodeSnapshot }}</td>
+                            <td>{{ entry.unitPrice|money }}</td>
+                            <td>{{ entry.discountAmount|money }}</td>
+                            <td>{{ entry.totalPrice|money }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No products.</p>
+        {% endif %}
+
+        {% if entity.status.value == 'draft' %}
+            <form method="post" action="{{ path('app_admin_order_confirm', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline">
+                <input type="hidden" name="_token" value="{{ csrf_token('confirm_order_' ~ entity.id) }}">
+                <button class="btn btn-success btn-sm" type="submit" {{ entity.orderEntries|length == 0 ? 'disabled' : '' }}>Confirm</button>
+            </form>
+        {% endif %}
+
+        {% if entity.status.value == 'confirmed' %}
+            <form method="post" action="{{ path('app_admin_order_return_to_draft', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" onsubmit="return confirm('Return order to draft?');">
+                <input type="hidden" name="_token" value="{{ csrf_token('return_to_draft_order_' ~ entity.id) }}">
+                <button class="btn btn-light btn-sm" type="submit">Return to draft</button>
+            </form>
+        {% endif %}
+
+        {% if entity.status.value != 'canceled' %}
+            <form method="post" action="{{ path('app_admin_order_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" onsubmit="return confirm('Cancel order?');">
+                <input type="hidden" name="_token" value="{{ csrf_token('cancel_order_' ~ entity.id) }}">
+                <button class="btn btn-danger btn-sm" type="submit">Cancel</button>
+            </form>
+        {% endif %}
+
+    </div>
+</div>

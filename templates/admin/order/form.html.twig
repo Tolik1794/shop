@@ -1,0 +1,24 @@
+{% extends 'admin/_store_components/layout.html.twig' %}
+
+{% block title %}Order{% endblock %}
+
+{% block navbar_breadcrumb %}
+    {{ include('admin/_components/_breadcrumb.html.twig', {
+        breadcrumb_class: 'mb-0',
+        items: [
+            {
+                label: 'Orders',
+                url: entity.id
+                    ? path('app_admin_order_index', {store_id: app.request.attributes.get('store_id'), id: entity.id, page: order_index_page})
+                    : path('app_admin_order_index', {store_id: app.request.attributes.get('store_id')})
+            },
+            {
+                label: entity.id ? entity.number : 'New'
+            }
+        ]
+    }) }}
+{% endblock %}
+
+{% block main_content %}
+    {{ include('admin/order/_form.html.twig') }}
+{% endblock %}

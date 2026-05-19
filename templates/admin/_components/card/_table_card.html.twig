@@ -1,0 +1,21 @@
+<div class="card">
+    <div class="card-header pb-0">
+        {% if actions|trim %}
+            {{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
+        {% endif %}
+        <h5 class="card-title mb-0">{{ table_title }}</h5>
+    </div>
+    <div class="card-body">
+        <table class="table table-hover {{ table_class|default('') }}">
+            <thead>
+            {{ table_head }}
+            </thead>
+            <tbody>
+            {{ table_body }}
+            </tbody>
+        </table>
+
+        {{ include('admin/_components/pagination.html.twig', {pagination: pagination}) }}
+
+    </div>
+</div>

@@ -1,0 +1,94 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block body %}
+    {% block wrapper %}
+        <div class="wrapper">
+            <nav id="sidebar" class="sidebar js-sidebar">
+                <div class="sidebar-content js-simplebar" data-simplebar="init">
+                    <div class="simplebar-wrapper" style="margin: 0px;">
+                        <div class="simplebar-height-auto-observer-wrapper">
+                            <div class="simplebar-height-auto-observer"></div>
+                        </div>
+                        <div class="simplebar-mask">
+                            <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
+                                <div class="simplebar-content-wrapper" tabindex="0" role="region"
+                                     aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
+                                    <div class="simplebar-content" style="padding: 0px;">
+                                        {% block sidebar_brand %}
+                                            <a class="sidebar-brand" href="{{ path('admin_store_index') }}">
+                                                <span class="align-middle">MyStores</span>
+                                            </a>
+                                        {% endblock %}
+
+                                        {% block sidebar_menu %}
+                                            {{ knp_menu_render('mainAdmin',{'currentClass': 'active', 'allow_safe_labels': true}) }}
+                                        {% endblock sidebar_menu %}
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="simplebar-placeholder" style="width: auto; height: 1235px;"></div>
+                    </div>
+                    <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
+                        <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
+                    </div>
+                    <div class="simplebar-track simplebar-vertical" style="visibility: visible;">
+                        <div class="simplebar-scrollbar"
+                             style="height: 727px; transform: translate3d(0px, 0px, 0px); display: block;"></div>
+                    </div>
+                </div>
+            </nav>
+            {% block main %}
+                <div class="main">
+                    <nav class="navbar navbar-expand navbar-light navbar-bg">
+                        <a class="sidebar-toggle js-sidebar-toggle">
+                            <i class="hamburger align-self-center"></i>
+                        </a>
+
+                        <div class="flex-grow-1 ms-3">
+                            {% block navbar_breadcrumb %}{% endblock %}
+                        </div>
+
+                        <div class="navbar-collapse collapse">
+                            <ul class="navbar-nav navbar-align">
+                                <li class="nav-item dropdown">
+                                    <a class="nav-icon dropdown-toggle d-inline-block d-sm-none" href="#"
+                                       data-bs-toggle="dropdown">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                                             viewBox="0 0 24 24"
+                                             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                             stroke-linejoin="round" class="feather feather-settings align-middle">
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                                        </svg>
+                                    </a>
+
+                                    <a class="nav-link dropdown-toggle d-none d-sm-inline-block" href="#"
+                                       data-bs-toggle="dropdown">
+                                        <img src="{{ app.user.avatar ? '' : asset('images/user_logo.png') }}" class="avatar img-fluid rounded me-1"
+                                             alt="{{ app.user.email }}">
+                                        <span class="text-dark">{{ app.user.email }}</span>
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-end">
+                                        {{ knp_menu_render('userAdmin', {'allow_safe_labels': true, template: 'menu/user.html.twig'}) }}
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </nav>
+
+                    {% block main_content %}
+
+                    {% endblock main_content %}
+                </div>
+            {% endblock main %}
+
+        </div>
+        {#        <div class="position-fixed flash"> #}
+        {#            {% block flash_messages %} #}
+        {#                {{ include('component/flash_messages.html.twig') }} #}
+        {#            {% endblock flash_messages %} #}
+        {#        </div> #}
+    {% endblock wrapper %}
+{% endblock body %}

@@ -2,108 +2,364 @@
 
 namespace App\Entity;
 
+use App\Entity\User\User;
+use App\Enum\ActiveStatusEnum;
 use App\Repository\CategoryRepository;
+use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: CategoryRepository::class)]
+#[ORM\UniqueConstraint(name: 'uniq_category_store_parent_name', columns: ['store_id', 'parent_id', 'name'], options: ['where' => '(parent_id IS NOT NULL)'])]
+#[ORM\UniqueConstraint(name: 'uniq_category_store_root_name', columns: ['store_id', 'name'], options: ['where' => '(parent_id IS NULL)'])]
 class Category
 {
-    #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+	#[ORM\Id]
+	#[ORM\GeneratedValue]
+	#[ORM\Column]
+	private ?int $id = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $name = null;
+	#[ORM\Column(length: 255)]
+	private ?string $name = null;
 
-    #[ORM\OneToMany(mappedBy: 'category', targetEntity: Product::class)]
-    private Collection $products;
+	#[ORM\Column(length: 255, nullable: true)]
+	private ?string $description = null;
 
-    #[ORM\OneToMany(mappedBy: 'category', targetEntity: CategoryAdditionalName::class)]
-    private Collection $categoryAdditionalNames;
+	#[ORM\Column]
+	private int $level = 0;
 
-    public function __construct()
-    {
-        $this->products = new ArrayCollection();
-        $this->categoryAdditionalNames = new ArrayCollection();
-    }
+	#[ORM\Column(length: 255, enumType: ActiveStatusEnum::class)]
+	private ActiveStatusEnum $status;
 
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
+	#[ORM\Column]
+	private DateTimeImmutable $createdAt;
 
-    public function getName(): ?string
-    {
-        return $this->name;
-    }
+	#[ORM\Column]
+	private DateTimeImmutable $updatedAt;
 
-    public function setName(string $name): self
-    {
-        $this->name = $name;
+	#[ORM\Column(nullable: true)]
+	private ?DateTimeImmutable $deletedAt = null;
 
-        return $this;
-    }
+	#[ORM\ManyToOne(inversedBy: 'categories')]
+	#[ORM\JoinColumn(nullable: false)]
+	private ?Store $store = null;
 
-    /**
-     * @return Collection<int, Product>
-     */
-    public function getProducts(): Collection
-    {
-        return $this->products;
-    }
+	#[ORM\ManyToOne]
+	private ?User $createdBy = null;
 
-    public function addProduct(Product $product): self
-    {
-        if (!$this->products->contains($product)) {
-            $this->products->add($product);
-            $product->setCategory($this);
-        }
+	#[ORM\ManyToOne]
+	private ?User $updatedBy = null;
 
-        return $this;
-    }
+	#[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'children')]
+	private ?self $parent = null;
 
-    public function removeProduct(Product $product): self
-    {
-        if ($this->products->removeElement($product)) {
-            // set the owning side to null (unless already changed)
-            if ($product->getCategory() === $this) {
-                $product->setCategory(null);
-            }
-        }
+	#[ORM\OneToMany(mappedBy: 'parent', targetEntity: self::class)]
+	private Collection $children;
 
-        return $this;
-    }
+	#[ORM\ManyToOne(targetEntity: self::class)]
+	private ?self $firstParent = null;
 
-    /**
-     * @return Collection<int, CategoryAdditionalName>
-     */
-    public function getCategoryAdditionalNames(): Collection
-    {
-        return $this->categoryAdditionalNames;
-    }
+	#[ORM\OneToMany(mappedBy: 'category', targetEntity: Product::class)]
+	private Collection $products;
 
-    public function addCategoryAdditionalName(CategoryAdditionalName $categoryAdditionalName): self
-    {
-        if (!$this->categoryAdditionalNames->contains($categoryAdditionalName)) {
-            $this->categoryAdditionalNames->add($categoryAdditionalName);
-            $categoryAdditionalName->setCategory($this);
-        }
+	#[ORM\OneToMany(mappedBy: 'category', targetEntity: CategoryAdditionalName::class)]
+	private Collection $categoryAdditionalNames;
 
-        return $this;
-    }
+	#[ORM\OneToMany(mappedBy: 'category', targetEntity: CategoryProductParameterName::class)]
+	private Collection $categoryProductParameterNames;
 
-    public function removeCategoryAdditionalName(CategoryAdditionalName $categoryAdditionalName): self
-    {
-        if ($this->categoryAdditionalNames->removeElement($categoryAdditionalName)) {
-            // set the owning side to null (unless already changed)
-            if ($categoryAdditionalName->getCategory() === $this) {
-                $categoryAdditionalName->setCategory(null);
-            }
-        }
+	public function __construct()
+	{
+		$this->status = ActiveStatusEnum::ACTIVE;
+		$this->createdAt = new DateTimeImmutable();
+		$this->updatedAt = new DateTimeImmutable();
+		$this->products = new ArrayCollection();
+		$this->categoryAdditionalNames = new ArrayCollection();
+		$this->children = new ArrayCollection();
+		$this->categoryProductParameterNames = new ArrayCollection();
+	}
 
-        return $this;
-    }
+	public function __toString(): string
+	{
+		return $this->getNameWithParent();
+	}
+
+	public function getId(): ?int
+	{
+		return $this->id;
+	}
+
+	public function getName(): ?string
+	{
+		return $this->name;
+	}
+
+	public function setName(string $name): self
+	{
+		$this->name = $name;
+
+		return $this;
+	}
+
+	public function getDescription(): ?string
+	{
+		return $this->description;
+	}
+
+	public function setDescription(?string $description): self
+	{
+		$this->description = $description;
+
+		return $this;
+	}
+
+	public function getLevel(): int
+	{
+		return $this->level;
+	}
+
+	public function setLevel(int $level): self
+	{
+		$this->level = $level;
+
+		return $this;
+	}
+
+	public function getStatus(): ActiveStatusEnum
+	{
+		return $this->status;
+	}
+
+	public function setStatus(ActiveStatusEnum $status): self
+	{
+		$this->status = $status;
+
+		return $this;
+	}
+
+	public function getCreatedAt(): DateTimeImmutable
+	{
+		return $this->createdAt;
+	}
+
+	public function setCreatedAt(DateTimeImmutable $createdAt): self
+	{
+		$this->createdAt = $createdAt;
+
+		return $this;
+	}
+
+	public function getUpdatedAt(): DateTimeImmutable
+	{
+		return $this->updatedAt;
+	}
+
+	public function setUpdatedAt(DateTimeImmutable $updatedAt): self
+	{
+		$this->updatedAt = $updatedAt;
+
+		return $this;
+	}
+
+	public function getDeletedAt(): ?DateTimeImmutable
+	{
+		return $this->deletedAt;
+	}
+
+	public function setDeletedAt(?DateTimeImmutable $deletedAt): self
+	{
+		$this->deletedAt = $deletedAt;
+
+		return $this;
+	}
+
+	public function getStore(): ?Store
+	{
+		return $this->store;
+	}
+
+	public function setStore(?Store $store): self
+	{
+		$this->store = $store;
+
+		return $this;
+	}
+
+	public function getCreatedBy(): ?User
+	{
+		return $this->createdBy;
+	}
+
+	public function setCreatedBy(?User $createdBy): self
+	{
+		$this->createdBy = $createdBy;
+
+		return $this;
+	}
+
+	public function getUpdatedBy(): ?User
+	{
+		return $this->updatedBy;
+	}
+
+	public function setUpdatedBy(?User $updatedBy): self
+	{
+		$this->updatedBy = $updatedBy;
+
+		return $this;
+	}
+
+	public function getParent(): ?self
+	{
+		return $this->parent;
+	}
+
+	public function setParent(?self $parent): self
+	{
+		$this->parent = $parent;
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, self>
+	 */
+	public function getChildren(): Collection
+	{
+		return $this->children;
+	}
+
+	public function addChild(self $child): self
+	{
+		if (!$this->children->contains($child)) {
+			$this->children->add($child);
+			$child->setParent($this);
+		}
+
+		return $this;
+	}
+
+	public function removeChild(self $child): self
+	{
+		if ($this->children->removeElement($child)) {
+			// set the owning side to null (unless already changed)
+			if ($child->getParent() === $this) {
+				$child->setParent(null);
+			}
+		}
+
+		return $this;
+	}
+
+	public function getNameWithParent(): string
+	{
+		$parentName = $this->getParent()?->getNameWithParent();
+
+		if (!$parentName) return $this->name;
+
+		return sprintf('%s > %s', $parentName, $this->name);
+	}
+
+	public function getFirstParent(): ?self
+	{
+		return $this->firstParent;
+	}
+
+	public function setFirstParent(?self $firstParent): self
+	{
+		$this->firstParent = $firstParent;
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, Product>
+	 */
+	public function getProducts(): Collection
+	{
+		return $this->products;
+	}
+
+	public function addProduct(Product $product): self
+	{
+		if (!$this->products->contains($product)) {
+			$this->products->add($product);
+			$product->setCategory($this);
+		}
+
+		return $this;
+	}
+
+	public function removeProduct(Product $product): self
+	{
+		if ($this->products->removeElement($product)) {
+			// set the owning side to null (unless already changed)
+			if ($product->getCategory() === $this) {
+				$product->setCategory(null);
+			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, CategoryAdditionalName>
+	 */
+	public function getCategoryAdditionalNames(): Collection
+	{
+		return $this->categoryAdditionalNames;
+	}
+
+	public function addCategoryAdditionalName(CategoryAdditionalName $categoryAdditionalName): self
+	{
+		if (!$this->categoryAdditionalNames->contains($categoryAdditionalName)) {
+			$this->categoryAdditionalNames->add($categoryAdditionalName);
+			$categoryAdditionalName->setCategory($this);
+		}
+
+		return $this;
+	}
+
+	public function removeCategoryAdditionalName(CategoryAdditionalName $categoryAdditionalName): self
+	{
+		if ($this->categoryAdditionalNames->removeElement($categoryAdditionalName)) {
+			// set the owning side to null (unless already changed)
+			if ($categoryAdditionalName->getCategory() === $this) {
+				$categoryAdditionalName->setCategory(null);
+			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, CategoryProductParameterName>
+	 */
+	public function getCategoryProductParameterNames(): Collection
+	{
+		return $this->categoryProductParameterNames;
+	}
+
+	public function addCategoryProductParameterName(CategoryProductParameterName $categoryProductParameterName): self
+	{
+		if (!$this->categoryProductParameterNames->contains($categoryProductParameterName)) {
+			$this->categoryProductParameterNames->add($categoryProductParameterName);
+			$categoryProductParameterName->setCategory($this);
+		}
+
+		return $this;
+	}
+
+	public function removeCategoryProductParameterName(CategoryProductParameterName $categoryProductParameterName): self
+	{
+		if ($this->categoryProductParameterNames->removeElement($categoryProductParameterName)) {
+			// set the owning side to null (unless already changed)
+			if ($categoryProductParameterName->getCategory() === $this) {
+				$categoryProductParameterName->setCategory(null);
+			}
+		}
+
+		return $this;
+	}
 }

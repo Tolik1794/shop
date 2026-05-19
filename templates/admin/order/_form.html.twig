@@ -1,0 +1,59 @@
+{% set order_form_id = 'order-form-' ~ (entity.id ?: 'new') %}
+
+<main class="content order-builder" {{ stimulus_controller('order-form product-search select-two') }} data-select-two-target="form">
+    <div class="container-fluid p-0">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div>
+                <h1 class="h3 mb-1">{{ entity.id ? 'Редагування замовлення' : 'Нове замовлення' }}</h1>
+                <div class="text-muted">{{ entity.number }}</div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button form="{{ order_form_id }}" type="submit" class="btn btn-primary">Зберегти</button>
+                <button form="{{ order_form_id }}" name="save" value="stay" type="submit" class="btn btn-outline-primary">Зберегти як чернетку</button>
+                <a href="{{ path('app_admin_order_index', app.request.query.all|merge({store_id: app.request.attributes.get('store_id'), id: entity.id, page: order_index_page})) }}" class="btn btn-light">Скасувати</a>
+            </div>
+        </div>
+
+        {% if form.vars.errors|length > 0 %}
+            <div class="form-error mb-3">
+                {{ form_errors(form) }}
+            </div>
+        {% endif %}
+
+        <div class="row g-3 align-items-start">
+            {{ form_start(form, {
+                attr: {
+                    'id': order_form_id,
+                    'class': 'col-12 col-lg-6 order-1',
+                    'data-order-form-target': 'form',
+                    'data-order-form-summary-url': path('app_api_admin_order_summary', {store_id: app.request.attributes.get('store_id')}),
+                    'data-order-form-customer-search-url': path('app_api_admin_order_customer_search', {store_id: app.request.attributes.get('store_id')}),
+                    'data-action': 'submit->order-form#validate'
+                }
+            }) }}
+                {{ include('admin/order/_entry_table.html.twig') }}
+                {{ include('admin/order/_summary.html.twig') }}
+
+                <template data-order-form-target="prototype">
+                    {{ include('admin/order/_entry_row.html.twig', {entry: form.orderEntries.vars.prototype, currency: form.currency.vars.data|default(null)}) }}
+                </template>
+
+                {% if form._token is defined %}
+                    {{ form_widget(form._token) }}
+                {% endif %}
+
+            {{ form_end(form, {'render_rest': false}) }}
+
+            <div class="col-12 col-lg-6 order-3 order-lg-2">
+                {{ include('admin/order/_header_settings.html.twig', {order_form_id: order_form_id}) }}
+
+                {% if entity.id %}
+                    {{ include('admin/order/_discussion_card.html.twig') }}
+                {% else %}
+                    {{ include('admin/order/_draft_discussion_card.html.twig', {order_form_id: order_form_id}) }}
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</main>

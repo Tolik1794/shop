@@ -4,33 +4,45 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {
-        "php": ">=8.1",
+        "php": ">=8.4",
         "ext-ctype": "*",
         "ext-iconv": "*",
-        "doctrine/doctrine-bundle": "^2.7",
-        "doctrine/doctrine-migrations-bundle": "^3.2",
-        "doctrine/orm": "^2.13",
-        "sensio/framework-extra-bundle": "^6.2",
-        "symfony/console": "6.1.*",
-        "symfony/dotenv": "6.1.*",
-        "symfony/flex": "^1.17|^2",
-        "symfony/form": "6.1.*",
-        "symfony/framework-bundle": "6.1.*",
-        "symfony/google-mailer": "6.1.*",
-        "symfony/mailer": "6.1.*",
-        "symfony/proxy-manager-bridge": "6.1.*",
-        "symfony/runtime": "6.1.*",
-        "symfony/security-bundle": "6.1.*",
-        "symfony/twig-bundle": "6.1.*",
-        "symfony/validator": "6.1.*",
-        "symfony/webpack-encore-bundle": "^1.15",
-        "symfony/yaml": "6.1.*",
-        "symfonycasts/verify-email-bundle": "^1.11"
+        "doctrine/doctrine-bundle": "^3.2",
+        "doctrine/doctrine-migrations-bundle": "^4.0",
+        "doctrine/event-manager": "^2.1",
+        "doctrine/orm": "^3.6",
+        "knplabs/knp-menu-bundle": "^3.7",
+        "knplabs/knp-paginator-bundle": "^6.10",
+        "liip/imagine-bundle": "^2.17",
+        "stof/doctrine-extensions-bundle": "^1.15",
+        "symfony/console": "7.4.*",
+        "symfony/dotenv": "7.4.*",
+        "symfony/expression-language": "7.4.*",
+        "symfony/flex": "^2.10",
+        "symfony/form": "7.4.*",
+        "symfony/framework-bundle": "7.4.*",
+        "symfony/google-mailer": "7.4.*",
+        "symfony/mailer": "7.4.*",
+        "symfony/runtime": "7.4.*",
+        "symfony/security-bundle": "7.4.*",
+        "symfony/stimulus-bundle": "^3.0",
+        "symfony/translation": "7.4.*",
+        "symfony/twig-bundle": "7.4.*",
+        "symfony/validator": "7.4.*",
+        "symfony/webpack-encore-bundle": "^2.4",
+        "symfony/yaml": "7.4.*",
+        "symfonycasts/verify-email-bundle": "^1.18"
     },
     "require-dev": {
-        "symfony/maker-bundle": "^1.45",
-        "symfony/stopwatch": "6.1.*",
-        "symfony/web-profiler-bundle": "6.1.*"
+        "doctrine/doctrine-fixtures-bundle": "^4.3",
+        "fakerphp/faker": "^1.24",
+        "phpunit/phpunit": "^11.5",
+        "symfony/browser-kit": "7.4.*",
+        "symfony/css-selector": "7.4.*",
+        "symfony/maker-bundle": "^1.67",
+        "symfony/phpunit-bridge": "^7.4",
+        "symfony/stopwatch": "7.4.*",
+        "symfony/web-profiler-bundle": "7.4.*"
     },
     "config": {
         "allow-plugins": {
@@ -77,7 +89,7 @@
     "extra": {
         "symfony": {
             "allow-contrib": false,
-            "require": "6.1.*",
+            "require": "7.4.*",
             "docker": false
         }
     }

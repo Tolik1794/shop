@@ -1,0 +1,18 @@
+<div class="mb-3 order-product-search">
+    <label class="form-label">Пошук товару</label>
+    <input
+            type="search"
+            class="form-control"
+            placeholder="Назва або артикул товару"
+            autocomplete="off"
+            data-product-search-target="query"
+            data-product-search-url="{{ path('app_api_admin_order_search_products_for_order_entry', {store_id: app.request.attributes.get('store_id')}) }}"
+            data-action="input->product-search#search focus->product-search#open"
+    >
+    <div
+            class="order-product-results d-none"
+            data-product-search-target="results"
+            data-action="scroll->product-search#scroll"
+    ></div>
+    <div class="invalid-feedback d-block" data-product-search-target="error"></div>
+</div>

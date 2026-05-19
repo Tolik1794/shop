@@ -1,0 +1,68 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}User list{% endblock %}
+
+{% set table_actions %}
+    {% if is_granted('ROLE_STORE_ADMIN') %}
+        <a class="btn btn-light btn-sm" href="{{ path('admin_store_new') }}"><i class="fa-solid fa-plus me-1"></i>New</a>
+    {% endif %}
+{% endset %}
+
+{% set table_head %}
+    <tr>
+        <th>Email</th>
+        <th>Nickname</th>
+        <th>Roles</th>
+    </tr>
+{% endset %}
+
+{% set table_body %}
+    {% for entity in pagination %}
+        <tr
+                id="{{ entity.nickname }}"
+                data-id-column="user_id"
+                class="{{ entity.nickname == first_entity.nickname ? 'table-active' : '' }}"
+                data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
+                data-link="{{ path('admin_user_show', {user_id: entity.nickname}) }}"
+                onclick="document.getElementById('first-tab').click()"
+        >
+            <td>{{ entity.email }}</td>
+            <td>{{ entity.nickname }}</td>
+            <td>{{ entity.roles|join(', ') }}</td>
+        </tr>
+    {% endfor %}
+{% endset %}
+
+{% block main_content %}
+    <main class="content" {{ stimulus_controller('reload-card') }}>
+        <div class="container-fluid p-0">
+            <div class="row">
+                <div class="col-xxl-4 col-xl-5 col-lg-6">
+                    {{ include('admin/_components/card/_tab_card.html.twig', {
+                        tab_search_key: 1,
+                        tab_head: [
+                            include('admin/_components/tab_icon/_show.html.twig'),
+                            include('admin/_components/tab_icon/_filter.html.twig')
+                            ~ (app.request.query.get(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
+                        ],
+                        tab_body: [
+                            first_entity ? render(controller(
+                                'App\\Controller\\Admin\\UserController::show',
+                                { 'user_id': first_entity.nickname, 'request': app.request }
+                            )) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
+                            include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
+                        ]
+                    }) }}
+                </div>
+                <div class="col-xxl-8 col-xl-7 col-lg-6">
+                    {{ include('admin/_components/card/_table_card.html.twig', {
+                        actions: table_actions,
+                        table_title: 'Managers',
+                        table_head: table_head,
+                        table_body: table_body
+                    }) }}
+                </div>
+            </div>
+        </div>
+    </main>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends 'admin/_store_components/layout.html.twig' %}
+
+{% block title %}Product prices{% endblock %}
+
+{% block navbar_breadcrumb %}
+    {{ include('admin/_components/_breadcrumb.html.twig', {
+        breadcrumb_class: 'mb-0',
+        items: [
+            {
+                label: 'Products',
+                url: path('admin_product_index', {store_id: app.request.attributes.get('store_id')})
+            },
+            {
+                label: product.name,
+                url: path('admin_product_index', {store_id: app.request.attributes.get('store_id'), id: product.id, page: product_index_page})
+            },
+            {
+                label: 'Prices'
+            }
+        ]
+    }) }}
+{% endblock %}
+
+{% set table_actions %}
+    {% if is_granted('ROLE_STORE_ADMIN') %}
+        <a class="btn btn-light btn-sm" href="{{ path('app_admin_product_price_new', {store_id: app.request.attributes.get('store_id'), product_id: product.id}) }}"><i class="fa-solid fa-plus me-1"></i>New</a>
+    {% endif %}
+{% endset %}
+
+{% set table_head %}
+    <tr>
+        <th>Type</th>
+        <th>Price</th>
+        <th>Currency</th>
+        <th>Base price</th>
+        <th>Valid from</th>
+    </tr>
+{% endset %}
+
+{% set table_body %}
+    {% for entity in pagination %}
+        <tr
+                id="{{ entity.id }}"
+                data-id-column="id"
+                class="{{ first_entity and entity.id == first_entity.id ? 'table-active' : '' }}"
+                data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
+                data-link="{{ path('app_admin_product_price_show', {store_id: app.request.attributes.get('store_id'), product_id: product.id, id: entity.id}) }}"
+                onclick="document.getElementById('first-tab').click()"
+        >
+            <td>{{ entity.type.value }}</td>
+            <td>{{ entity.price|money }}</td>
+            <td>{{ entity.currency.code }}</td>
+            <td>{{ entity.priceBase|money }}</td>
+            <td>{{ entity.validFrom|date('Y-m-d H:i') }}</td>
+        </tr>
+    {% endfor %}
+{% endset %}
+
+{% block main_content %}
+    <main class="content" {{ stimulus_controller('reload-card') }}>
+        <div class="container-fluid p-0">
+            <div class="row">
+                <div class="col-xxl-4 col-xl-5 col-lg-6">
+                    {{ include('admin/_components/card/_tab_card.html.twig', {
+                        tab_head: [
+                            include('admin/_components/tab_icon/_show.html.twig')
+                        ],
+                        tab_body: [
+                            first_entity ? render(controller(
+                                'App\\Controller\\Admin\\ProductPriceController::show',
+                                { store_id: app.request.attributes.get('store_id'), product_id: product.id, id: first_entity.id, 'request': app.request }
+                            )) : '<div class="card"><div class="card-body">Nothing to show...</div></div>'
+                        ]
+                    }) }}
+                </div>
+                <div class="col-xxl-8 col-xl-7 col-lg-6">
+                    {{ include('admin/_components/card/_table_card.html.twig', {
+                        actions: table_actions,
+                        table_title: 'Product prices',
+                        table_head: table_head,
+                        table_body: table_body
+                    }) }}
+                </div>
+            </div>
+        </div>
+    </main>
+{% endblock %}

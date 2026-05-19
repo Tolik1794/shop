@@ -1,0 +1,91 @@
+{% set actions %}
+    {% if is_granted('POST_EDIT', entity) %}
+        <a class="btn btn-light btn-sm" href="{{ path('admin_store_edit', query_params|merge({store_id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>Edit</a>
+    {% endif %}
+{% endset %}
+
+<div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+    <div class="card-header">
+        {% if actions|trim %}
+            {{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
+        {% endif %}
+        <h5 class="card-title mb-0">{{ entity.name }}</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-0">
+            <div class="col-sm-3 col-xl-12 col-xxl-3 text-center">
+                {% if avatar %}
+                    <img src="{{ avatar|trim_full_path|imagine_filter('squared_thumbnail_small') }}" width="64"
+                         height="64"
+                         class="rounded-circle mt-2" alt="Default avatar">
+                {% else %}
+                    <img src="{{ asset('images/store_logo.jpg') }}" width="64" height="64"
+                         class="rounded-circle mt-2" alt="Default avatar">
+                {% endif %}
+            </div>
+            <div class="col-sm-9 col-xl-12 col-xxl-9">
+                <strong>Description</strong>
+                <p>{{ entity.description }}</p>
+            </div>
+        </div>
+
+        <table class="table table-sm mt-2 mb-4">
+            <tbody>
+            <tr>
+                <th>Name</th>
+                <td>
+                    <a href="{{ path('admin_store_main', { store_id: entity.id }) }}">
+                        {{ entity.name }}
+                    </a>
+                </td>
+            </tr>
+            <tr>
+                <th>Slug</th>
+                <td>{{ entity.slug }}</td>
+            </tr>
+            <tr>
+                <th>Email</th>
+                <td>
+                    <span>{{ entity.email }} </span>
+                    <span
+                            data-copy-text="{{ entity.email }}"
+                            onclick="navigator.clipboard.writeText(this.dataset.copyText)"
+                    >
+                        <i class="fa-regular fa-copy fa-sm zoom"></i>
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <th>Phone</th>
+                <td>
+                    <span>{{ entity.phone }} </span>
+                    <span
+                            data-copy-text="{{ entity.phone }}"
+                            onclick="navigator.clipboard.writeText(this.dataset.copyText)"
+                    >
+                    <i class="fa-regular fa-copy fa-sm zoom"></i>
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <th>Status</th>
+                <td>
+                    <span class="badge {{ entity.status|active_status_class }}">{{ entity.status.value|capitalize }}</span>
+                </td>
+            </tr>
+            <tr>
+                <th>Base currency</th>
+                <td>{{ entity.baseCurrency.code }}</td>
+            </tr>
+            <tr>
+                <th>Costing method</th>
+                <td>{{ entity.costingMethod.value }}</td>
+            </tr>
+            <tr>
+                <th>Allow backorders</th>
+                <td>{{ entity.allowBackorders ? 'Yes' : 'No' }}</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

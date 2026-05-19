@@ -1,0 +1,11 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block sidebar_brand %}
+    <a class="sidebar-brand" href="{{ path('admin_store_index') }}">
+        <span class="align-middle">{{ store().name }}</span>
+    </a>
+{% endblock %}
+
+{% block sidebar_menu %}
+    {{ knp_menu_render('mainAdminStore',{'currentClass': 'active', 'allow_safe_labels': true}) }}
+{% endblock %}

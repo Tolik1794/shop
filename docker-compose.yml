@@ -1,0 +1,82 @@
+name: shop
+
+services:
+  php:
+    container_name: shop_php
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    working_dir: /var/www/shop
+    environment:
+      APP_ENV: dev
+      APP_DEBUG: "1"
+      APP_SECRET: docker-dev-secret
+      DATABASE_URL: "postgresql://shop:shop@postgres:5432/shop?serverVersion=16&charset=utf8"
+      REDIS_URL: "redis://redis:6379"
+      MAILER_DSN: "null://null"
+    volumes:
+      - ./:/var/www/shop:cached
+      - shop_var_cache:/var/www/shop/var/cache
+      - shop_var_log:/var/www/shop/var/log
+    command: >
+      sh -lc "mkdir -p var/cache var/log
+      && chown -R www-data:www-data var/cache var/log
+      && php-fpm"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - shop
+
+  nginx:
+    container_name: shop_nginx
+    image: nginx:1.27-alpine
+    depends_on:
+      - php
+    ports:
+      - "${SHOP_HTTP_PORT:-8088}:80"
+    volumes:
+      - ./:/var/www/shop:ro,cached
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - shop
+
+  postgres:
+    container_name: shop_postgres
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: shop
+      POSTGRES_USER: shop
+      POSTGRES_PASSWORD: shop
+    volumes:
+      - shop_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shop -d shop"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - shop
+    ports:
+      - "15434:5432"
+
+  redis:
+    container_name: shop_redis
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - shop_redis_data:/data
+    networks:
+      - shop
+
+volumes:
+  shop_postgres_data:
+  shop_redis_data:
+  shop_var_cache:
+  shop_var_log:
+
+networks:
+  shop:
+    name: shop_network

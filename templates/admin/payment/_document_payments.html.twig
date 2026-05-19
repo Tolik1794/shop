@@ -1,0 +1,44 @@
+<h6 class="mb-2">Payments</h6>
+
+{% if payments|length > 0 %}
+	<div class="table-responsive">
+		<table class="table table-sm mb-3">
+			<thead>
+			<tr>
+				<th>Date</th>
+				<th>Direction</th>
+				<th>Type</th>
+				<th>Amount</th>
+				<th>Amount base</th>
+				<th>Correction</th>
+				<th>Reason</th>
+			</tr>
+			</thead>
+			<tbody>
+			{% for payment in payments %}
+				{% set correction = payment.reversesPayment
+					? 'Reversal of #' ~ payment.reversesPayment.id
+					: (payment.reversedByPayment ? 'Reversed by #' ~ payment.reversedByPayment.id : '') %}
+				{% set reversalReason = payment.reversesPayment
+					? payment.comment
+					: (payment.reversedByPayment ? payment.reversedByPayment.comment : '') %}
+				<tr>
+					<td>{{ payment.paidAt|date('Y-m-d H:i') }}</td>
+					<td>{{ payment.direction.value }}</td>
+					<td>{{ payment.type.value }}</td>
+					<td>{{ payment.amount|money }} {{ payment.currency.code }}</td>
+					<td>{{ payment.amountBase|money }}</td>
+					<td>{{ correction ?: '—' }}</td>
+					<td>{{ reversalReason ?: '—' }}</td>
+				</tr>
+			{% endfor %}
+			</tbody>
+		</table>
+	</div>
+{% else %}
+	<p class="text-muted">No payments.</p>
+{% endif %}
+
+<a class="btn btn-light btn-sm mb-3" href="{{ path('app_admin_payment_new', return_url is defined ? route_params|merge({return_url: return_url}) : route_params) }}">
+	<i class="fa-solid fa-plus me-1"></i>Add payment
+</a>

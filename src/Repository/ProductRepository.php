@@ -3,7 +3,9 @@
 namespace App\Repository;
 
 use App\Entity\Product;
+use App\Entity\Store;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -39,28 +41,58 @@ class ProductRepository extends ServiceEntityRepository
         }
     }
 
-//    /**
-//     * @return Product[] Returns an array of Product objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('p')
-//            ->andWhere('p.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('p.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
+	public function findAvailableByStoreQB(Store $store): QueryBuilder
+	{
+		return $this->createQueryBuilder('product')
+			->innerJoin('product.store', 'store')
+			->where('store = :store')
+			->setParameter('store', $store);
+	}
 
-//    public function findOneBySomeField($value): ?Product
-//    {
-//        return $this->createQueryBuilder('p')
-//            ->andWhere('p.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
+	public function getIndexPage(Product $product, int $limit = 20): int
+	{
+		$count = (int) $this->createQueryBuilder('product')
+			->select('COUNT(product.id)')
+			->andWhere('product.store = :store')
+			->andWhere('product.id <= :id')
+			->setParameter('store', $product->getStore())
+			->setParameter('id', $product->getId())
+			->getQuery()
+			->getSingleScalarResult();
+
+		return max(1, (int) ceil($count / $limit));
+	}
+
+	/**
+	 * @return Product[]
+	 */
+	public function findChoicesByStoreAndSearch(Store $store, string $search, int $limit = 20, int $offset = 0): array
+	{
+		return $this->findAvailableByStoreQB($store)
+			->andWhere('product.name like :search OR product.code like :search')
+			->setParameter('search', '%' . $search . '%')
+			->orderBy('product.name', 'ASC')
+			->setMaxResults($limit)
+			->setFirstResult($offset)
+			->getQuery()
+			->getResult();
+	}
+
+	/**
+	 * @return Product[]
+	 */
+	public function findPurchasableChoicesByStoreAndSearch(Store $store, string $search, int $limit = 20, int $offset = 0): array
+	{
+		return $this->findAvailableByStoreQB($store)
+			->andWhere('product.canBePurchased = :canBePurchased')
+			->andWhere('product.name like :search OR product.code like :search')
+			->setParameter('canBePurchased', true)
+			->setParameter('search', '%' . $search . '%')
+			->orderBy('product.name', 'ASC')
+			->setMaxResults($limit)
+			->setFirstResult($offset)
+			->getQuery()
+			->getResult();
+	}
+
 }

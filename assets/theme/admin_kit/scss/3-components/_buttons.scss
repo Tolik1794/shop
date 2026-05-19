@@ -1,0 +1,37 @@
+.btn .feather {
+  width: 14px;
+  height: 14px;
+}
+
+.pagination a, .pagination .current {
+  padding: 4px 10px;
+  border-radius: 4px;
+  color: #1e293b
+}
+
+.pagination .current {
+  background: $blue;
+  border-color: $blue;
+  color: white;
+}
+
+@each $color, $value in $theme-colors {
+  .btn-#{$color} {
+    @include button-color($white);
+    @include button-color-hover($white);
+  }
+}
+
+@each $color, $value in $social-colors {
+  .btn-#{$color} {
+    @include button-variant($value, $value);
+    @include button-color($white);
+    @include button-color-hover($white);
+  }
+}
+
+.btn-light,
+.btn-white {
+  @include button-color($gray-800);
+  @include button-color-hover($gray-800);
+}

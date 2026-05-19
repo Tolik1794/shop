@@ -1,0 +1,95 @@
+@startuml
+
+title 11. Status history, audit fields and deletion rules
+
+hide circle
+skinparam linetype ortho
+
+enum StatusHistoryEntityType {
+	purchase
+	inventory_document
+	production_order
+}
+
+entity StatusHistory {
+	* id: int
+	--
+	* entityType: StatusHistoryEntityType
+	* entityId: int
+	oldStatus: string(100)?
+	* newStatus: string(100)
+	comment: text?
+	* changedAt: DateTimeImmutable
+	changedBy: User?
+	* store: Store
+}
+
+Store ||--o{ StatusHistory : has status logs
+User |o--o{ StatusHistory : changes status
+StatusHistoryEntityType ||--o{ StatusHistory : classifies
+
+note right of StatusHistory
+  Current project status:
+  - StatusHistory is not implemented.
+  - Many business entities already have status and audit fields.
+  - Status changes are not logged centrally.
+
+  Required behavior:
+  - Every business status transition creates a history row.
+  - entityType + entityId are used intentionally for MVP flexibility.
+  - Application code validates that entityId exists for the type.
+  - History rows are append-only.
+  - UI should show status timeline on Purchase,
+    InventoryDocument and ProductionOrder pages.
+  - Order uses dedicated OrderHistory from stage 05.1,
+    because its timeline must store all actions, not only status changes.
+  - Payment has audit requirements, but no business status workflow
+    in the current model, so it is not part of StatusHistory yet.
+end note
+
+note bottom
+  Shared deletion/audit policy:
+
+  Soft delete / archive:
+  - Product, Category, Unit, Warehouse, Customer, Supplier,
+    ProductPrice and InventoryReason keep historical readability
+    through deletedAt/status rather than destructive removal.
+
+  Never hard delete once they have business impact:
+  - Order
+  - Purchase
+  - InventoryDocument
+  - Payment
+  - ProductionOrder
+  - InventoryDocumentLine
+  - StockMovement
+  - WarehouseStockBatch
+  - StockReservation
+  - StatusHistory
+  - OrderHistory
+
+  Draft-only exception:
+  - A draft business document may be hard deleted only when
+    business rules allow it and it has no posted movements,
+    payments or other dependent history.
+
+  Audit fields:
+  - createdBy/updatedBy/canceledBy/postedBy/startedBy/completedBy
+    are historical audit data, not a permission model.
+  - Fill them consistently in services or subscribers.
+end note
+
+note bottom
+  Suggested implementation steps:
+
+  1. Add StatusHistory entity, enum and repository.
+  2. Add StatusHistoryService::record().
+  3. Keep Order on dedicated OrderHistory from stage 05.1.
+  4. Update Purchase transition service first.
+  5. Then update InventoryDocument and ProductionOrder services.
+  6. Add reusable Twig component for generic status timeline rendering.
+  7. Add tests that every generic transition writes history exactly once.
+  8. Add deletion-policy tests around posted documents and history.
+end note
+
+@enduml

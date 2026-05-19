@@ -1,0 +1,13 @@
+<nav class="{{ breadcrumb_class|default('mb-3') }}" aria-label="breadcrumb">
+    {% for item in items %}
+        {% if item.url is defined and item.url %}
+            <a href="{{ item.url }}">{{ item.label }}</a>
+        {% else %}
+            <span>{{ item.label }}</span>
+        {% endif %}
+
+        {% if not loop.last %}
+            <span class="mx-1">&gt;</span>
+        {% endif %}
+    {% endfor %}
+</nav>
