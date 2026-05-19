@@ -73,6 +73,12 @@ class Store implements AvatarEntityInterface
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Payment::class)]
 	private Collection $payments;
 
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: InventoryDocument::class)]
+	private Collection $inventoryDocuments;
+
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: InventoryReason::class)]
+	private Collection $inventoryReasons;
+
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Customer::class)]
 	private Collection $customers;
 
@@ -101,6 +107,8 @@ class Store implements AvatarEntityInterface
 		$this->orders = new ArrayCollection();
 		$this->purchases = new ArrayCollection();
 		$this->payments = new ArrayCollection();
+		$this->inventoryDocuments = new ArrayCollection();
+		$this->inventoryReasons = new ArrayCollection();
 		$this->customers = new ArrayCollection();
 		$this->suppliers = new ArrayCollection();
 		$this->status = ActiveStatusEnum::INACTIVE;
@@ -303,6 +311,41 @@ class Store implements AvatarEntityInterface
 		}
 
 		return $this;
+	}
+
+	/**
+	 * @return Collection<int, InventoryDocument>
+	 */
+	public function getInventoryDocuments(): Collection
+	{
+		return $this->inventoryDocuments;
+	}
+
+	public function addInventoryDocument(InventoryDocument $inventoryDocument): self
+	{
+		if (!$this->inventoryDocuments->contains($inventoryDocument)) {
+			$this->inventoryDocuments->add($inventoryDocument);
+			$inventoryDocument->setStore($this);
+		}
+
+		return $this;
+	}
+
+	public function removeInventoryDocument(InventoryDocument $inventoryDocument): self
+	{
+		if ($this->inventoryDocuments->removeElement($inventoryDocument) && $inventoryDocument->getStore() === $this) {
+			$inventoryDocument->setStore(null);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, InventoryReason>
+	 */
+	public function getInventoryReasons(): Collection
+	{
+		return $this->inventoryReasons;
 	}
 
 	/**

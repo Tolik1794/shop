@@ -103,6 +103,9 @@ class Purchase implements WorkflowSubjectInterface
 	#[ORM\OneToMany(mappedBy: 'purchase', targetEntity: Payment::class)]
 	private Collection $payments;
 
+	#[ORM\OneToMany(mappedBy: 'purchase', targetEntity: InventoryDocument::class)]
+	private Collection $inventoryDocuments;
+
     public function __construct()
     {
 		$this->status = PurchaseStatus::DRAFT;
@@ -113,8 +116,9 @@ class Purchase implements WorkflowSubjectInterface
 		$this->paymentStatus = PaymentStatusEnum::UNPAID;
 		$this->createdAt = new DateTimeImmutable();
 		$this->updatedAt = new DateTimeImmutable();
-        $this->purchaseEntries = new ArrayCollection();
+		$this->purchaseEntries = new ArrayCollection();
 		$this->payments = new ArrayCollection();
+		$this->inventoryDocuments = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -285,5 +289,13 @@ class Purchase implements WorkflowSubjectInterface
 		}
 
 		return $this;
+	}
+
+	/**
+	 * @return Collection<int, InventoryDocument>
+	 */
+	public function getInventoryDocuments(): Collection
+	{
+		return $this->inventoryDocuments;
 	}
 }
