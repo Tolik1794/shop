@@ -108,10 +108,6 @@ class WarehouseStockService
 
 	private function assertReservationAllowed(WarehouseStock $warehouseStock, string $quantityOnHand, string $reservedQuantity): void
 	{
-		if ($warehouseStock->getWarehouse()?->getStore()?->isAllowBackorders()) {
-			return;
-		}
-
 		if ((float) $reservedQuantity > (float) $quantityOnHand) {
 			throw new StockOperationException('Reserved quantity cannot be greater than quantity on hand.');
 		}

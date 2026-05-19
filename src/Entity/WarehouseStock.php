@@ -48,6 +48,12 @@ class WarehouseStock
     #[ORM\OneToMany(targetEntity: WarehouseStockBatch::class, mappedBy: 'warehouseStock')]
     private Collection $warehouseStockBatches;
 
+    /**
+     * @var Collection<int, StockReservation>
+     */
+    #[ORM\OneToMany(targetEntity: StockReservation::class, mappedBy: 'warehouseStock')]
+    private Collection $stockReservations;
+
     public function __construct()
     {
 		$this->quantityOnHand = '0.0000';
@@ -56,6 +62,7 @@ class WarehouseStock
 		$this->createdAt = new DateTimeImmutable();
 		$this->updatedAt = new DateTimeImmutable();
         $this->warehouseStockBatches = new ArrayCollection();
+        $this->stockReservations = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -172,6 +179,33 @@ class WarehouseStock
             if ($warehouseStockBatch->getWarehouseStock() === $this) {
                 $warehouseStockBatch->setWarehouseStock(null);
             }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, StockReservation>
+     */
+    public function getStockReservations(): Collection
+    {
+        return $this->stockReservations;
+    }
+
+    public function addStockReservation(StockReservation $stockReservation): static
+    {
+        if (!$this->stockReservations->contains($stockReservation)) {
+            $this->stockReservations->add($stockReservation);
+            $stockReservation->setWarehouseStock($this);
+        }
+
+        return $this;
+    }
+
+    public function removeStockReservation(StockReservation $stockReservation): static
+    {
+        if ($this->stockReservations->removeElement($stockReservation) && $stockReservation->getWarehouseStock() === $this) {
+            $stockReservation->setWarehouseStock(null);
         }
 
         return $this;

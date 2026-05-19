@@ -6,13 +6,18 @@ use App\Entity\Order;
 use App\Entity\OrderEntry;
 use App\Entity\OrderStatus;
 use App\Entity\Product;
+use App\Entity\StockReservation;
+use App\Entity\StockReservationStatus;
 use App\Entity\Store;
 use App\Entity\User\User;
+use App\Exception\StockOperationException;
 use App\Repository\OrderRepository;
+use App\Repository\WarehouseStockRepository;
 use App\Service\ExchangeRateResolver;
 use App\Service\Order\OrderEntryPricingService;
 use App\Service\Order\OrderEntrySnapshotter;
 use App\Service\OrderCalculator;
+use App\Service\StockReservationService;
 use App\Workflow\History\OrderHistoryChangeSetBuilder;
 use App\Workflow\History\OrderHistoryRecorder;
 use App\Workflow\StatusTransitionService;
@@ -31,6 +36,8 @@ class OrderManager extends AbstractManager
 		private readonly OrderHistoryChangeSetBuilder $orderHistoryChangeSetBuilder,
 		private readonly OrderHistoryRecorder $orderHistoryRecorder,
 		private readonly UserManager $userManager,
+		private readonly WarehouseStockRepository $warehouseStockRepository,
+		private readonly StockReservationService $stockReservationService,
 	)
 	{
 	}
@@ -105,8 +112,11 @@ class OrderManager extends AbstractManager
 
 	public function confirm(Order $order): void
 	{
-		$this->statusTransitionService->apply($order, 'confirm', $this->transitionContext());
-		$this->saveOrder($order);
+		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->statusTransitionService->apply($order, 'confirm', $this->transitionContext());
+			$this->saveOrder($order);
+			$this->reserveStockForOrder($order);
+		});
 	}
 
 	public function cancel(Order $order): void
@@ -115,14 +125,20 @@ class OrderManager extends AbstractManager
 			return;
 		}
 
-		$this->statusTransitionService->apply($order, 'cancel', $this->transitionContext());
-		$this->saveOrder($order);
+		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->statusTransitionService->apply($order, 'cancel', $this->transitionContext());
+			$this->releaseActiveReservations($order);
+			$this->saveOrder($order);
+		});
 	}
 
 	public function returnToDraft(Order $order): void
 	{
-		$this->statusTransitionService->apply($order, 'return_to_draft', $this->transitionContext());
-		$this->saveOrder($order);
+		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->statusTransitionService->apply($order, 'return_to_draft', $this->transitionContext());
+			$this->releaseActiveReservations($order);
+			$this->saveOrder($order);
+		});
 	}
 
 	public function recalculate(Order $order): void
@@ -186,4 +202,39 @@ class OrderManager extends AbstractManager
 			: TransitionContext::system();
 	}
 
+	private function reserveStockForOrder(Order $order): void
+	{
+		foreach ($order->getOrderEntries() as $orderEntry) {
+			$product = $orderEntry->getProduct();
+			$warehouse = $orderEntry->getWarehouse();
+
+			if (!$product instanceof Product || $warehouse === null) {
+				continue;
+			}
+
+			$warehouseStock = $this->warehouseStockRepository->findOneByProductAndWarehouse($product, $warehouse);
+			if ($warehouseStock === null) {
+				if ($order->getStore()?->isAllowBackorders()) {
+					continue;
+				}
+
+				throw new StockOperationException('Warehouse stock row was not found for order entry.');
+			}
+
+			$this->stockReservationService->reserveForOrderEntry($orderEntry, $warehouseStock);
+		}
+	}
+
+	private function releaseActiveReservations(Order $order): void
+	{
+		foreach ($order->getOrderEntries() as $orderEntry) {
+			foreach ($orderEntry->getStockReservations() as $reservation) {
+				if (!$reservation instanceof StockReservation || $reservation->getStatus() !== StockReservationStatus::ACTIVE) {
+					continue;
+				}
+
+				$this->stockReservationService->release($reservation);
+			}
+		}
+	}
 }

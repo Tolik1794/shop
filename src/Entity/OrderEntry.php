@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\OrderEntryRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -67,6 +69,12 @@ class OrderEntry
 	#[ORM\ManyToOne]
 	private ?Warehouse $warehouse = null;
 
+	/**
+	 * @var Collection<int, StockReservation>
+	 */
+	#[ORM\OneToMany(targetEntity: StockReservation::class, mappedBy: 'orderEntry')]
+	private Collection $stockReservations;
+
 	public function __construct()
 	{
 		$this->quantity = '0.0000';
@@ -74,6 +82,7 @@ class OrderEntry
 		$this->unitPriceBase = '0.0000';
 		$this->totalPrice = '0.0000';
 		$this->totalPriceBase = '0.0000';
+		$this->stockReservations = new ArrayCollection();
 	}
 
     public function getId(): ?int
@@ -125,4 +134,31 @@ class OrderEntry
 	public function setProduct(?Product $product): self { $this->product = $product; return $this; }
 	public function getWarehouse(): ?Warehouse { return $this->warehouse; }
 	public function setWarehouse(?Warehouse $warehouse): self { $this->warehouse = $warehouse; return $this; }
+
+	/**
+	 * @return Collection<int, StockReservation>
+	 */
+	public function getStockReservations(): Collection
+	{
+		return $this->stockReservations;
+	}
+
+	public function addStockReservation(StockReservation $stockReservation): self
+	{
+		if (!$this->stockReservations->contains($stockReservation)) {
+			$this->stockReservations->add($stockReservation);
+			$stockReservation->setOrderEntry($this);
+		}
+
+		return $this;
+	}
+
+	public function removeStockReservation(StockReservation $stockReservation): self
+	{
+		if ($this->stockReservations->removeElement($stockReservation) && $stockReservation->getOrderEntry() === $this) {
+			$stockReservation->setOrderEntry(null);
+		}
+
+		return $this;
+	}
 }

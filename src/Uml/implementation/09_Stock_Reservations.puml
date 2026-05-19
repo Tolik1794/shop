@@ -29,12 +29,14 @@ StockReservationStatus ||--o{ StockReservation : controls
 
 note right of StockReservation
   Current project status:
-  - StockReservation is not implemented.
-  - WarehouseStock.reservedQuantity exists.
-  - OrderEntry exists.
+  - StockReservation is implemented.
+  - WarehouseStock.reservedQuantity is updated
+    by active reservation lifecycle changes.
+  - Order confirmation reserves stock-backed entries.
+  - Return to draft and cancel release active reservations.
   - Store.allowBackorders exists.
 
-  Required behavior:
+  Implemented behavior:
   - quantity > 0.
   - active reservations contribute to reservedQuantity.
   - completed/canceled/expired reservations do not count.
@@ -43,25 +45,33 @@ note right of StockReservation
   - Backorders are allowed at OrderEntry level only;
     WarehouseStock itself must never go negative.
   - OrderEntry can remain unreserved when allowBackorders=true.
-  - Shipment posting completes matching reservations.
+  Remaining integration:
+  - Shipment posting should complete matching reservations
+    when Inventory Documents and Movements are implemented.
+  - awaiting_stock/ready_to_ship synchronization belongs to
+    08.1 progress/status synchronization.
 end note
 
 note bottom
   Suggested implementation steps:
 
-  1. Add StockReservation entity, enum and repository.
-  2. Add ReservationService:
+  Done:
+
+  1. Added StockReservation entity, enum and repository.
+  2. Added StockReservationService:
      reserve(orderEntry, warehouseStock, quantity),
      release(reservation),
      complete(reservation),
      expireOldReservations().
-  3. Update Order confirmation workflow to reserve available stock.
-  4. Update Inventory shipment posting to complete reservations.
-  5. Re-evaluate awaiting_stock/ready_to_ship after reservation changes.
-  6. Add tests for over-reservation, partial reservation,
-     release, expiration, shipment completion and backorders.
+  3. Updated Order confirmation workflow to reserve available stock.
+  4. Added tests for over-reservation, partial reservation,
+     release, expiration and backorders.
 
-  Do this after InventoryDocuments and 08.1 progress synchronization.
+  Deferred:
+
+  5. Complete reservations from shipment posting.
+  6. Re-evaluate awaiting_stock/ready_to_ship after
+     reservation changes.
 end note
 
 @enduml

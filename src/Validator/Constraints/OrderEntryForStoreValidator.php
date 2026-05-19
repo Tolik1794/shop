@@ -49,6 +49,10 @@ class OrderEntryForStoreValidator extends ConstraintValidator
 			return;
 		}
 
+		if ($store->isAllowBackorders()) {
+			return;
+		}
+
 		$warehouseStock = $this->warehouseStockRepository->findOneByProductAndWarehouse($product, $warehouse);
 		$availableQuantity = $warehouseStock !== null
 			? max(0, (float) $warehouseStock->getQuantityOnHand() - (float) $warehouseStock->getReservedQuantity())

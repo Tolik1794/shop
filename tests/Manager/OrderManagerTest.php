@@ -9,8 +9,12 @@ use App\Entity\OrderEntry;
 use App\Entity\OrderHistory;
 use App\Entity\OrderStatus;
 use App\Entity\Product;
+use App\Entity\StockReservation;
+use App\Entity\StockReservationStatus;
 use App\Entity\Store;
 use App\Entity\Unit;
+use App\Entity\Warehouse;
+use App\Entity\WarehouseStock;
 use App\Enum\ProductKindEnum;
 use App\Manager\OrderManager;
 use DateTimeImmutable;
@@ -109,6 +113,37 @@ class OrderManagerTest extends KernelTestCase
 		]));
 	}
 
+	public function testConfirmReservesStockBackedOrderEntries(): void
+	{
+		$currency = $this->persistCurrency('T' . substr(uniqid(), -2), 'Reservation currency');
+		$store = $this->persistStore('order-reservation-' . uniqid(), $currency);
+		$product = $this->persistProduct($store);
+		$warehouse = $this->persistWarehouse($store);
+		$warehouseStock = $this->persistWarehouseStock($warehouse, $product, '3.0000');
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('2.0000')
+			->setUnitPrice('10.0000');
+		$order->addOrderEntry($orderEntry);
+		$this->orderManager->saveOrder($order);
+		$this->orderManager->confirm($order);
+		$this->entityManager->refresh($warehouseStock);
+
+		$reservation = $this->entityManager->getRepository(StockReservation::class)->findOneBy([
+			'orderEntry' => $orderEntry,
+			'warehouseStock' => $warehouseStock,
+		]);
+
+		self::assertInstanceOf(StockReservation::class, $reservation);
+		self::assertSame(StockReservationStatus::ACTIVE, $reservation->getStatus());
+		self::assertSame('2.0000', $reservation->getQuantity());
+		self::assertSame('2.0000', $warehouseStock->getReservedQuantity());
+	}
+
 	public function testCancelMovesOrderToCanceledAndStoresTransitionTime(): void
 	{
 		$currency = $this->persistCurrency('C' . substr(uniqid(), -2), 'Cancel currency');
@@ -140,6 +175,38 @@ class OrderManagerTest extends KernelTestCase
 		$this->orderManager->returnToDraft($order);
 
 		self::assertSame(OrderStatus::DRAFT, $order->getStatus());
+	}
+
+	public function testReturnToDraftReleasesActiveReservations(): void
+	{
+		$currency = $this->persistCurrency('K' . substr(uniqid(), -2), 'Release reservation currency');
+		$store = $this->persistStore('order-release-reservation-' . uniqid(), $currency);
+		$product = $this->persistProduct($store);
+		$warehouse = $this->persistWarehouse($store);
+		$warehouseStock = $this->persistWarehouseStock($warehouse, $product, '3.0000');
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('2.0000')
+			->setUnitPrice('10.0000');
+		$order->addOrderEntry($orderEntry);
+		$this->orderManager->saveOrder($order);
+		$this->orderManager->confirm($order);
+		$reservation = $this->entityManager->getRepository(StockReservation::class)->findOneBy([
+			'orderEntry' => $orderEntry,
+			'warehouseStock' => $warehouseStock,
+		]);
+		self::assertInstanceOf(StockReservation::class, $reservation);
+
+		$this->orderManager->returnToDraft($order);
+		$this->entityManager->refresh($warehouseStock);
+
+		self::assertSame(OrderStatus::DRAFT, $order->getStatus());
+		self::assertSame(StockReservationStatus::CANCELED, $reservation->getStatus());
+		self::assertSame('0.0000', $warehouseStock->getReservedQuantity());
 	}
 
 	public function testReturnToDraftDoesNotRestoreCanceledOrderYet(): void
@@ -259,6 +326,31 @@ class OrderManagerTest extends KernelTestCase
 		$this->entityManager->flush();
 
 		return $product;
+	}
+
+	private function persistWarehouse(Store $store): Warehouse
+	{
+		$warehouse = (new Warehouse())
+			->setName('Warehouse ' . uniqid())
+			->setStore($store);
+
+		$this->entityManager->persist($warehouse);
+		$this->entityManager->flush();
+
+		return $warehouse;
+	}
+
+	private function persistWarehouseStock(Warehouse $warehouse, Product $product, string $quantityOnHand): WarehouseStock
+	{
+		$warehouseStock = (new WarehouseStock())
+			->setWarehouse($warehouse)
+			->setProduct($product)
+			->setQuantityOnHand($quantityOnHand);
+
+		$this->entityManager->persist($warehouseStock);
+		$this->entityManager->flush();
+
+		return $warehouseStock;
 	}
 
 	private function persistExchangeRate(Currency $fromCurrency, Currency $toCurrency, Store $store, string $rate): ExchangeRate

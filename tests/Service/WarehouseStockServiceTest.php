@@ -72,6 +72,16 @@ class WarehouseStockServiceTest extends KernelTestCase
 		$this->warehouseStockService->reserve($warehouse, $product, '3.0000');
 	}
 
+	public function testReserveMoreThanAvailableIsBlockedWhenBackordersEnabled(): void
+	{
+		[$warehouse, $product] = $this->createWarehouseAndProduct(true);
+		$this->warehouseStockService->increase($warehouse, $product, '2.0000');
+
+		$this->expectException(StockOperationException::class);
+
+		$this->warehouseStockService->reserve($warehouse, $product, '3.0000');
+	}
+
 	public function testDecreaseBelowReservedQuantityIsBlockedWhenBackordersDisabled(): void
 	{
 		[$warehouse, $product] = $this->createWarehouseAndProduct();
@@ -83,19 +93,21 @@ class WarehouseStockServiceTest extends KernelTestCase
 		$this->warehouseStockService->decrease($warehouse, $product, '2.0000');
 	}
 
-	private function createWarehouseAndProduct(): array
+	private function createWarehouseAndProduct(bool $allowBackorders = false): array
 	{
+		$currencyCode = $this->uniqueCurrencyCode('W');
 		$currency = (new Currency())
-			->setCode('W' . substr(uniqid(), -2))
+			->setCode($currencyCode)
 			->setName('Warehouse currency')
-			->setSymbol('W')
+			->setSymbol($currencyCode)
 			->setDecimalPlaces(2);
 		$store = (new Store())
 			->setName('Warehouse stock store ' . uniqid())
 			->setSlug('warehouse-stock-store-' . uniqid())
 			->setPhone('+380000000000')
 			->setEmail('warehouse-stock-' . uniqid() . '@example.com')
-			->setBaseCurrency($currency);
+			->setBaseCurrency($currency)
+			->setAllowBackorders($allowBackorders);
 		$warehouse = (new Warehouse())
 			->setName('Warehouse ' . uniqid())
 			->setStore($store);
@@ -128,5 +140,14 @@ class WarehouseStockServiceTest extends KernelTestCase
 		$this->entityManager->flush();
 
 		return [$warehouse, $product];
+	}
+
+	private function uniqueCurrencyCode(string $prefix): string
+	{
+		do {
+			$code = $prefix . str_pad(strtoupper(base_convert((string) random_int(0, 1295), 10, 36)), 2, '0', STR_PAD_LEFT);
+		} while ($this->entityManager->getRepository(Currency::class)->find($code) instanceof Currency);
+
+		return $code;
 	}
 }

@@ -19,9 +19,7 @@ class WarehouseStockBusinessValidator
 			$form->addError(new FormError('Stock row for selected warehouse and product already exists.'));
 		}
 
-		if (!$warehouseStock->getWarehouse()?->getStore()?->isAllowBackorders()
-			&& (float) $warehouseStock->getReservedQuantity() > (float) $warehouseStock->getQuantityOnHand()
-		) {
+		if ((float) $warehouseStock->getReservedQuantity() > (float) $warehouseStock->getQuantityOnHand()) {
 			$form->get('reservedQuantity')->addError(new FormError('Reserved quantity cannot be greater than quantity on hand.'));
 		}
 
