@@ -196,7 +196,7 @@ class OrderController extends AbstractAdvancedController
 		return $this->render('admin/order/show.html.twig', [
 			'entity' => $order,
 			...$this->getOrderDiscussionViewData($order),
-			'query_params' => array_filter($request->query->all(), static fn ($value) => is_scalar($value)),
+			'query_params' => $request->query->all(),
 		]);
 	}
 

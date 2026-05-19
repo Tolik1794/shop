@@ -66,6 +66,22 @@ class OrderRepository extends ServiceEntityRepository
 		return sprintf('SO-%d-%06d', $store->getId(), $count + 1);
 	}
 
+	/**
+	 * @return Order[]
+	 */
+	public function findChoicesByStoreAndSearch(Store $store, string $search, int $limit = 20): array
+	{
+		return $this->createQueryBuilder('orders')
+			->andWhere('orders.store = :store')
+			->andWhere('orders.number LIKE :search OR orders.customerNameSnapshot LIKE :search')
+			->setParameter('store', $store)
+			->setParameter('search', '%' . $search . '%')
+			->orderBy('orders.id', 'DESC')
+			->setMaxResults($limit)
+			->getQuery()
+			->getResult();
+	}
+
 	public function getIndexPage(Order $order, int $limit = 20): int
 	{
 		$count = (int) $this->createQueryBuilder('orders')

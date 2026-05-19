@@ -39,6 +39,9 @@ class Currency
 	#[ORM\OneToMany(mappedBy: 'toCurrency', targetEntity: ExchangeRate::class)]
 	private Collection $exchangeRatesTo;
 
+	#[ORM\OneToMany(mappedBy: 'currency', targetEntity: Payment::class)]
+	private Collection $payments;
+
 	public function __construct()
 	{
 		$this->status = ActiveStatusEnum::ACTIVE;
@@ -46,6 +49,7 @@ class Currency
 		$this->productPrices = new ArrayCollection();
 		$this->exchangeRatesFrom = new ArrayCollection();
 		$this->exchangeRatesTo = new ArrayCollection();
+		$this->payments = new ArrayCollection();
 	}
 
 	public function __toString(): string
@@ -216,6 +220,33 @@ class Currency
 	{
 		if ($this->exchangeRatesTo->removeElement($exchangeRate) && $exchangeRate->getToCurrency() === $this) {
 			$exchangeRate->setToCurrency(null);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, Payment>
+	 */
+	public function getPayments(): Collection
+	{
+		return $this->payments;
+	}
+
+	public function addPayment(Payment $payment): self
+	{
+		if (!$this->payments->contains($payment)) {
+			$this->payments->add($payment);
+			$payment->setCurrency($this);
+		}
+
+		return $this;
+	}
+
+	public function removePayment(Payment $payment): self
+	{
+		if ($this->payments->removeElement($payment) && $payment->getCurrency() === $this) {
+			$payment->setCurrency(null);
 		}
 
 		return $this;

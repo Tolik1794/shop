@@ -68,7 +68,7 @@
                         tab_body: [
                             first_entity ? render(controller(
                                 'App\\Controller\\Admin\\ProductPriceController::show',
-                                { store_id: app.request.attributes.get('store_id'), product_id: product.id, id: first_entity.id }
+                                { store_id: app.request.attributes.get('store_id'), product_id: product.id, id: first_entity.id, 'request': app.request }
                             )) : '<div class="card"><div class="card-body">Nothing to show...</div></div>'
                         ]
                     }) }}

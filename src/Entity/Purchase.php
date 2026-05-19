@@ -72,6 +72,9 @@ class Purchase implements WorkflowSubjectInterface
 	#[ORM\Column(length: 255, enumType: PaymentStatusEnum::class)]
 	private PaymentStatusEnum $paymentStatus;
 
+	#[ORM\Column(nullable: true)]
+	private ?DateTimeImmutable $paidAt = null;
+
 	#[ORM\Column]
 	private DateTimeImmutable $createdAt;
 
@@ -97,6 +100,9 @@ class Purchase implements WorkflowSubjectInterface
 	#[ORM\ManyToOne]
 	private ?User $canceledBy = null;
 
+	#[ORM\OneToMany(mappedBy: 'purchase', targetEntity: Payment::class)]
+	private Collection $payments;
+
     public function __construct()
     {
 		$this->status = PurchaseStatus::DRAFT;
@@ -108,6 +114,7 @@ class Purchase implements WorkflowSubjectInterface
 		$this->createdAt = new DateTimeImmutable();
 		$this->updatedAt = new DateTimeImmutable();
         $this->purchaseEntries = new ArrayCollection();
+		$this->payments = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -175,6 +182,8 @@ class Purchase implements WorkflowSubjectInterface
 	public function setPaidAmountBase(string $paidAmountBase): self { $this->paidAmountBase = $paidAmountBase; return $this; }
 	public function getPaymentStatus(): PaymentStatusEnum { return $this->paymentStatus; }
 	public function setPaymentStatus(PaymentStatusEnum $paymentStatus): self { $this->paymentStatus = $paymentStatus; return $this; }
+	public function getPaidAt(): ?DateTimeImmutable { return $this->paidAt; }
+	public function setPaidAt(?DateTimeImmutable $paidAt): self { $this->paidAt = $paidAt; return $this; }
 	public function getCreatedAt(): DateTimeImmutable { return $this->createdAt; }
 	public function setCreatedAt(DateTimeImmutable $createdAt): self { $this->createdAt = $createdAt; return $this; }
 	public function getUpdatedAt(): DateTimeImmutable { return $this->updatedAt; }
@@ -250,4 +259,31 @@ class Purchase implements WorkflowSubjectInterface
 
         return $this;
     }
+
+	/**
+	 * @return Collection<int, Payment>
+	 */
+	public function getPayments(): Collection
+	{
+		return $this->payments;
+	}
+
+	public function addPayment(Payment $payment): self
+	{
+		if (!$this->payments->contains($payment)) {
+			$this->payments->add($payment);
+			$payment->setPurchase($this);
+		}
+
+		return $this;
+	}
+
+	public function removePayment(Payment $payment): self
+	{
+		if ($this->payments->removeElement($payment) && $payment->getPurchase() === $this) {
+			$payment->setPurchase(null);
+		}
+
+		return $this;
+	}
 }

@@ -36,6 +36,7 @@ entity Purchase {
 	canceledAt: DateTimeImmutable?
 	* paidAmountBase: decimal(14,4)
 	* paymentStatus: PaymentStatusEnum
+	paidAt: DateTimeImmutable?
 	* createdAt: DateTimeImmutable
 	* updatedAt: DateTimeImmutable
 	* store: Store
@@ -80,10 +81,11 @@ User |o--o{ Purchase : creates/updates/cancels
 
 note right of Purchase
   Current project status:
-  - Purchase and PurchaseEntry entities exist as schema base.
+  - Purchase and PurchaseEntry entities are implemented.
   - Supplier entity/relation and supplier snapshot copying exist.
   - PurchaseStatus and payment snapshot fields exist.
-  - Admin Purchase CRUD/workflow is not implemented yet.
+  - paidAt is maintained as a payment cache once Payments stage exists.
+  - Admin Purchase CRUD/workflow is implemented.
 
   Required behavior:
   - Purchase number is generated per store.

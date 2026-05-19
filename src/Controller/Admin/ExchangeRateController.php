@@ -136,13 +136,8 @@ class ExchangeRateController extends AbstractAdvancedController
 
 		return $this->render('admin/exchange_rate/show.html.twig', [
 			'entity' => $exchangeRate,
-			'query_params' => $this->getScalarQueryParams($request)
+			'query_params' => $request->query->all(),
 		]);
-	}
-
-	private function getScalarQueryParams(Request $request): array
-	{
-		return array_filter($request->query->all(), static fn ($value) => is_scalar($value));
 	}
 
 	private function isValidExchangeRate(ExchangeRate $exchangeRate, FormInterface $form): bool

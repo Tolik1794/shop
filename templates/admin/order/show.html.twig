@@ -51,6 +51,14 @@
                 <td>{{ entity.paymentStatus.value }}</td>
             </tr>
             <tr>
+                <th>Paid amount base</th>
+                <td>{{ entity.paidAmountBase|money }}</td>
+            </tr>
+            <tr>
+                <th>Paid at</th>
+                <td>{{ entity.paidAt ? entity.paidAt|date('Y-m-d H:i') : '' }}</td>
+            </tr>
+            <tr>
                 <th>Delivery address</th>
                 <td>{{ entity.deliveryAddress }}</td>
             </tr>

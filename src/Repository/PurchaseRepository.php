@@ -66,6 +66,22 @@ class PurchaseRepository extends ServiceEntityRepository
 		return sprintf('PO-%d-%06d', $store->getId(), $count + 1);
 	}
 
+	/**
+	 * @return Purchase[]
+	 */
+	public function findChoicesByStoreAndSearch(Store $store, string $search, int $limit = 20): array
+	{
+		return $this->createQueryBuilder('purchase')
+			->andWhere('purchase.store = :store')
+			->andWhere('purchase.number LIKE :search OR purchase.supplierNameSnapshot LIKE :search')
+			->setParameter('store', $store)
+			->setParameter('search', '%' . $search . '%')
+			->orderBy('purchase.id', 'DESC')
+			->setMaxResults($limit)
+			->getQuery()
+			->getResult();
+	}
+
 	public function getIndexPage(Purchase $purchase, int $limit = 20): int
 	{
 		$count = (int) $this->createQueryBuilder('purchase')
