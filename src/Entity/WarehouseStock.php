@@ -49,6 +49,18 @@ class WarehouseStock
     private Collection $warehouseStockBatches;
 
     /**
+     * @var Collection<int, InventoryDocumentLine>
+     */
+    #[ORM\OneToMany(targetEntity: InventoryDocumentLine::class, mappedBy: 'warehouseStock')]
+    private Collection $inventoryDocumentLines;
+
+    /**
+     * @var Collection<int, StockMovement>
+     */
+    #[ORM\OneToMany(targetEntity: StockMovement::class, mappedBy: 'warehouseStock')]
+    private Collection $stockMovements;
+
+    /**
      * @var Collection<int, StockReservation>
      */
     #[ORM\OneToMany(targetEntity: StockReservation::class, mappedBy: 'warehouseStock')]
@@ -59,9 +71,11 @@ class WarehouseStock
 		$this->quantityOnHand = '0.0000';
 		$this->reservedQuantity = '0.0000';
 		$this->averageCost = '0.0000';
-		$this->createdAt = new DateTimeImmutable();
-		$this->updatedAt = new DateTimeImmutable();
+        $this->createdAt = new DateTimeImmutable();
+        $this->updatedAt = new DateTimeImmutable();
         $this->warehouseStockBatches = new ArrayCollection();
+        $this->inventoryDocumentLines = new ArrayCollection();
+        $this->stockMovements = new ArrayCollection();
         $this->stockReservations = new ArrayCollection();
     }
 
@@ -209,5 +223,21 @@ class WarehouseStock
         }
 
         return $this;
+    }
+
+    /**
+     * @return Collection<int, InventoryDocumentLine>
+     */
+    public function getInventoryDocumentLines(): Collection
+    {
+        return $this->inventoryDocumentLines;
+    }
+
+    /**
+     * @return Collection<int, StockMovement>
+     */
+    public function getStockMovements(): Collection
+    {
+        return $this->stockMovements;
     }
 }

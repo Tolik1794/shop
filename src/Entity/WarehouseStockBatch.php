@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use App\Repository\WarehouseStockBatchRepository;
 use DateTimeImmutable;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -41,9 +43,19 @@ class WarehouseStockBatch
     #[ORM\JoinColumn(nullable: true)]
     private ?PurchaseEntry $purchaseEntry = null;
 
+    #[ORM\OneToOne(targetEntity: StockMovement::class)]
+    private ?StockMovement $createdByMovement = null;
+
+    /**
+     * @var Collection<int, StockMovement>
+     */
+    #[ORM\OneToMany(targetEntity: StockMovement::class, mappedBy: 'warehouseStockBatch')]
+    private Collection $stockMovements;
+
 	public function __construct()
 	{
 		$this->createdAt = new DateTimeImmutable();
+        $this->stockMovements = new ArrayCollection();
 	}
 
     public function getId(): ?int
@@ -145,6 +157,26 @@ class WarehouseStockBatch
         $this->purchaseEntry = $purchaseEntry;
 
         return $this;
+    }
+
+    public function getCreatedByMovement(): ?StockMovement
+    {
+        return $this->createdByMovement;
+    }
+
+    public function setCreatedByMovement(?StockMovement $createdByMovement): static
+    {
+        $this->createdByMovement = $createdByMovement;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, StockMovement>
+     */
+    public function getStockMovements(): Collection
+    {
+        return $this->stockMovements;
     }
 
 }

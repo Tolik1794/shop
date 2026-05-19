@@ -95,12 +95,18 @@ class WarehouseStockServiceTest extends KernelTestCase
 
 	private function createWarehouseAndProduct(bool $allowBackorders = false): array
 	{
-		$currencyCode = $this->uniqueCurrencyCode('W');
-		$currency = (new Currency())
-			->setCode($currencyCode)
-			->setName('Warehouse currency')
-			->setSymbol($currencyCode)
-			->setDecimalPlaces(2);
+		$currencyCode = 'W' . substr(uniqid(), -2);
+		$currency = $this->entityManager->getRepository(Currency::class)->find($currencyCode);
+
+		if (!$currency instanceof Currency) {
+			$currency = (new Currency())
+				->setCode($currencyCode)
+				->setName('Warehouse currency')
+				->setSymbol('W')
+				->setDecimalPlaces(2);
+			$this->entityManager->persist($currency);
+		}
+
 		$store = (new Store())
 			->setName('Warehouse stock store ' . uniqid())
 			->setSlug('warehouse-stock-store-' . uniqid())
@@ -131,7 +137,6 @@ class WarehouseStockServiceTest extends KernelTestCase
 			->setCanBePurchased(false)
 			->setCanBeManufactured(false);
 
-		$this->entityManager->persist($currency);
 		$this->entityManager->persist($store);
 		$this->entityManager->persist($warehouse);
 		$this->entityManager->persist($category);

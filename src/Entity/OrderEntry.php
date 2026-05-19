@@ -70,6 +70,12 @@ class OrderEntry
 	private ?Warehouse $warehouse = null;
 
 	/**
+	 * @var Collection<int, InventoryDocumentLine>
+	 */
+	#[ORM\OneToMany(mappedBy: 'orderEntry', targetEntity: InventoryDocumentLine::class)]
+	private Collection $inventoryDocumentLines;
+
+	/**
 	 * @var Collection<int, StockReservation>
 	 */
 	#[ORM\OneToMany(targetEntity: StockReservation::class, mappedBy: 'orderEntry')]
@@ -82,6 +88,7 @@ class OrderEntry
 		$this->unitPriceBase = '0.0000';
 		$this->totalPrice = '0.0000';
 		$this->totalPriceBase = '0.0000';
+		$this->inventoryDocumentLines = new ArrayCollection();
 		$this->stockReservations = new ArrayCollection();
 	}
 
@@ -134,6 +141,33 @@ class OrderEntry
 	public function setProduct(?Product $product): self { $this->product = $product; return $this; }
 	public function getWarehouse(): ?Warehouse { return $this->warehouse; }
 	public function setWarehouse(?Warehouse $warehouse): self { $this->warehouse = $warehouse; return $this; }
+
+	/**
+	 * @return Collection<int, InventoryDocumentLine>
+	 */
+	public function getInventoryDocumentLines(): Collection
+	{
+		return $this->inventoryDocumentLines;
+	}
+
+	public function addInventoryDocumentLine(InventoryDocumentLine $inventoryDocumentLine): self
+	{
+		if (!$this->inventoryDocumentLines->contains($inventoryDocumentLine)) {
+			$this->inventoryDocumentLines->add($inventoryDocumentLine);
+			$inventoryDocumentLine->setOrderEntry($this);
+		}
+
+		return $this;
+	}
+
+	public function removeInventoryDocumentLine(InventoryDocumentLine $inventoryDocumentLine): self
+	{
+		if ($this->inventoryDocumentLines->removeElement($inventoryDocumentLine) && $inventoryDocumentLine->getOrderEntry() === $this) {
+			$inventoryDocumentLine->setOrderEntry(null);
+		}
+
+		return $this;
+	}
 
 	/**
 	 * @return Collection<int, StockReservation>

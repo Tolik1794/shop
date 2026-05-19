@@ -104,6 +104,9 @@ class Order implements WorkflowSubjectInterface
 	#[ORM\OneToMany(mappedBy: 'order', targetEntity: Payment::class)]
 	private Collection $payments;
 
+	#[ORM\OneToMany(mappedBy: 'order', targetEntity: InventoryDocument::class)]
+	private Collection $inventoryDocuments;
+
 	public function __construct()
 	{
 		$this->status = OrderStatus::DRAFT;
@@ -118,6 +121,7 @@ class Order implements WorkflowSubjectInterface
 		$this->comments = new ArrayCollection();
 		$this->historyEntries = new ArrayCollection();
 		$this->payments = new ArrayCollection();
+		$this->inventoryDocuments = new ArrayCollection();
 	}
 
 	public function getId(): ?int
@@ -313,6 +317,14 @@ class Order implements WorkflowSubjectInterface
 		}
 
 		return $this;
+	}
+
+	/**
+	 * @return Collection<int, InventoryDocument>
+	 */
+	public function getInventoryDocuments(): Collection
+	{
+		return $this->inventoryDocuments;
 	}
 
 	/**

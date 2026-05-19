@@ -79,6 +79,12 @@ class PurchaseEntry
     #[ORM\OneToMany(targetEntity: WarehouseStockBatch::class, mappedBy: 'purchaseEntry')]
     private Collection $warehouseStockBatches;
 
+	/**
+	 * @var Collection<int, InventoryDocumentLine>
+	 */
+	#[ORM\OneToMany(mappedBy: 'purchaseEntry', targetEntity: InventoryDocumentLine::class)]
+	private Collection $inventoryDocumentLines;
+
     public function __construct()
     {
 		$this->quantity = '0.0000';
@@ -87,6 +93,7 @@ class PurchaseEntry
 		$this->totalCost = '0.0000';
 		$this->totalCostBase = '0.0000';
         $this->warehouseStockBatches = new ArrayCollection();
+		$this->inventoryDocumentLines = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -170,4 +177,31 @@ class PurchaseEntry
 
         return $this;
     }
+
+	/**
+	 * @return Collection<int, InventoryDocumentLine>
+	 */
+	public function getInventoryDocumentLines(): Collection
+	{
+		return $this->inventoryDocumentLines;
+	}
+
+	public function addInventoryDocumentLine(InventoryDocumentLine $inventoryDocumentLine): static
+	{
+		if (!$this->inventoryDocumentLines->contains($inventoryDocumentLine)) {
+			$this->inventoryDocumentLines->add($inventoryDocumentLine);
+			$inventoryDocumentLine->setPurchaseEntry($this);
+		}
+
+		return $this;
+	}
+
+	public function removeInventoryDocumentLine(InventoryDocumentLine $inventoryDocumentLine): static
+	{
+		if ($this->inventoryDocumentLines->removeElement($inventoryDocumentLine) && $inventoryDocumentLine->getPurchaseEntry() === $this) {
+			$inventoryDocumentLine->setPurchaseEntry(null);
+		}
+
+		return $this;
+	}
 }
