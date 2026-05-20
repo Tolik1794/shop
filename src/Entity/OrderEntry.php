@@ -75,6 +75,12 @@ class OrderEntry
 	#[ORM\OneToMany(mappedBy: 'orderEntry', targetEntity: InventoryDocumentLine::class)]
 	private Collection $inventoryDocumentLines;
 
+	/**
+	 * @var Collection<int, StockReservation>
+	 */
+	#[ORM\OneToMany(targetEntity: StockReservation::class, mappedBy: 'orderEntry')]
+	private Collection $stockReservations;
+
 	public function __construct()
 	{
 		$this->quantity = '0.0000';
@@ -83,6 +89,7 @@ class OrderEntry
 		$this->totalPrice = '0.0000';
 		$this->totalPriceBase = '0.0000';
 		$this->inventoryDocumentLines = new ArrayCollection();
+		$this->stockReservations = new ArrayCollection();
 	}
 
     public function getId(): ?int
@@ -157,6 +164,33 @@ class OrderEntry
 	{
 		if ($this->inventoryDocumentLines->removeElement($inventoryDocumentLine) && $inventoryDocumentLine->getOrderEntry() === $this) {
 			$inventoryDocumentLine->setOrderEntry(null);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, StockReservation>
+	 */
+	public function getStockReservations(): Collection
+	{
+		return $this->stockReservations;
+	}
+
+	public function addStockReservation(StockReservation $stockReservation): self
+	{
+		if (!$this->stockReservations->contains($stockReservation)) {
+			$this->stockReservations->add($stockReservation);
+			$stockReservation->setOrderEntry($this);
+		}
+
+		return $this;
+	}
+
+	public function removeStockReservation(StockReservation $stockReservation): self
+	{
+		if ($this->stockReservations->removeElement($stockReservation) && $stockReservation->getOrderEntry() === $this) {
+			$stockReservation->setOrderEntry(null);
 		}
 
 		return $this;

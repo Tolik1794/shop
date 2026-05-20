@@ -24,6 +24,7 @@ use App\Repository\WarehouseStockRepository;
 use App\Service\BusinessDocumentStatusSynchronizer;
 use App\Service\DocumentProgressRecalculator;
 use App\Service\InventoryPostingService;
+use App\Service\StockReservationService;
 use App\Service\WarehouseStockService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -35,6 +36,7 @@ class InventoryPostingServiceTest extends TestCase
 	private WarehouseStockService&MockObject $warehouseStockService;
 	private WarehouseStockRepository&MockObject $warehouseStockRepository;
 	private UserManager&MockObject $userManager;
+	private StockReservationService&MockObject $stockReservationService;
 	private InventoryPostingService $inventoryPostingService;
 
 	protected function setUp(): void
@@ -43,6 +45,7 @@ class InventoryPostingServiceTest extends TestCase
 		$this->warehouseStockService = $this->createMock(WarehouseStockService::class);
 		$this->warehouseStockRepository = $this->createMock(WarehouseStockRepository::class);
 		$this->userManager = $this->createMock(UserManager::class);
+		$this->stockReservationService = $this->createMock(StockReservationService::class);
 		$this->userManager->method('getCurrentUser')->willReturn(null);
 		$this->entityManager->method('persist');
 		$this->entityManager->method('flush');
@@ -54,6 +57,7 @@ class InventoryPostingServiceTest extends TestCase
 			$this->warehouseStockService,
 			$this->userManager,
 			new DocumentProgressRecalculator(new BusinessDocumentStatusSynchronizer($this->warehouseStockRepository)),
+			$this->stockReservationService,
 		);
 	}
 
@@ -210,6 +214,9 @@ class InventoryPostingServiceTest extends TestCase
 				->setOrderEntry($orderEntry));
 
 		$this->warehouseStockService->method('findOrCreate')->willReturn($warehouseStock);
+		$this->stockReservationService->expects($this->once())
+			->method('completeForOrderEntry')
+			->with($orderEntry, '2.0000', false);
 
 		$this->inventoryPostingService->post($document);
 
