@@ -82,6 +82,24 @@ class StockReservationService
 		$this->close($reservation, StockReservationStatus::COMPLETED);
 	}
 
+	public function completeForOrderEntry(OrderEntry $orderEntry, string $quantity, bool $flush = true): void
+	{
+		$remainingQuantity = $this->normalize($quantity);
+		$this->assertPositiveQuantity($remainingQuantity);
+
+		foreach ($this->stockReservationRepository->findActiveForOrderEntry($orderEntry) as $reservation) {
+			if ((float) $remainingQuantity <= 0) {
+				break;
+			}
+
+			$remainingQuantity = $this->completeReservedQuantity($reservation, $remainingQuantity);
+		}
+
+		if ($flush) {
+			$this->entityManager->flush();
+		}
+	}
+
 	public function expireOldReservations(DateTimeImmutable $now): int
 	{
 		$count = 0;
@@ -123,6 +141,38 @@ class StockReservationService
 		if ($flush) {
 			$this->entityManager->flush();
 		}
+	}
+
+	private function completeReservedQuantity(StockReservation $reservation, string $quantityToComplete): string
+	{
+		$warehouseStock = $reservation->getWarehouseStock();
+		$orderEntry = $reservation->getOrderEntry();
+		if (!$warehouseStock instanceof WarehouseStock || !$orderEntry instanceof OrderEntry) {
+			throw new StockOperationException('Reservation must have order entry and warehouse stock.');
+		}
+
+		$reservationQuantity = $this->normalize($reservation->getQuantity());
+		if ((float) $quantityToComplete >= (float) $reservationQuantity) {
+			$this->close($reservation, StockReservationStatus::COMPLETED, false);
+
+			return $this->subtract($quantityToComplete, $reservationQuantity);
+		}
+
+		$completedReservation = (new StockReservation())
+			->setOrderEntry($orderEntry)
+			->setWarehouseStock($warehouseStock)
+			->setQuantity($quantityToComplete)
+			->setStatus(StockReservationStatus::COMPLETED)
+			->setReservedAt($reservation->getReservedAt())
+			->setExpiresAt($reservation->getExpiresAt());
+
+		$reservation->setQuantity($this->subtract($reservationQuantity, $quantityToComplete));
+		$warehouseStock->setReservedQuantity($this->subtract($warehouseStock->getReservedQuantity(), $quantityToComplete));
+		$orderEntry->addStockReservation($completedReservation);
+		$warehouseStock->addStockReservation($completedReservation);
+		$this->entityManager->persist($completedReservation);
+
+		return '0.0000';
 	}
 
 	private function assertReservationMatchesOrderEntry(OrderEntry $orderEntry, WarehouseStock $warehouseStock): void

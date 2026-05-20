@@ -5,6 +5,7 @@ namespace App\Service;
 use App\Entity\InventoryDocument;
 use App\Entity\InventoryDocumentLine;
 use App\Entity\Order;
+use App\Entity\OrderEntry;
 use App\Entity\Purchase;
 use App\Entity\StockMovement;
 use App\Entity\Store;
@@ -27,6 +28,7 @@ class InventoryPostingService
 		private readonly WarehouseStockService $warehouseStockService,
 		private readonly UserManager $userManager,
 		private readonly DocumentProgressRecalculator $documentProgressRecalculator,
+		private readonly StockReservationService $stockReservationService,
 	)
 	{
 	}
@@ -193,6 +195,23 @@ class InventoryPostingService
 		$line->addStockMovement($movement);
 		$this->entityManager->persist($warehouseStock);
 		$this->entityManager->persist($movement);
+		$this->completeReservationsForShipment($line);
+	}
+
+	private function completeReservationsForShipment(InventoryDocumentLine $line): void
+	{
+		$document = $line->getInventoryDocument();
+		$orderEntry = $line->getOrderEntry();
+
+		if (
+			$document?->getType() !== InventoryDocumentType::SALE_SHIPMENT
+			|| $line->getDirection() !== InventoryDirection::OUT
+			|| !$orderEntry instanceof OrderEntry
+		) {
+			return;
+		}
+
+		$this->stockReservationService->completeForOrderEntry($orderEntry, (string) $line->getQuantity(), false);
 	}
 
 	private function assertDocumentCanBePosted(InventoryDocument $document): void

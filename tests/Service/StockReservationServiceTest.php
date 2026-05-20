@@ -82,6 +82,20 @@ class StockReservationServiceTest extends KernelTestCase
 		self::assertSame('0.0000', $warehouseStock->getReservedQuantity());
 	}
 
+	public function testCompleteForOrderEntryKeepsUnshippedReservationBalanceActive(): void
+	{
+		[$orderEntry, $warehouseStock] = $this->createOrderEntryAndStock('5.0000', '0.0000', '5.0000');
+		$reservation = $this->stockReservationService->reserve($orderEntry, $warehouseStock, '5.0000');
+
+		$this->stockReservationService->completeForOrderEntry($orderEntry, '2.0000');
+		$this->entityManager->refresh($warehouseStock);
+
+		self::assertSame(StockReservationStatus::ACTIVE, $reservation->getStatus());
+		self::assertSame('3.0000', $reservation->getQuantity());
+		self::assertSame('3.0000', $warehouseStock->getReservedQuantity());
+		self::assertSame('3.0000', $this->stockReservationService->getActiveQuantityForOrderEntry($orderEntry));
+	}
+
 	public function testExpiredReservationIsReleasedFromAggregate(): void
 	{
 		[$orderEntry, $warehouseStock] = $this->createOrderEntryAndStock('5.0000', '0.0000', '2.0000');

@@ -137,19 +137,26 @@ User |o--o{ InventoryDocument : creates/updates/posts/cancels
 note right of InventoryDocument
   Current project status:
   - InventoryDocument, InventoryDocumentLine, StockMovement
-    and InventoryReason are not implemented.
-  - WarehouseStock exists, but stock changes are still manual.
+    and InventoryReason are implemented.
+  - InventoryPostingService posts document lines into
+    WarehouseStock and StockMovement records.
+  - Posted document cancellation creates and posts a reversal.
+  - Purchase receipt and sale shipment update business
+    progress through 08.1 services.
 
-  Required behavior:
+  Implemented behavior:
   - draft = editable and has no stock effect.
   - posted = immutable and creates movements.
   - canceled = canceled through reversal logic, not destructive edits.
-  - only one of order, purchase or productionOrder is filled.
+  - only one of order or purchase is filled.
   - postedBy/postedAt and canceledBy/canceledAt are filled by workflow.
   - posted documents are corrected by reversal documents.
   - currency fields are optional for purely technical documents.
-  - reason is strongly recommended for adjustments, write-offs,
-    returns, production loss and inventory count.
+
+  Remaining integration:
+  - ProductionOrder is not implemented yet.
+  - InventoryReason CRUD/validation can be expanded for UI workflows.
+  - transfer and production document flows are later stages.
 end note
 
 note right of InventoryReason
@@ -183,20 +190,24 @@ note right of StockMovement
 end note
 
 note bottom
-  Suggested implementation steps:
+  Implementation status:
 
-  1. Add entities/enums/repositories for documents, reasons,
+  Done:
+
+  1. Added entities/enums/repositories for documents, reasons,
      lines and movements.
-  2. Add InventoryPostingService:
+  2. Added InventoryPostingService:
      post(document), cancel(document), createReversal(document).
-  3. Implement stock_adjustment and inventory_count MVP first.
-  4. Then add purchase_receipt, sale_shipment,
-     customer_return and supplier_return flows.
-  5. Add transfer and production document flows later.
-  6. Add tests for:
-     immutable posted docs, reversal logic, non-negative stock,
-     average-cost/FIFO rules, reason validation and audit fields.
-  7. Continue with 08.1 to synchronize business-document progress.
+  3. Implemented stock_adjustment posting foundation.
+  4. Implemented purchase_receipt and sale_shipment flows.
+  5. Added reversal, non-negative stock and average-cost tests.
+  6. Continued with 08.1 synchronization.
+
+  Deferred:
+
+  7. Add transfer and production document flows later.
+  8. Expand InventoryReason validation for adjustment/write-off
+     UI workflows.
 
   This is the central stock module.
 end note

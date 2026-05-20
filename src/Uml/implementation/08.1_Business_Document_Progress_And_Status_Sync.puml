@@ -56,11 +56,14 @@ BusinessDocumentStatusSynchronizer --> Order : update status
 BusinessDocumentStatusSynchronizer --> Purchase : update status
 
 note right of DocumentProgressRecalculator
-  Missing implementation stage:
-  this bridge is required after InventoryDocuments exist,
-  because business documents must reflect posted stock facts.
+  Current project status:
+  - DocumentProgressRecalculator is implemented.
+  - It is invoked by InventoryPostingService after post,
+    cancel and reversal flows.
+  - OrderEntry and PurchaseEntry cache fields are rebuilt
+    from posted inventory document lines.
 
-  Required behavior:
+  Implemented behavior:
   - Rebuild progress cache fields from posted document lines,
     not by incrementing blind counters.
   - Recalculation must be idempotent and safe after reversal.
@@ -91,14 +94,16 @@ note right of BusinessDocumentStatusSynchronizer
 end note
 
 note bottom
-  Suggested implementation steps:
+  Implementation status:
 
-  1. Add recalculation service for order/purchase line progress.
-  2. Add synchronizer that derives stock-driven statuses only.
-  3. Invoke both after InventoryPostingService post/cancel/reversal.
-  4. Keep manual business confirmations separate:
+  Done:
+
+  1. Added recalculation service for order/purchase line progress.
+  2. Added synchronizer that derives stock-driven statuses only.
+  3. Invoked both after InventoryPostingService post/cancel/reversal.
+  4. Kept manual business confirmations separate:
      delivery confirmation, final completion, explicit cancellation.
-  5. Add tests for partial/full shipment, partial/full receipt,
+  5. Added tests for partial/full shipment, partial/full receipt,
      returns, reversals, idempotent recalculation and status downgrade.
 
   Why this is separate from 08:

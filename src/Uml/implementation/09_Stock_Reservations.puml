@@ -34,6 +34,7 @@ note right of StockReservation
     by active reservation lifecycle changes.
   - Order confirmation reserves stock-backed entries.
   - Return to draft and cancel release active reservations.
+  - Sale shipment posting completes matching active reservations.
   - Store.allowBackorders exists.
 
   Implemented behavior:
@@ -45,11 +46,10 @@ note right of StockReservation
   - Backorders are allowed at OrderEntry level only;
     WarehouseStock itself must never go negative.
   - OrderEntry can remain unreserved when allowBackorders=true.
-  Remaining integration:
-  - Shipment posting should complete matching reservations
-    when Inventory Documents and Movements are implemented.
-  - awaiting_stock/ready_to_ship synchronization belongs to
-    08.1 progress/status synchronization.
+  - Shipment posting completes matching active reservations,
+    including partial reservation completion.
+  - awaiting_stock/ready_to_ship synchronization is handled
+    by 08.1 BusinessDocumentStatusSynchronizer.
 end note
 
 note bottom
@@ -66,12 +66,9 @@ note bottom
   3. Updated Order confirmation workflow to reserve available stock.
   4. Added tests for over-reservation, partial reservation,
      release, expiration and backorders.
-
-  Deferred:
-
-  5. Complete reservations from shipment posting.
-  6. Re-evaluate awaiting_stock/ready_to_ship after
-     reservation changes.
+  5. Completed reservations from sale shipment posting.
+  6. Re-evaluated awaiting_stock/ready_to_ship through
+     08.1 progress synchronization.
 end note
 
 @enduml
