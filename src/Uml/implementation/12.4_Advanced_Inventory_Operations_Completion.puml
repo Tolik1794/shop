@@ -42,49 +42,53 @@ InventoryDocumentLine --> OrderEntry : sales source
 InventoryDocumentLine --> PurchaseEntry : purchase source
 
 note right of InventoryTransferUseCase
-  Current status:
-  - Transfer type exists in the enum and direction rules allow paired lines.
-  - No dedicated transfer use case/admin UI exists.
-
-  Required behavior:
+  Implemented:
+  - App\Service\Inventory\InventoryTransferUseCase creates draft/postable
+    transfer documents with one OUT line and one IN line.
   - One transfer document contains paired OUT/IN lines.
   - Source warehouse decreases stock, destination increases stock.
   - The same product and quantity must be balanced across the pair.
   - Cost snapshot should move with the stock.
+  - InventoryPostingService validates the pair before posting.
 end note
 
 note right of CustomerReturnUseCase
-  Required behavior:
+  Implemented:
+  - App\Service\Inventory\CustomerReturnUseCase creates customer returns.
   - Customer return links to OrderEntry.
   - Returned quantity must not exceed shipped quantity.
   - Posting creates IN movement and updates order progress/status.
   - Refund/payment handling remains in Payment stage.
+  - InventoryPostingService enforces source order-entry bounds.
 end note
 
 note right of SupplierReturnUseCase
-  Required behavior:
+  Implemented:
+  - App\Service\Inventory\SupplierReturnUseCase creates supplier returns.
   - Supplier return links to PurchaseEntry.
   - Returned quantity must not exceed received quantity.
   - Posting creates OUT movement and updates purchase progress/status.
+  - InventoryPostingService enforces source purchase-entry bounds.
 end note
 
 note right of WriteOffAdjustmentUseCase
-  Required behavior:
+  Implemented:
+  - App\Service\Inventory\WriteOffAdjustmentUseCase creates write-off and
+    stock-adjustment drafts.
   - Write-off and stock adjustment require InventoryReason.
   - Direction and cost rules must be explicit.
   - Audit fields and StatusHistory should show post/cancel events.
+  - InventoryPostingService validates active/store-compatible reasons and
+    explicit unit cost for stock-adjustment IN lines.
 end note
 
 note bottom
-  Suggested implementation order:
-
-  1. Add read-only InventoryDocument admin UI first in 12.1.
-  2. Add customer return and supplier return creation flows from
-     Order/Purchase pages.
-  3. Add write-off/stock-adjustment forms using InventoryReason.
-  4. Add transfer use case with paired-line validation.
-  5. Add tests for quantity bounds, cost snapshots, reversal,
-     status synchronization and status history.
+  Verification target:
+  - tests/Service/InventoryPostingServiceTest.php
+  - tests/Service/Inventory/AdvancedInventoryUseCaseTest.php
+  - lint:container
+  - lint:twig templates
+  - doctrine:schema:validate --skip-sync
 end note
 
 @enduml
