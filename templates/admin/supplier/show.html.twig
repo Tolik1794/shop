@@ -35,9 +35,10 @@
             </tbody>
         </table>
 
-        <form method="post" action="{{ path('app_admin_supplier_delete', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" onsubmit="return confirm('Delete supplier?');">
+        <p class="text-muted small mb-2">Archived suppliers are hidden from new operations, but historical documents remain readable.</p>
+        <form method="post" action="{{ path('app_admin_supplier_delete', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" onsubmit="return confirm('Archive supplier? Historical documents will remain readable.');">
             <input type="hidden" name="_token" value="{{ csrf_token('delete_supplier_' ~ entity.id) }}">
-            <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            <button class="btn btn-danger btn-sm" type="submit">Archive</button>
         </form>
     </div>
 </div>

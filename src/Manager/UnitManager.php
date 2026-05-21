@@ -3,15 +3,15 @@
 namespace App\Manager;
 
 use App\Entity\Unit;
-use App\Enum\ActiveStatusEnum;
 use App\Repository\UnitRepository;
-use DateTimeImmutable;
+use App\Service\Lifecycle\ReferenceArchivePolicy;
 use Doctrine\ORM\EntityManagerInterface;
 
 class UnitManager extends AbstractManager
 {
 	public function __construct(
 		private readonly EntityManagerInterface $entityManager,
+		private readonly ReferenceArchivePolicy $referenceArchivePolicy,
 	)
 	{
 	}
@@ -23,13 +23,7 @@ class UnitManager extends AbstractManager
 
 	public function archive(Unit $unit): void
 	{
-		$now = new DateTimeImmutable();
-
-		$unit
-			->setStatus(ActiveStatusEnum::INACTIVE)
-			->setDeletedAt($now)
-			->setUpdatedAt($now);
-
+		$this->referenceArchivePolicy->archive($unit);
 		$this->save($unit);
 	}
 

@@ -39,9 +39,10 @@
             </tbody>
         </table>
 
-        <form method="post" action="{{ path('app_admin_customer_delete', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" onsubmit="return confirm('Delete customer?');">
+        <p class="text-muted small mb-2">Archived customers are hidden from new operations, but historical documents remain readable.</p>
+        <form method="post" action="{{ path('app_admin_customer_delete', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" onsubmit="return confirm('Archive customer? Historical documents will remain readable.');">
             <input type="hidden" name="_token" value="{{ csrf_token('delete_customer_' ~ entity.id) }}">
-            <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+            <button class="btn btn-danger btn-sm" type="submit">Archive</button>
         </form>
     </div>
 </div>

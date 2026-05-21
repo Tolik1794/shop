@@ -40,12 +40,15 @@ DeletePolicyTestSuite --> DocumentDeletionPolicy
 DeletePolicyTestSuite --> ReferenceArchivePolicy
 
 note right of DocumentDeletionPolicy
-  Current status:
-  - UML defines non-destructive business history rules.
-  - Some controllers/managers can still physically remove draft or
-    reference child rows where that is valid.
-  - There is no single policy service/test suite that proves
-    protected business records cannot be hard deleted.
+  Implemented:
+  - App\Service\Lifecycle\DocumentDeletionPolicy centralizes
+    hard-delete checks for business documents and history records.
+  - Posted/canceled InventoryDocument records, stock movements,
+    reservations, payments, OrderHistory and StatusHistory are blocked.
+  - Draft InventoryDocument / InventoryDocumentLine cleanup is allowed
+    only while there are no stock movements or status history.
+  - Order, Purchase and ProductionOrder hard delete is limited to
+    draft records with no linked payments, inventory documents or history.
 
   Required behavior:
   - Posted/canceled documents, payments, movements, reservations,
@@ -57,24 +60,23 @@ note right of DocumentDeletionPolicy
 end note
 
 note right of ReferenceArchivePolicy
-  Reference data policy:
-  - Product, Category, Unit, Warehouse, Customer, Supplier,
-    ProductPrice and InventoryReason must remain readable.
-  - Prefer inactive status for hiding from new operations.
-  - Use deletedAt only as soft archive.
-  - Do not break old snapshots, document links or reports.
+  Implemented:
+  - App\Service\Lifecycle\ReferenceArchivePolicy centralizes
+    reference archive behavior.
+  - Product, Category, Unit, Warehouse, Customer, Supplier and
+    InventoryReason use status=inactive and deletedAt.
+  - ProductPrice is closed with validTo instead of hard delete.
+  - Customer/Supplier/Unit/InventoryReason admin actions now show
+    archive messaging instead of destructive-delete wording.
 end note
 
 note bottom
-  Suggested implementation order:
-
-  1. Add a small policy service or manager methods for archive/delete checks.
-  2. Wire admin delete/archive actions through that policy.
-  3. Add tests that hard delete is blocked for:
-     posted InventoryDocument, StockMovement, Payment,
-     OrderHistory, StatusHistory and ProductionOrder with documents.
-  4. Add tests that draft-only cleanup is still possible where allowed.
-  5. Add UI messages explaining why a record was archived instead of removed.
+  Verification target:
+  - tests/Service/Lifecycle/DocumentDeletionPolicyTest.php
+  - tests/Service/Lifecycle/ReferenceArchivePolicyTest.php
+  - lint:container
+  - lint:twig templates
+  - doctrine:schema:validate --skip-sync
 end note
 
 @enduml

@@ -35,7 +35,8 @@
             </tbody>
         </table>
 
-        <form method="post" action="{{ path('app_admin_unit_archive', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" onsubmit="return confirm('Archive unit?');">
+        <p class="text-muted small mb-2">Archived units remain available for historical documents and reports.</p>
+        <form method="post" action="{{ path('app_admin_unit_archive', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" onsubmit="return confirm('Archive unit? Historical documents will remain readable.');">
             <input type="hidden" name="_token" value="{{ csrf_token('archive_unit_' ~ entity.id) }}">
             <button class="btn btn-danger btn-sm" type="submit">Archive</button>
         </form>

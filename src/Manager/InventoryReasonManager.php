@@ -3,15 +3,15 @@
 namespace App\Manager;
 
 use App\Entity\InventoryReason;
-use App\Enum\ActiveStatusEnum;
 use App\Repository\InventoryReasonRepository;
-use DateTimeImmutable;
+use App\Service\Lifecycle\ReferenceArchivePolicy;
 use Doctrine\ORM\EntityManagerInterface;
 
 class InventoryReasonManager extends AbstractManager
 {
 	public function __construct(
 		private readonly EntityManagerInterface $entityManager,
+		private readonly ReferenceArchivePolicy $referenceArchivePolicy,
 	)
 	{
 	}
@@ -23,13 +23,7 @@ class InventoryReasonManager extends AbstractManager
 
 	public function archive(InventoryReason $inventoryReason): void
 	{
-		$now = new DateTimeImmutable();
-
-		$inventoryReason
-			->setStatus(ActiveStatusEnum::INACTIVE)
-			->setDeletedAt($now)
-			->setUpdatedAt($now);
-
+		$this->referenceArchivePolicy->archive($inventoryReason);
 		$this->save($inventoryReason);
 	}
 

@@ -4,13 +4,14 @@ namespace App\Manager;
 
 use App\Entity\Customer;
 use App\Repository\CustomerRepository;
-use DateTimeImmutable;
+use App\Service\Lifecycle\ReferenceArchivePolicy;
 use Doctrine\ORM\EntityManagerInterface;
 
 class CustomerManager extends AbstractManager
 {
 	public function __construct(
 		private readonly EntityManagerInterface $entityManager,
+		private readonly ReferenceArchivePolicy $referenceArchivePolicy,
 	)
 	{
 	}
@@ -22,7 +23,7 @@ class CustomerManager extends AbstractManager
 
 	public function softDelete(Customer $customer): void
 	{
-		$customer->setDeletedAt(new DateTimeImmutable());
+		$this->referenceArchivePolicy->archive($customer);
 		$this->save($customer);
 	}
 
