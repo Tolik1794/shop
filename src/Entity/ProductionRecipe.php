@@ -10,7 +10,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ProductionRecipeRepository::class)]
-#[ORM\UniqueConstraint(name: 'uniq_production_recipe_store_product_default', columns: ['store_id', 'product_id'], options: ['where' => 'is_default = true'])]
+#[ORM\UniqueConstraint(name: 'uniq_production_recipe_store_product_default', columns: ['store_id', 'product_id'], options: ['where' => '(is_default = true)'])]
 #[ORM\Index(name: 'idx_production_recipe_store_status', columns: ['store_id', 'status'])]
 class ProductionRecipe
 {
