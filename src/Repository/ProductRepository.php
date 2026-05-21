@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Product;
 use App\Entity\Store;
+use App\Enum\ProductKindEnum;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -87,6 +88,35 @@ class ProductRepository extends ServiceEntityRepository
 			->andWhere('product.canBePurchased = :canBePurchased')
 			->andWhere('product.name like :search OR product.code like :search')
 			->setParameter('canBePurchased', true)
+			->setParameter('search', '%' . $search . '%')
+			->orderBy('product.name', 'ASC')
+			->setMaxResults($limit)
+			->setFirstResult($offset)
+			->getQuery()
+			->getResult();
+	}
+
+	public function findManufacturableByStoreQB(Store $store): QueryBuilder
+	{
+		return $this->findAvailableByStoreQB($store)
+			->andWhere('product.canBeManufactured = :canBeManufactured')
+			->setParameter('canBeManufactured', true);
+	}
+
+	public function findProductionMaterialsByStoreQB(Store $store): QueryBuilder
+	{
+		return $this->findAvailableByStoreQB($store)
+			->andWhere('product.productKind = :materialKind')
+			->setParameter('materialKind', ProductKindEnum::MATERIAL);
+	}
+
+	/**
+	 * @return Product[]
+	 */
+	public function findMaterialChoicesByStoreAndSearch(Store $store, string $search, int $limit = 20, int $offset = 0): array
+	{
+		return $this->findProductionMaterialsByStoreQB($store)
+			->andWhere('product.name like :search OR product.code like :search')
 			->setParameter('search', '%' . $search . '%')
 			->orderBy('product.name', 'ASC')
 			->setMaxResults($limit)

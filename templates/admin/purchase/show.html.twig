@@ -70,21 +70,21 @@
 		{% endif %}
 
 		{% if entity.status.value == 'draft' %}
-			<form method="post" action="{{ path('app_admin_purchase_order', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline">
+			<form method="post" action="{{ path('app_admin_purchase_order', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction">
 				<input type="hidden" name="_token" value="{{ csrf_token('order_purchase_' ~ entity.id) }}">
 				<button class="btn btn-success btn-sm" type="submit" {{ entity.purchaseEntries|length == 0 ? 'disabled' : '' }}>Order</button>
 			</form>
 		{% endif %}
 
 		{% if entity.status.value == 'ordered' %}
-			<form method="post" action="{{ path('app_admin_purchase_return_to_draft', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" onsubmit="return confirm('Return purchase to draft?');">
+			<form method="post" action="{{ path('app_admin_purchase_return_to_draft', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="Return purchase to draft?">
 				<input type="hidden" name="_token" value="{{ csrf_token('return_to_draft_purchase_' ~ entity.id) }}">
 				<button class="btn btn-light btn-sm" type="submit">Return to draft</button>
 			</form>
 		{% endif %}
 
 		{% if entity.status.value in ['draft', 'ordered'] %}
-			<form method="post" action="{{ path('app_admin_purchase_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" onsubmit="return confirm('Cancel purchase?');">
+			<form method="post" action="{{ path('app_admin_purchase_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="Cancel purchase?">
 				<input type="hidden" name="_token" value="{{ csrf_token('cancel_purchase_' ~ entity.id) }}">
 				<button class="btn btn-danger btn-sm" type="submit">Cancel</button>
 			</form>

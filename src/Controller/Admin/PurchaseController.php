@@ -24,6 +24,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/admin/store/{store_id}/purchase', name: 'app_admin_purchase_'), IsGranted('ROLE_STORE_ADMIN')]
 class PurchaseController extends AbstractAdvancedController
 {
+	use QuickActionResponseTrait;
+
 	private const int DEFAULT_PAGE_LIMIT = 20;
 
 	public function __construct(private readonly PurchaseManager $purchaseManager)
@@ -189,14 +191,22 @@ class PurchaseController extends AbstractAdvancedController
 	{
 		$this->denyPurchaseOutsideStore($purchase, $store);
 
-		if ($this->isCsrfTokenValid('order_purchase_' . $purchase->getId(), (string) $request->request->get('_token'))) {
-			try {
-				$this->purchaseManager->order($purchase);
-			} catch (RuntimeException) {
-			}
+		if (!$this->isCsrfTokenValid('order_purchase_' . $purchase->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Purchase action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $purchase, Response::HTTP_UNPROCESSABLE_ENTITY);
 		}
 
-		return $this->redirectToPurchaseIndex($store, $purchase);
+		try {
+			$this->purchaseManager->order($purchase);
+			$this->addFlash('success', 'Purchase ordered.');
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $purchase, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->quickActionResponse($request, $store, $purchase);
 	}
 
 	#[Route('/{id}/return-to-draft', name: 'return_to_draft', methods: ['POST'])]
@@ -209,14 +219,22 @@ class PurchaseController extends AbstractAdvancedController
 	{
 		$this->denyPurchaseOutsideStore($purchase, $store);
 
-		if ($this->isCsrfTokenValid('return_to_draft_purchase_' . $purchase->getId(), (string) $request->request->get('_token'))) {
-			try {
-				$this->purchaseManager->returnToDraft($purchase);
-			} catch (RuntimeException) {
-			}
+		if (!$this->isCsrfTokenValid('return_to_draft_purchase_' . $purchase->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Purchase action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $purchase, Response::HTTP_UNPROCESSABLE_ENTITY);
 		}
 
-		return $this->redirectToPurchaseIndex($store, $purchase);
+		try {
+			$this->purchaseManager->returnToDraft($purchase);
+			$this->addFlash('success', 'Purchase returned to draft.');
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $purchase, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->quickActionResponse($request, $store, $purchase);
 	}
 
 	#[Route('/{id}/cancel', name: 'cancel', methods: ['POST'])]
@@ -229,11 +247,22 @@ class PurchaseController extends AbstractAdvancedController
 	{
 		$this->denyPurchaseOutsideStore($purchase, $store);
 
-		if ($this->isCsrfTokenValid('cancel_purchase_' . $purchase->getId(), (string) $request->request->get('_token'))) {
-			$this->purchaseManager->cancel($purchase);
+		if (!$this->isCsrfTokenValid('cancel_purchase_' . $purchase->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Purchase action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $purchase, Response::HTTP_UNPROCESSABLE_ENTITY);
 		}
 
-		return $this->redirectToPurchaseIndex($store, $purchase);
+		try {
+			$this->purchaseManager->cancel($purchase);
+			$this->addFlash('success', 'Purchase canceled.');
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $purchase, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->quickActionResponse($request, $store, $purchase);
 	}
 
 	private function createPurchaseForm(Purchase $purchase, Store $store): FormInterface
@@ -283,5 +312,23 @@ class PurchaseController extends AbstractAdvancedController
 			'id' => $purchase->getId(),
 			'page' => $this->purchaseManager->getRepository()->getIndexPage($purchase, self::DEFAULT_PAGE_LIMIT),
 		]);
+	}
+
+	private function quickActionResponse(Request $request, Store $store, Purchase $purchase, int $status = Response::HTTP_OK): Response
+	{
+		if (!$this->wantsQuickActionJson($request)) {
+			return $this->redirectToPurchaseIndex($store, $purchase);
+		}
+
+		return $this->quickActionJsonResponse($request, [
+			'card' => $this->renderView('admin/purchase/show.html.twig', [
+				'entity' => $purchase,
+				'query_params' => $request->query->all(),
+			]),
+			'row' => $this->renderView('admin/purchase/_index_row.html.twig', [
+				'entity' => $purchase,
+				'first_entity' => $purchase,
+			]),
+		], $status);
 	}
 }

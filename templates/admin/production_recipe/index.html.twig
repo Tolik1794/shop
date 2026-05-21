@@ -1,0 +1,65 @@
+{% extends 'admin/_store_components/layout.html.twig' %}
+
+{% block title %}Production recipes{% endblock %}
+
+{% set table_actions %}
+	<a class="btn btn-light btn-sm" href="{{ path('app_admin_production_recipe_new', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-plus me-1"></i>New</a>
+	<a class="btn btn-light btn-sm" href="{{ path('app_admin_production_order_index', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-industry me-1"></i>Orders</a>
+{% endset %}
+
+{% set table_head %}
+	<tr>
+		<th>Name</th>
+		<th>Product</th>
+		<th>Default</th>
+		<th>Status</th>
+		<th>Materials</th>
+	</tr>
+{% endset %}
+
+{% set table_body %}
+	{% for entity in pagination %}
+		<tr
+				id="{{ entity.id }}"
+				data-id-column="id"
+				class="{{ first_entity and entity.id == first_entity.id ? 'table-active' : '' }}"
+				data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
+				data-link="{{ path('app_admin_production_recipe_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+				onclick="document.getElementById('first-tab').click()"
+		>
+			<td><strong>{{ entity.name }}</strong></td>
+			<td>{{ entity.product.name }}</td>
+			<td>{{ entity.default ? 'Yes' : 'No' }}</td>
+			<td>{{ entity.status.value }}</td>
+			<td>{{ entity.items|length }}</td>
+		</tr>
+	{% endfor %}
+{% endset %}
+
+{% block main_content %}
+	<main class="content" {{ stimulus_controller('reload-card') }}>
+		<div class="container-fluid p-0">
+			<div class="row">
+				<div class="col-xxl-4 col-xl-5 col-lg-6">
+					{{ include('admin/_components/card/_tab_card.html.twig', {
+						tab_head: [include('admin/_components/tab_icon/_show.html.twig')],
+						tab_body: [
+							first_entity ? render(controller(
+								'App\\Controller\\Admin\\ProductionRecipeController::show',
+								{ store_id: app.request.attributes.get('store_id'), id: first_entity.id, 'request': app.request }
+							)) : '<div class="card"><div class="card-body">Nothing to show...</div></div>'
+						]
+					}) }}
+				</div>
+				<div class="col-xxl-8 col-xl-7 col-lg-6">
+					{{ include('admin/_components/card/_table_card.html.twig', {
+						actions: table_actions,
+						table_title: 'Production recipes',
+						table_head: table_head,
+						table_body: table_body
+					}) }}
+				</div>
+			</div>
+		</div>
+	</main>
+{% endblock %}

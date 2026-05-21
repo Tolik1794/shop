@@ -6,6 +6,7 @@ use App\Entity\InventoryDocument;
 use App\Entity\InventoryDocumentLine;
 use App\Entity\Order;
 use App\Entity\OrderEntry;
+use App\Entity\ProductionOrder;
 use App\Entity\Purchase;
 use App\Entity\PurchaseEntry;
 use App\Enum\InventoryDirection;
@@ -26,6 +27,10 @@ class DocumentProgressRecalculator
 
 		if ($document->getPurchase() instanceof Purchase) {
 			$this->recalculatePurchase($document->getPurchase());
+		}
+
+		if ($document->getProductionOrder() instanceof ProductionOrder) {
+			$this->recalculateProductionOrder($document->getProductionOrder());
 		}
 
 		$reversedDocument = $document->getReversedDocument();
@@ -50,6 +55,28 @@ class DocumentProgressRecalculator
 		}
 
 		$this->statusSynchronizer->syncPurchase($purchase);
+	}
+
+	public function recalculateProductionOrder(ProductionOrder $productionOrder): void
+	{
+		$completed = 0.0;
+		$product = $productionOrder->getProduct();
+
+		foreach ($productionOrder->getInventoryDocuments() as $document) {
+			if (!$this->isProgressSource($document) || $document->getType() !== InventoryDocumentType::PRODUCTION) {
+				continue;
+			}
+
+			foreach ($document->getLines() as $line) {
+				if ($line->getProduct() !== $product || $line->getDirection() !== InventoryDirection::IN) {
+					continue;
+				}
+
+				$completed += $this->numberValue($line->getQuantity());
+			}
+		}
+
+		$productionOrder->setCompletedQuantity($this->formatQuantity(max(0, $completed)));
 	}
 
 	private function recalculateOrderEntry(OrderEntry $entry): void

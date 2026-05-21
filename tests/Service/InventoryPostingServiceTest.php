@@ -8,6 +8,7 @@ use App\Entity\Order;
 use App\Entity\OrderEntry;
 use App\Entity\OrderStatus;
 use App\Entity\Product;
+use App\Entity\ProductionOrder;
 use App\Entity\Purchase;
 use App\Entity\PurchaseEntry;
 use App\Entity\PurchaseStatus;
@@ -274,6 +275,41 @@ class InventoryPostingServiceTest extends TestCase
 		self::assertSame('0.0000', $purchaseEntry->getReceivedQuantity());
 		self::assertSame(PurchaseStatus::ORDERED, $purchase->getStatus());
 		self::assertSame('0.0000', $warehouseStock->getQuantityOnHand());
+	}
+
+	public function testProductionDocumentUpdatesCompletedQuantity(): void
+	{
+		[$store, $warehouse, $output] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$output->setCanBeManufactured(true);
+		$material = (new Product())
+			->setStore($store)
+			->setProductKind(ProductKindEnum::MATERIAL)
+			->setName('Production material')
+			->setCode('production-material-' . uniqid())
+			->setCanBeSold(false)
+			->setCanBePurchased(true)
+			->setCanBeManufactured(false);
+		$outputStock = $this->warehouseStock($warehouse, $output, '0.0000', '0.0000');
+		$materialStock = $this->warehouseStock($warehouse, $material, '10.0000', '2.0000');
+		$productionOrder = (new ProductionOrder())
+			->setStore($store)
+			->setProduct($output)
+			->setWarehouse($warehouse)
+			->setPlannedQuantity('3.0000');
+		$document = $this->document($store)
+			->setType(InventoryDocumentType::PRODUCTION)
+			->setProductionOrder($productionOrder)
+			->addLine($this->line($material, $warehouse, InventoryDirection::OUT, '6.0000'))
+			->addLine($this->line($output, $warehouse, InventoryDirection::IN, '3.0000', '4.0000'));
+
+		$this->warehouseStockService->method('findOrCreate')
+			->willReturnCallback(static fn (Warehouse $warehouseArg, Product $productArg): WarehouseStock => $productArg === $material ? $materialStock : $outputStock);
+
+		$this->inventoryPostingService->post($document);
+
+		self::assertSame('3.0000', $productionOrder->getCompletedQuantity());
+		self::assertSame('4.0000', $outputStock->getAverageCost());
+		self::assertSame('4.0000', $materialStock->getQuantityOnHand());
 	}
 
 	/**

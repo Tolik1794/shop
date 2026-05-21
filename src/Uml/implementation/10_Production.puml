@@ -88,10 +88,16 @@ User |o--o{ ProductionOrder : creates/updates/starts/completes/cancels
 
 note right of ProductionRecipe
   Current project status:
-  - Production entities are not implemented.
+  - ProductionRecipe and ProductionRecipeItem are implemented.
+  - ProductionOrder and ProductionOrderMaterial are implemented.
+  - ProductionOrderFactory creates order material snapshots.
+  - ProductionOrderFactory can create a draft production
+    InventoryDocument with OUT material lines and IN output line.
+  - InventoryDocument can link to ProductionOrder.
+  - Admin CRUD exists for recipes.
   - Product already has canBeManufactured and productKind.
 
-  Required behavior:
+  Implemented behavior:
   - Recipe belongs to one produced product and one store.
   - isDefault marks the main recipe for default creation flow.
   - Recipe items are material/component products.
@@ -101,15 +107,21 @@ note right of ProductionRecipe
 end note
 
 note right of ProductionOrder
-  Required behavior:
+  Implemented behavior:
   - Creating from recipe copies material rows into
     ProductionOrderMaterial snapshot.
   - Recipe edits later do not mutate existing production orders.
-  - materials_reserved means stock is reserved but not consumed yet.
-  - in_progress requires reserved materials or explicit override.
+  - Production document quantities can be scaled for partial
+    completed output.
+  - Posted production documents recalculate completedQuantity.
   - Actual consumption/output is posted through InventoryDocument.
+  - materials_reserved increases WarehouseStock.reservedQuantity
+    for planned material quantities.
+  - in_progress requires materials_reserved.
+  - completing or canceling releases reserved material quantities.
   - Losses and extra consumption are stock documents,
     not direct edits to material rows.
+  - Admin CRUD and workflow actions exist for production orders.
 end note
 
 note right of ProductionOrderStatus
@@ -120,17 +132,21 @@ note right of ProductionOrderStatus
 end note
 
 note bottom
-  Suggested implementation steps:
+  Implementation status:
 
-  1. Add ProductionRecipe and ProductionRecipeItem CRUD.
-  2. Add ProductionOrder and ProductionOrderMaterial entities.
-  3. Add service to create ProductionOrder from recipe snapshot.
-  4. Add planning transitions and audit timestamps/users.
-  5. Integrate material reservation after Reservations stage.
-  6. Integrate consumption/output documents after InventoryDocuments.
-  7. Add tests for:
-     recipe copy, waste planning, transition guards,
-     reservation integration and stock posting.
+  Done:
+
+  1. Added ProductionRecipe and ProductionRecipeItem entities.
+  2. Added ProductionOrder and ProductionOrderMaterial entities.
+  3. Added service to create ProductionOrder from recipe snapshot.
+  4. Added InventoryDocument.productionOrder link.
+  5. Added production document factory for consumption/output lines.
+  6. Added tests for recipe copy, waste planning,
+     service-product rejection and document line directions.
+  7. Added admin CRUD for recipes and production orders.
+  8. Added production order workflow transitions and audit fields.
+  9. Integrated material reservation through WarehouseStock.reservedQuantity.
+  10. Integrated completion with production InventoryDocument posting.
 
   This stage should be done after inventory and reservations.
 end note

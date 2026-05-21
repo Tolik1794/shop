@@ -96,6 +96,9 @@ class InventoryDocument
 	private ?Purchase $purchase = null;
 
 	#[ORM\ManyToOne(inversedBy: 'inventoryDocuments')]
+	private ?ProductionOrder $productionOrder = null;
+
+	#[ORM\ManyToOne(inversedBy: 'inventoryDocuments')]
 	private ?InventoryReason $reason = null;
 
 	/**
@@ -158,6 +161,17 @@ class InventoryDocument
 	public function setOrder(?Order $order): self { $this->order = $order; return $this; }
 	public function getPurchase(): ?Purchase { return $this->purchase; }
 	public function setPurchase(?Purchase $purchase): self { $this->purchase = $purchase; return $this; }
+	public function getProductionOrder(): ?ProductionOrder { return $this->productionOrder; }
+	public function setProductionOrder(?ProductionOrder $productionOrder): self
+	{
+		$this->productionOrder = $productionOrder;
+
+		if ($productionOrder instanceof ProductionOrder && !$productionOrder->getInventoryDocuments()->contains($this)) {
+			$productionOrder->addInventoryDocument($this);
+		}
+
+		return $this;
+	}
 	public function getReason(): ?InventoryReason { return $this->reason; }
 	public function setReason(?InventoryReason $reason): self { $this->reason = $reason; return $this; }
 
