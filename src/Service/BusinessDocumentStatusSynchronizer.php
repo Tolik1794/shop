@@ -9,10 +9,15 @@ use App\Entity\Purchase;
 use App\Entity\PurchaseStatus;
 use App\Enum\ProductKindEnum;
 use App\Repository\WarehouseStockRepository;
+use App\Workflow\History\GenericStatusHistoryRecorder;
+use App\Workflow\TransitionContext;
 
 class BusinessDocumentStatusSynchronizer
 {
-	public function __construct(private readonly WarehouseStockRepository $warehouseStockRepository)
+	public function __construct(
+		private readonly WarehouseStockRepository $warehouseStockRepository,
+		private readonly GenericStatusHistoryRecorder $statusHistoryRecorder,
+	)
 	{
 	}
 
@@ -64,7 +69,7 @@ class BusinessDocumentStatusSynchronizer
 		$order->setStatus($this->hasAvailableStock($order) ? OrderStatus::READY_TO_SHIP : OrderStatus::AWAITING_STOCK);
 	}
 
-	public function syncPurchase(Purchase $purchase): void
+	public function syncPurchase(Purchase $purchase, ?TransitionContext $context = null): void
 	{
 		if (in_array($purchase->getStatus(), [
 			PurchaseStatus::DRAFT,
@@ -89,26 +94,40 @@ class BusinessDocumentStatusSynchronizer
 		}
 
 		if ($returned > 0 && $received > 0 && $this->isEnough($returned, $received)) {
-			$purchase->setStatus(PurchaseStatus::RETURNED);
+			$this->setPurchaseStatus($purchase, PurchaseStatus::RETURNED, $context);
 			return;
 		}
 
 		if ($returned > 0) {
-			$purchase->setStatus(PurchaseStatus::PARTIALLY_RETURNED);
+			$this->setPurchaseStatus($purchase, PurchaseStatus::PARTIALLY_RETURNED, $context);
 			return;
 		}
 
 		if ($this->isEnough($received, $expected)) {
-			$purchase->setStatus(PurchaseStatus::RECEIVED);
+			$this->setPurchaseStatus($purchase, PurchaseStatus::RECEIVED, $context);
 			return;
 		}
 
 		if ($received > 0) {
-			$purchase->setStatus(PurchaseStatus::PARTIALLY_RECEIVED);
+			$this->setPurchaseStatus($purchase, PurchaseStatus::PARTIALLY_RECEIVED, $context);
 			return;
 		}
 
-		$purchase->setStatus(PurchaseStatus::ORDERED);
+		$this->setPurchaseStatus($purchase, PurchaseStatus::ORDERED, $context);
+	}
+
+	private function setPurchaseStatus(Purchase $purchase, PurchaseStatus $status, ?TransitionContext $context): void
+	{
+		$fromStatus = $purchase->getStatus();
+		if ($fromStatus === $status) {
+			return;
+		}
+
+		$purchase->setStatus($status);
+
+		if ($context instanceof TransitionContext) {
+			$this->statusHistoryRecorder->recordChange($purchase, 'sync_progress', $fromStatus->value, $status->value, $context);
+		}
 	}
 
 	private function hasAvailableStock(Order $order): bool

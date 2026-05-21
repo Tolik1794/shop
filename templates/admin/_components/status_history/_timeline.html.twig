@@ -1,0 +1,27 @@
+{% if status_history_entries|length > 0 %}
+	<div class="order-discussion-scroll order-discussion-history">
+		{% set current_status_history_date = null %}
+		{% for history in status_history_entries %}
+			{% set history_date = history.changedAt|date('Y-m-d') %}
+			{% if history_date != current_status_history_date %}
+				{% set current_status_history_date = history_date %}
+				<div class="text-muted small fw-semibold mt-3 mb-2">{{ history.changedAt|date('Y-m-d') }}</div>
+			{% endif %}
+			<div class="border-start border-2 ps-3 pb-3">
+				<div class="d-flex justify-content-between gap-2">
+					<strong>{{ history.oldStatus ?: 'new' }} -> {{ history.newStatus }}</strong>
+					<span class="text-muted small">{{ history.changedAt|date('H:i') }}</span>
+				</div>
+				<div class="text-muted small">
+					{{ history.entityType.value }}
+					{% if history.changedBy %} · {{ history.changedBy.email }}{% endif %}
+				</div>
+				{% if history.comment %}
+					<div>{{ history.comment }}</div>
+				{% endif %}
+			</div>
+		{% endfor %}
+	</div>
+{% else %}
+	<p class="text-muted mb-0">No status history yet.</p>
+{% endif %}

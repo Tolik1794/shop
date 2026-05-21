@@ -2,9 +2,9 @@
 		id="{{ entity.id }}"
 		data-id-column="id"
 		class="{{ first_entity and entity.id == first_entity.id ? 'table-active' : '' }}"
-		data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
-		data-link="{{ path('app_admin_production_order_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
-		onclick="document.getElementById('first-tab').click()"
+		data-action="click->reload-card#reloadDocumentCards click->reload-card#tableActivate"
+		data-show-link="{{ path('app_admin_production_order_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+		data-history-link="{{ path('app_admin_production_order_history', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
 >
 	<td>
 		<table class="table table-sm mb-2">

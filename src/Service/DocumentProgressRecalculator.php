@@ -12,6 +12,7 @@ use App\Entity\PurchaseEntry;
 use App\Enum\InventoryDirection;
 use App\Enum\InventoryDocumentStatus;
 use App\Enum\InventoryDocumentType;
+use App\Workflow\TransitionContext;
 
 class DocumentProgressRecalculator
 {
@@ -19,14 +20,14 @@ class DocumentProgressRecalculator
 	{
 	}
 
-	public function recalculateForInventoryDocument(InventoryDocument $document): void
+	public function recalculateForInventoryDocument(InventoryDocument $document, ?TransitionContext $context = null): void
 	{
 		if ($document->getOrder() instanceof Order) {
 			$this->recalculateOrder($document->getOrder());
 		}
 
 		if ($document->getPurchase() instanceof Purchase) {
-			$this->recalculatePurchase($document->getPurchase());
+			$this->recalculatePurchase($document->getPurchase(), $context);
 		}
 
 		if ($document->getProductionOrder() instanceof ProductionOrder) {
@@ -35,7 +36,7 @@ class DocumentProgressRecalculator
 
 		$reversedDocument = $document->getReversedDocument();
 		if ($reversedDocument instanceof InventoryDocument) {
-			$this->recalculateForInventoryDocument($reversedDocument);
+			$this->recalculateForInventoryDocument($reversedDocument, $context);
 		}
 	}
 
@@ -48,13 +49,13 @@ class DocumentProgressRecalculator
 		$this->statusSynchronizer->syncOrder($order);
 	}
 
-	public function recalculatePurchase(Purchase $purchase): void
+	public function recalculatePurchase(Purchase $purchase, ?TransitionContext $context = null): void
 	{
 		foreach ($purchase->getPurchaseEntries() as $entry) {
 			$this->recalculatePurchaseEntry($entry);
 		}
 
-		$this->statusSynchronizer->syncPurchase($purchase);
+		$this->statusSynchronizer->syncPurchase($purchase, $context);
 	}
 
 	public function recalculateProductionOrder(ProductionOrder $productionOrder): void

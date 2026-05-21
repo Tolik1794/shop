@@ -6,11 +6,15 @@ use App\Entity\ProductionOrder;
 use App\Entity\ProductionOrderMaterial;
 use App\Entity\ProductionOrderStatus;
 use App\Entity\ProductionRecipe;
+use App\Entity\StatusHistoryEntityType;
 use App\Entity\Store;
 use App\Entity\Warehouse;
+use App\Form\Admin\FilterType\ProductionOrderFilterType;
 use App\Form\Admin\Type\ProductionOrderCreateType;
 use App\Form\Admin\Type\ProductionOrderType;
 use App\Manager\ProductionManager;
+use App\Repository\StatusHistoryRepository;
+use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
 use RuntimeException;
@@ -29,7 +33,10 @@ class ProductionOrderController extends AbstractAdvancedController
 
 	private const int DEFAULT_PAGE_LIMIT = 20;
 
-	public function __construct(private readonly ProductionManager $productionManager)
+	public function __construct(
+		private readonly ProductionManager $productionManager,
+		private readonly StatusHistoryRepository $statusHistoryRepository,
+	)
 	{
 	}
 
@@ -37,11 +44,18 @@ class ProductionOrderController extends AbstractAdvancedController
 	public function index(
 		PaginatorInterface $paginator,
 		Request $request,
+		FilterFormHandler $filterFormHandler,
 		#[MapEntity(expr: 'repository.find(store_id)')]
 		Store $store,
 	): Response
 	{
 		$queryBuilder = $this->productionManager->getRepository()->findAvailableByStoreQB($store);
+		$filterForm = $this->createForm(ProductionOrderFilterType::class)->handleRequest($request);
+
+		if ($filterForm->isSubmitted() && $filterForm->isValid()) {
+			$filterFormHandler->handleFilterForm($filterForm, $queryBuilder);
+		}
+
 		$page = $request->query->getInt('page', 1);
 
 		if ($page < 1) return $this->redirectToFirstPage();
@@ -65,6 +79,7 @@ class ProductionOrderController extends AbstractAdvancedController
 		return $this->render('admin/production_order/index.html.twig', [
 			'pagination' => $pagination,
 			'first_entity' => $order,
+			'filter_form' => $filterForm->createView(),
 		]);
 	}
 
@@ -75,7 +90,10 @@ class ProductionOrderController extends AbstractAdvancedController
 		Store $store,
 	): Response
 	{
-		$form = $this->createForm(ProductionOrderCreateType::class, null, [
+		$recipe = $this->findRecipeForPrefill($request, $store);
+		$form = $this->createForm(ProductionOrderCreateType::class, [
+			'recipe' => $recipe,
+		], [
 			'method' => 'POST',
 			'store' => $store,
 			'attr' => [
@@ -114,6 +132,26 @@ class ProductionOrderController extends AbstractAdvancedController
 		return $this->render('admin/production_order/new.html.twig', [
 			'form' => $form,
 		], new Response(status: $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
+	}
+
+	private function findRecipeForPrefill(Request $request, Store $store): ?ProductionRecipe
+	{
+		$recipeId = $request->query->get('recipe_id');
+
+		if (!$recipeId) {
+			return null;
+		}
+
+		$recipe = $this->productionManager->getRecipeRepository()->findOneBy([
+			'id' => $recipeId,
+			'store' => $store,
+		]);
+
+		if (!$recipe instanceof ProductionRecipe) {
+			throw $this->createNotFoundException();
+		}
+
+		return $recipe;
 	}
 
 	#[Route('/{id}/edit', name: 'edit', methods: ['GET', 'POST'])]
@@ -173,6 +211,21 @@ class ProductionOrderController extends AbstractAdvancedController
 		return $this->render('admin/production_order/show.html.twig', [
 			'entity' => $order,
 			'query_params' => $request->query->all(),
+		]);
+	}
+
+	#[Route('/{id}/history', name: 'history', methods: ['GET'])]
+	public function history(
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		ProductionOrder $order,
+	): Response
+	{
+		$this->denyOrderOutsideStore($order, $store);
+
+		return $this->render('admin/production_order/history.html.twig', [
+			'entity' => $order,
+			'status_history_entries' => $this->statusHistoryRepository->findTimelineFor($store, StatusHistoryEntityType::PRODUCTION_ORDER, (int) $order->getId()),
 		]);
 	}
 
@@ -286,6 +339,10 @@ class ProductionOrderController extends AbstractAdvancedController
 			'card' => $this->renderView('admin/production_order/show.html.twig', [
 				'entity' => $order,
 				'query_params' => $request->query->all(),
+			]),
+			'history' => $this->renderView('admin/production_order/history.html.twig', [
+				'entity' => $order,
+				'status_history_entries' => $this->statusHistoryRepository->findTimelineFor($store, StatusHistoryEntityType::PRODUCTION_ORDER, (int) $order->getId()),
 			]),
 			'row' => $this->renderView('admin/production_order/_index_row.html.twig', [
 				'entity' => $order,

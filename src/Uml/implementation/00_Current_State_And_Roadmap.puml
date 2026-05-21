@@ -5,49 +5,39 @@ title 00. Current state and implementation roadmap
 hide circle
 skinparam linetype ortho
 
-rectangle "Already implemented or mostly implemented" as Done {
+rectangle "Implemented through stage 11" as Done {
 	[Store, User, UserStore]
-	[Currency, Unit]
-	[Category and product parameters]
-	[Product basic card]
-	[Warehouse and WarehouseStock]
-	[Order/Purchase entities as schema only]
+	[Currency, Unit, ExchangeRate]
+	[Category, product parameters and ProductPrice]
+	[Customers and suppliers]
+	[Warehouse, WarehouseStock and reservations]
+	[Order and Purchase CRUD/workflows]
+	[Order comments and OrderHistory]
+	[Payments and recalculation]
+	[Inventory posting and StockMovement]
+	[Production recipes/orders]
+	[StatusHistory and generic timeline]
 }
 
-rectangle "Missing full functionality" as Todo {
-	[Exchange rates]
-	[Product price history]
-	[Customers and suppliers]
-	[Order CRUD and order workflow]
-	[Order comments and order timeline]
-	[Purchase CRUD and purchase workflow]
-	[Payments]
-	[Inventory documents and stock movements]
-	[Stock reservations]
-	[Production recipes and production orders]
-	[Status history and audit UI]
-	[Universal status transition service]
+rectangle "Forward-only cleanup after stage 11" as Todo {
+	[12 Implementation gap audit]
+	[12.1 Admin reference and inventory UI]
+	[12.2 Document lifecycle and delete policy hardening]
+	[12.3 Workflow status drift cleanup]
+	[12.4 Advanced inventory operations]
 }
 
 Done --> Todo : next tasks
 
 note right of Done
-  What is already in the project:
+  Current state after stage 11:
 
-  - Entity mappings exist for Store, User, Currency, Unit,
-    Category, Product, Warehouse, WarehouseStock,
-    Order, OrderEntry, Purchase and PurchaseEntry.
-  - Admin CRUD exists for Store, Category, Product,
-    Warehouse and WarehouseStock.
-  - Fixtures exist for users, stores, currencies, units,
-    category tree, product parameter names and many products.
-  - Database migrations were rebuilt and schema validates.
-
-  Important limitation:
-  Some entities already have fields from Database.puml,
-  but business workflows are not implemented yet.
-  Example: Order has totals/currency/status fields,
-  but no order CRUD and no stock posting logic.
+  - Stages 01-11 are implemented enough for the current shop flow.
+  - Database.puml is represented by entities/migrations for the
+    current sales, purchase, payment, inventory and production model.
+  - Remaining work is not a return to earlier stages.
+    It is a forward cleanup layer that closes admin UI,
+    lifecycle policy, workflow drift and advanced inventory gaps.
 end note
 
 note right of Todo
@@ -66,6 +56,11 @@ note right of Todo
   10_Production
   11_Status_History_Audit_And_Deletions
   11.1_Universal_Status_Transition_Service
+  12_Implementation_Gap_Audit_And_Forward_Plan
+  12.1_Admin_Reference_And_Inventory_UI_Completion
+  12.2_Document_Lifecycle_And_Delete_Policy_Hardening
+  12.3_Workflow_Status_Drift_And_History_Completion
+  12.4_Advanced_Inventory_Operations_Completion
 
   The order matters because later modules depend on data
   and workflows from earlier modules.

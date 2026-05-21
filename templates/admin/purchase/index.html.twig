@@ -26,12 +26,13 @@
 				<div class="col-xxl-4 col-xl-5 col-lg-6">
 					{{ include('admin/_components/card/_tab_card.html.twig', {
 						active_tab_key: app.request.query.get('active_tab') == 'payments' ? 1 : 0,
-						tab_search_key: 2,
+						tab_search_key: 3,
 						tab_head: [
 							include('admin/_components/tab_icon/_show.html.twig'),
 							include('admin/_components/tab_icon/_payment.html.twig', {
 								is_paid: first_entity and first_entity.paymentStatus.value in ['paid', 'overpaid']
 							}),
+							include('admin/_components/tab_icon/_history.html.twig'),
 							include('admin/_components/tab_icon/_filter.html.twig')
 							~ (app.request.query.all(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
 						],
@@ -43,6 +44,10 @@
 							first_entity ? render(controller(
 								'App\\Controller\\Admin\\PaymentController::purchaseDocument',
 								{ store_id: app.request.attributes.get('store_id'), purchase_id: first_entity.id, 'request': app.request }
+							)) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
+							first_entity ? render(controller(
+								'App\\Controller\\Admin\\PurchaseController::history',
+								{ store_id: app.request.attributes.get('store_id'), id: first_entity.id }
 							)) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
 							include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
 						]
