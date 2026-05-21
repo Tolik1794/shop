@@ -1,0 +1,80 @@
+@startuml
+
+title 12.2. Document lifecycle and delete policy hardening
+
+hide circle
+skinparam linetype ortho
+
+entity Order
+entity Purchase
+entity InventoryDocument
+entity Payment
+entity ProductionOrder
+entity InventoryDocumentLine
+entity StockMovement
+entity StockReservation
+entity OrderHistory
+entity StatusHistory
+
+class DocumentDeletionPolicy <<service>>
+class ReferenceArchivePolicy <<service>>
+class DeletePolicyTestSuite <<tests>>
+
+DocumentDeletionPolicy --> Order
+DocumentDeletionPolicy --> Purchase
+DocumentDeletionPolicy --> InventoryDocument
+DocumentDeletionPolicy --> Payment
+DocumentDeletionPolicy --> ProductionOrder
+DocumentDeletionPolicy --> InventoryDocumentLine
+DocumentDeletionPolicy --> StockMovement
+DocumentDeletionPolicy --> StockReservation
+DocumentDeletionPolicy --> OrderHistory
+DocumentDeletionPolicy --> StatusHistory
+ReferenceArchivePolicy --> Unit
+ReferenceArchivePolicy --> Product
+ReferenceArchivePolicy --> Customer
+ReferenceArchivePolicy --> Supplier
+ReferenceArchivePolicy --> Warehouse
+ReferenceArchivePolicy --> InventoryReason
+DeletePolicyTestSuite --> DocumentDeletionPolicy
+DeletePolicyTestSuite --> ReferenceArchivePolicy
+
+note right of DocumentDeletionPolicy
+  Current status:
+  - UML defines non-destructive business history rules.
+  - Some controllers/managers can still physically remove draft or
+    reference child rows where that is valid.
+  - There is no single policy service/test suite that proves
+    protected business records cannot be hard deleted.
+
+  Required behavior:
+  - Posted/canceled documents, payments, movements, reservations,
+    OrderHistory and StatusHistory are append-only/read-only records.
+  - Draft-only hard delete is allowed only for entities that have no
+    posted movements, payments, status history or business impact.
+  - Reference data uses status=inactive/deletedAt when it may appear
+    in historical documents.
+end note
+
+note right of ReferenceArchivePolicy
+  Reference data policy:
+  - Product, Category, Unit, Warehouse, Customer, Supplier,
+    ProductPrice and InventoryReason must remain readable.
+  - Prefer inactive status for hiding from new operations.
+  - Use deletedAt only as soft archive.
+  - Do not break old snapshots, document links or reports.
+end note
+
+note bottom
+  Suggested implementation order:
+
+  1. Add a small policy service or manager methods for archive/delete checks.
+  2. Wire admin delete/archive actions through that policy.
+  3. Add tests that hard delete is blocked for:
+     posted InventoryDocument, StockMovement, Payment,
+     OrderHistory, StatusHistory and ProductionOrder with documents.
+  4. Add tests that draft-only cleanup is still possible where allowed.
+  5. Add UI messages explaining why a record was archived instead of removed.
+end note
+
+@enduml

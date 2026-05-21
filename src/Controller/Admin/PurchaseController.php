@@ -5,10 +5,12 @@ namespace App\Controller\Admin;
 use App\Entity\Purchase;
 use App\Entity\PurchaseEntry;
 use App\Entity\PurchaseStatus;
+use App\Entity\StatusHistoryEntityType;
 use App\Entity\Store;
 use App\Form\Admin\FilterType\PurchaseFilterType;
 use App\Form\Admin\Type\PurchaseType;
 use App\Manager\PurchaseManager;
+use App\Repository\StatusHistoryRepository;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
@@ -28,7 +30,10 @@ class PurchaseController extends AbstractAdvancedController
 
 	private const int DEFAULT_PAGE_LIMIT = 20;
 
-	public function __construct(private readonly PurchaseManager $purchaseManager)
+	public function __construct(
+		private readonly PurchaseManager $purchaseManager,
+		private readonly StatusHistoryRepository $statusHistoryRepository,
+	)
 	{
 	}
 
@@ -181,6 +186,21 @@ class PurchaseController extends AbstractAdvancedController
 		]);
 	}
 
+	#[Route('/{id}/history', name: 'history', methods: ['GET'])]
+	public function history(
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Purchase $purchase,
+	): Response
+	{
+		$this->denyPurchaseOutsideStore($purchase, $store);
+
+		return $this->render('admin/purchase/history.html.twig', [
+			'entity' => $purchase,
+			'status_history_entries' => $this->statusHistoryRepository->findTimelineFor($store, StatusHistoryEntityType::PURCHASE, (int) $purchase->getId()),
+		]);
+	}
+
 	#[Route('/{id}/order', name: 'order', methods: ['POST'])]
 	public function order(
 		Request $request,
@@ -324,6 +344,10 @@ class PurchaseController extends AbstractAdvancedController
 			'card' => $this->renderView('admin/purchase/show.html.twig', [
 				'entity' => $purchase,
 				'query_params' => $request->query->all(),
+			]),
+			'history' => $this->renderView('admin/purchase/history.html.twig', [
+				'entity' => $purchase,
+				'status_history_entries' => $this->statusHistoryRepository->findTimelineFor($store, StatusHistoryEntityType::PURCHASE, (int) $purchase->getId()),
 			]),
 			'row' => $this->renderView('admin/purchase/_index_row.html.twig', [
 				'entity' => $purchase,

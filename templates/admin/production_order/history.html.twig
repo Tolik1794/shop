@@ -1,0 +1,8 @@
+<div class="card" {{ stimulus_target('reload-card', 'historyCard') }} data-card-id="{{ entity.id }}">
+	<div class="card-header">
+		<h5 class="card-title mb-0">Production order #{{ entity.id }} · History</h5>
+	</div>
+	<div class="card-body">
+		{{ include('admin/_components/status_history/_timeline.html.twig') }}
+	</div>
+</div>

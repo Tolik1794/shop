@@ -1,0 +1,90 @@
+@startuml
+
+title 12.4. Advanced inventory operations completion
+
+hide circle
+skinparam linetype ortho
+
+enum InventoryDocumentType {
+	purchase_receipt
+	sale_shipment
+	customer_return
+	supplier_return
+	production
+	write_off
+	stock_adjustment
+	transfer
+	reversal
+}
+
+entity InventoryDocument
+entity InventoryDocumentLine
+entity InventoryReason
+entity Warehouse
+entity WarehouseStock
+entity OrderEntry
+entity PurchaseEntry
+
+class InventoryTransferUseCase <<use case>>
+class CustomerReturnUseCase <<use case>>
+class SupplierReturnUseCase <<use case>>
+class WriteOffAdjustmentUseCase <<use case>>
+
+InventoryTransferUseCase --> InventoryDocument : transfer
+CustomerReturnUseCase --> InventoryDocument : customer_return
+SupplierReturnUseCase --> InventoryDocument : supplier_return
+WriteOffAdjustmentUseCase --> InventoryDocument : write_off / stock_adjustment
+InventoryDocument --> InventoryDocumentLine : lines
+InventoryDocumentLine --> Warehouse
+InventoryDocumentLine --> WarehouseStock
+InventoryDocument --> InventoryReason : explains
+InventoryDocumentLine --> OrderEntry : sales source
+InventoryDocumentLine --> PurchaseEntry : purchase source
+
+note right of InventoryTransferUseCase
+  Current status:
+  - Transfer type exists in the enum and direction rules allow paired lines.
+  - No dedicated transfer use case/admin UI exists.
+
+  Required behavior:
+  - One transfer document contains paired OUT/IN lines.
+  - Source warehouse decreases stock, destination increases stock.
+  - The same product and quantity must be balanced across the pair.
+  - Cost snapshot should move with the stock.
+end note
+
+note right of CustomerReturnUseCase
+  Required behavior:
+  - Customer return links to OrderEntry.
+  - Returned quantity must not exceed shipped quantity.
+  - Posting creates IN movement and updates order progress/status.
+  - Refund/payment handling remains in Payment stage.
+end note
+
+note right of SupplierReturnUseCase
+  Required behavior:
+  - Supplier return links to PurchaseEntry.
+  - Returned quantity must not exceed received quantity.
+  - Posting creates OUT movement and updates purchase progress/status.
+end note
+
+note right of WriteOffAdjustmentUseCase
+  Required behavior:
+  - Write-off and stock adjustment require InventoryReason.
+  - Direction and cost rules must be explicit.
+  - Audit fields and StatusHistory should show post/cancel events.
+end note
+
+note bottom
+  Suggested implementation order:
+
+  1. Add read-only InventoryDocument admin UI first in 12.1.
+  2. Add customer return and supplier return creation flows from
+     Order/Purchase pages.
+  3. Add write-off/stock-adjustment forms using InventoryReason.
+  4. Add transfer use case with paired-line validation.
+  5. Add tests for quantity bounds, cost snapshots, reversal,
+     status synchronization and status history.
+end note
+
+@enduml

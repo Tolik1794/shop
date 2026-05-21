@@ -30,9 +30,17 @@ StatusHistoryEntityType ||--o{ StatusHistory : classifies
 
 note right of StatusHistory
   Current project status:
-  - StatusHistory is not implemented.
-  - Many business entities already have status and audit fields.
-  - Status changes are not logged centrally.
+  - StatusHistory is implemented as Doctrine entity,
+    enum, repository and migration.
+  - Purchase and ProductionOrder workflow transitions
+    write generic StatusHistory rows.
+  - InventoryDocument post/cancel flows write StatusHistory.
+  - Purchase progress/status sync after inventory posting
+    also writes StatusHistory when the derived status changes.
+  - Purchase and ProductionOrder show pages display
+    the generic status timeline.
+  - InventoryDocument has no dedicated admin show page yet;
+    attach the same timeline component when that UI is added.
 
   Required behavior:
   - Every business status transition creates a history row.
@@ -80,16 +88,14 @@ note bottom
 end note
 
 note bottom
-  Suggested implementation steps:
+  Remaining implementation checks:
 
-  1. Add StatusHistory entity, enum and repository.
-  2. Add StatusHistoryService::record().
+  1. Add InventoryDocument status timeline UI when a dedicated
+     InventoryDocument admin show page exists.
+  2. Add deletion-policy tests around posted documents and history.
   3. Keep Order on dedicated OrderHistory from stage 05.1.
-  4. Update Purchase transition service first.
-  5. Then update InventoryDocument and ProductionOrder services.
-  6. Add reusable Twig component for generic status timeline rendering.
-  7. Add tests that every generic transition writes history exactly once.
-  8. Add deletion-policy tests around posted documents and history.
+  4. Treat direct status writes outside controlled services
+     as drift unless they are construction/default initialization.
 end note
 
 @enduml

@@ -1,0 +1,85 @@
+@startuml
+
+title 12.3. Workflow status drift and history completion
+
+hide circle
+skinparam linetype ortho
+
+class StatusTransitionService <<service>>
+class BusinessDocumentStatusSynchronizer <<service>>
+class InventoryPostingService <<service>>
+class OrderHistoryRecorder <<history>>
+class GenericStatusHistoryRecorder <<history>>
+class InventoryDocumentWorkflowDefinition <<definition>>
+class WorkflowDriftTestSuite <<tests>>
+
+entity Order
+entity Purchase
+entity InventoryDocument
+entity ProductionOrder
+entity OrderHistory
+entity StatusHistory
+
+StatusTransitionService --> OrderHistoryRecorder : order transitions
+StatusTransitionService --> GenericStatusHistoryRecorder : generic transitions
+BusinessDocumentStatusSynchronizer --> Order : derived status
+BusinessDocumentStatusSynchronizer --> Purchase : derived status
+InventoryPostingService --> InventoryDocument : post/cancel status
+InventoryDocumentWorkflowDefinition --> GenericStatusHistoryRecorder : future direct workflow
+WorkflowDriftTestSuite --> StatusTransitionService
+WorkflowDriftTestSuite --> BusinessDocumentStatusSynchronizer
+WorkflowDriftTestSuite --> InventoryPostingService
+
+note right of StatusTransitionService
+  Current status:
+  - Universal workflow core exists.
+  - Order, Purchase and ProductionOrder definitions exist.
+  - InventoryDocument implements WorkflowSubjectInterface.
+  - InventoryDocument post/cancel history is recorded directly
+    in InventoryPostingService, not via an InventoryDocument definition.
+
+  Required cleanup:
+  - Either add InventoryDocumentWorkflowDefinition or document that posting
+    is a specialized workflow owned by InventoryPostingService.
+  - Keep history recording exactly once for every post/cancel/reversal.
+end note
+
+note right of BusinessDocumentStatusSynchronizer
+  Current status:
+  - Purchase derived statuses now write StatusHistory when context exists.
+  - Order derived statuses still use Order.setStatus directly and should
+    write OrderHistory when they change.
+
+  Required cleanup:
+  - Add OrderHistory recording for derived order status changes:
+    awaiting_stock, ready_to_ship, partially_shipped, shipped,
+    partially_returned, returned.
+  - Keep delivered/completed as explicit business actions, not inferred.
+  - Add tests that direct status drift is visible in history.
+end note
+
+note right of InventoryDocumentWorkflowDefinition
+  Optional implementation:
+  - post: draft -> posted
+  - cancel_draft: draft -> canceled
+  - cancel_posted: posted -> canceled with reversal side effect
+
+  Caveat:
+  Stock posting contains heavy domain logic and transaction boundaries.
+  If added, the workflow definition should delegate to actions/services,
+  not move posting math into the generic transition service.
+end note
+
+note bottom
+  Suggested implementation order:
+
+  1. Add OrderHistory recording inside BusinessDocumentStatusSynchronizer
+     for derived Order status changes.
+  2. Add tests for status history/order history on every automatic status
+     change caused by inventory posting and reversal.
+  3. Decide whether InventoryDocument gets a formal workflow definition.
+  4. Add a static/targeted test that flags direct setStatus calls outside
+     approved construction, synchronizer, posting and workflow actions.
+end note
+
+@enduml

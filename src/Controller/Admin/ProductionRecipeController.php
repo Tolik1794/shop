@@ -5,8 +5,10 @@ namespace App\Controller\Admin;
 use App\Entity\ProductionRecipe;
 use App\Entity\ProductionRecipeItem;
 use App\Entity\Store;
+use App\Form\Admin\FilterType\ProductionRecipeFilterType;
 use App\Form\Admin\Type\ProductionRecipeType;
 use App\Manager\ProductionManager;
+use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
 use RuntimeException;
@@ -31,11 +33,18 @@ class ProductionRecipeController extends AbstractAdvancedController
 	public function index(
 		PaginatorInterface $paginator,
 		Request $request,
+		FilterFormHandler $filterFormHandler,
 		#[MapEntity(expr: 'repository.find(store_id)')]
 		Store $store,
 	): Response
 	{
 		$queryBuilder = $this->productionManager->getRecipeRepository()->findAvailableByStoreQB($store);
+		$filterForm = $this->createForm(ProductionRecipeFilterType::class)->handleRequest($request);
+
+		if ($filterForm->isSubmitted() && $filterForm->isValid()) {
+			$filterFormHandler->handleFilterForm($filterForm, $queryBuilder);
+		}
+
 		$page = $request->query->getInt('page', 1);
 
 		if ($page < 1) return $this->redirectToFirstPage();
@@ -59,6 +68,7 @@ class ProductionRecipeController extends AbstractAdvancedController
 		return $this->render('admin/production_recipe/index.html.twig', [
 			'pagination' => $pagination,
 			'first_entity' => $recipe,
+			'filter_form' => $filterForm->createView(),
 		]);
 	}
 

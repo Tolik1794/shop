@@ -1,0 +1,73 @@
+@startuml
+
+title 12. Implementation gap audit and forward plan
+
+hide circle
+skinparam linetype ortho
+
+rectangle "Complete enough for current stage" as Complete {
+	[01 Core store/user/reference model]
+	[02 Catalog, product parameters and pricing path]
+	[03 Customers and suppliers]
+	[04 Warehouse stock base]
+	[05 Sales orders]
+	[05.1 Order comments and history]
+	[06 Purchases]
+	[07 Payments]
+	[08 Inventory posting]
+	[08.1 Progress/status sync]
+	[09 Reservations]
+	[10 Production]
+	[11 Status history/audit base]
+}
+
+rectangle "Forward cleanup tasks" as Forward {
+	[12.1 Admin reference and inventory UI]
+	[12.2 Lifecycle and delete policy hardening]
+	[12.3 Workflow status drift and history completion]
+	[12.4 Advanced inventory operations]
+}
+
+Complete --> Forward : do not reopen old stages
+
+note right of Complete
+  Audit result:
+
+  - The data model and core services for stages 01-11 exist.
+  - Current tests cover pricing, payment recalculation, order history,
+    purchase transitions, inventory posting, reservations, production,
+    status history recorder and selected DB constraints.
+  - Stage files 01-11 can remain historical implementation guides.
+  - Gaps found during audit should be added as stage 12.x tasks,
+    because the project has already progressed to stage 11.
+end note
+
+note right of Forward
+  Forward-only gaps found:
+
+  1. Some implemented entities do not have admin UI parity yet:
+     Currency, Unit, InventoryReason and InventoryDocument show/list.
+  2. Delete/archiving policy exists in UML but needs systematic
+     service/controller guards and tests.
+  3. Some derived status updates still use direct setStatus paths;
+     those should be centralized or explicitly recorded.
+  4. Transfer, supplier/customer return UI and inventory reason
+     workflows remain advanced inventory work.
+end note
+
+note bottom
+  Verification rule for all 12.x tasks:
+
+  - Do not modify existing migrations that already ran.
+  - Add new migrations only for new schema.
+  - Keep controllers thin and place business decisions in managers/services.
+  - Preserve existing routes/selectors/response shapes unless the task
+    explicitly requires a controlled change.
+  - Use Docker commands:
+    doctrine:schema:validate --skip-sync,
+    lint:container,
+    lint:twig templates,
+    targeted PHPUnit tests.
+end note
+
+@enduml

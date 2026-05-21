@@ -3,6 +3,16 @@ import { Controller } from '@hotwired/stimulus';
 export default class extends Controller {
     static targets = ['card', 'commentsCard', 'historyCard', 'paymentsCard', 'paymentTabIcon', 'flashContainer']
 
+    connect() {
+        if (!this.hasFlashContainerTarget) {
+            return
+        }
+
+        this.flashContainerTarget
+            .querySelectorAll('.quick-action-flash')
+            .forEach((flash) => this.prepareFlash(flash))
+    }
+
     async reloadCard(event) {
         let eventTarget = event.currentTarget
 
@@ -45,6 +55,7 @@ export default class extends Controller {
         await Promise.all([
             this.replaceCard(this.hasCardTarget ? this.cardTarget : null, eventTarget.dataset.showLink),
             this.replaceCard(this.hasPaymentsCardTarget ? this.paymentsCardTarget : null, eventTarget.dataset.paymentsLink),
+            this.replaceCard(this.hasHistoryCardTarget ? this.historyCardTarget : null, eventTarget.dataset.historyLink),
         ])
 
         this.updatePaymentTabIcon(eventTarget)
@@ -125,13 +136,20 @@ export default class extends Controller {
                 this.updatePaymentTabIcon(row)
             }
         }
+
+        if (fragments.history && this.hasHistoryCardTarget) {
+            const div = document.createElement('div')
+
+            div.innerHTML = fragments.history.trim()
+            this.historyCardTarget.replaceWith(div.firstElementChild)
+        }
     }
 
     dismissFlash(event) {
         const flash = event.currentTarget.closest('.quick-action-flash')
 
         if (flash) {
-            flash.remove()
+            this.closeFlash(flash)
         }
     }
 
@@ -142,18 +160,60 @@ export default class extends Controller {
 
         flashes.forEach((flash) => {
             const type = flash.type || 'info'
+            const alertType = type === 'error' ? 'danger' : type
             const message = flash.message || ''
             const div = document.createElement('div')
 
-            div.className = `alert alert-${type} alert-dismissible mb-2 quick-action-flash`
+            div.className = `alert alert-${alertType} alert-dismissible mb-2 quick-action-flash`
             div.setAttribute('role', 'alert')
+            div.dataset.alertType = alertType
             div.innerHTML = `
                 <button type="button" class="btn-close" aria-label="Close" data-action="reload-card#dismissFlash"></button>
                 <div class="alert-message">${this.escapeHtml(message)}</div>
             `
 
             this.flashContainerTarget.prepend(div)
+            this.prepareFlash(div)
         })
+    }
+
+    prepareFlash(flash) {
+        if (flash.dataset.flashReady === '1') {
+            return
+        }
+
+        flash.dataset.flashReady = '1'
+
+        if (this.isErrorFlash(flash)) {
+            return
+        }
+
+        flash.dataset.dismissTimerId = window.setTimeout(() => {
+            this.closeFlash(flash)
+        }, 3000).toString()
+    }
+
+    closeFlash(flash) {
+        if (flash.classList.contains('quick-action-flash--dismiss')) {
+            return
+        }
+
+        if (flash.dataset.dismissTimerId) {
+            window.clearTimeout(Number(flash.dataset.dismissTimerId))
+            delete flash.dataset.dismissTimerId
+        }
+
+        flash.classList.add('quick-action-flash--dismiss')
+
+        window.setTimeout(() => {
+            flash.remove()
+        }, 260)
+    }
+
+    isErrorFlash(flash) {
+        return flash.dataset.alertType === 'danger'
+            || flash.dataset.alertType === 'error'
+            || flash.classList.contains('alert-danger')
     }
 
     escapeHtml(value) {

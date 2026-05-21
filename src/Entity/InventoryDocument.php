@@ -6,6 +6,7 @@ use App\Entity\User\User;
 use App\Enum\InventoryDocumentStatus;
 use App\Enum\InventoryDocumentType;
 use App\Repository\InventoryDocumentRepository;
+use App\Workflow\WorkflowSubjectInterface;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -17,7 +18,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_inventory_document_store_status', columns: ['store_id', 'status'])]
 #[ORM\Index(name: 'idx_inventory_document_store_type', columns: ['store_id', 'type'])]
 #[ORM\Index(name: 'idx_inventory_document_document_date', columns: ['document_date'])]
-class InventoryDocument
+class InventoryDocument implements WorkflowSubjectInterface
 {
 	#[ORM\Id]
 	#[ORM\GeneratedValue]
@@ -125,6 +126,9 @@ class InventoryDocument
 	public function setType(InventoryDocumentType $type): self { $this->type = $type; return $this; }
 	public function getStatus(): InventoryDocumentStatus { return $this->status; }
 	public function setStatus(InventoryDocumentStatus $status): self { $this->status = $status; return $this; }
+	public function getWorkflowKey(): string { return 'inventory_document'; }
+	public function getStatusValue(): string { return $this->status->value; }
+	public function setStatusValue(string $status): void { $this->status = InventoryDocumentStatus::from($status); }
 	public function getDocumentDate(): DateTimeImmutable { return $this->documentDate; }
 	public function setDocumentDate(DateTimeImmutable $documentDate): self { $this->documentDate = $documentDate; return $this; }
 	public function getCurrency(): ?Currency { return $this->currency; }

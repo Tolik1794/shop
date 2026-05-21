@@ -18,6 +18,8 @@ use App\Enum\InventoryDocumentType;
 use App\Enum\ProductKindEnum;
 use App\Exception\StockOperationException;
 use App\Manager\UserManager;
+use App\Workflow\History\GenericStatusHistoryRecorder;
+use App\Workflow\TransitionContext;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
@@ -30,6 +32,7 @@ class InventoryPostingService
 		private readonly UserManager $userManager,
 		private readonly DocumentProgressRecalculator $documentProgressRecalculator,
 		private readonly StockReservationService $stockReservationService,
+		private readonly GenericStatusHistoryRecorder $statusHistoryRecorder,
 	)
 	{
 	}
@@ -99,6 +102,9 @@ class InventoryPostingService
 		$this->assertDocumentCanBePosted($document);
 		$actor = $this->currentActor();
 		$postedAt = new DateTimeImmutable();
+		$fromStatus = $document->getStatus()->value;
+		$context = $this->transitionContext($actor, $postedAt);
+		$this->ensurePersistedIdentity($document);
 
 		foreach ($document->getLines() as $line) {
 			$this->postLine($line);
@@ -111,8 +117,9 @@ class InventoryPostingService
 			->setUpdatedAt($postedAt)
 			->setUpdatedBy($actor);
 
-		$this->documentProgressRecalculator->recalculateForInventoryDocument($document);
 		$this->entityManager->persist($document);
+		$this->statusHistoryRecorder->recordChange($document, 'post', $fromStatus, InventoryDocumentStatus::POSTED->value, $context);
+		$this->documentProgressRecalculator->recalculateForInventoryDocument($document, $context);
 	}
 
 	private function cancelDocument(InventoryDocument $document): ?InventoryDocument
@@ -123,6 +130,8 @@ class InventoryPostingService
 
 		$actor = $this->currentActor();
 		$canceledAt = new DateTimeImmutable();
+		$fromStatus = $document->getStatus()->value;
+		$context = $this->transitionContext($actor, $canceledAt);
 		$reversal = null;
 
 		if ($document->getStatus() === InventoryDocumentStatus::POSTED) {
@@ -138,8 +147,10 @@ class InventoryPostingService
 			->setUpdatedAt($canceledAt)
 			->setUpdatedBy($actor);
 
-		$this->documentProgressRecalculator->recalculateForInventoryDocument($document);
 		$this->entityManager->persist($document);
+		$this->ensurePersistedIdentity($document);
+		$this->statusHistoryRecorder->recordChange($document, 'cancel', $fromStatus, InventoryDocumentStatus::CANCELED->value, $context);
+		$this->documentProgressRecalculator->recalculateForInventoryDocument($document, $context);
 
 		return $reversal;
 	}
@@ -339,6 +350,23 @@ class InventoryPostingService
 		$user = $this->userManager->getCurrentUser();
 
 		return $user instanceof User ? $user : null;
+	}
+
+	private function transitionContext(?User $actor, DateTimeImmutable $occurredAt): TransitionContext
+	{
+		return $actor instanceof User
+			? TransitionContext::manual($actor, occurredAt: $occurredAt)
+			: TransitionContext::system(occurredAt: $occurredAt);
+	}
+
+	private function ensurePersistedIdentity(InventoryDocument $document): void
+	{
+		if ($document->getId() !== null) {
+			return;
+		}
+
+		$this->entityManager->persist($document);
+		$this->entityManager->flush();
 	}
 
 	private function numberValue(mixed $value): float

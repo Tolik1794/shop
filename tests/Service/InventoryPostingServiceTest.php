@@ -27,6 +27,7 @@ use App\Service\DocumentProgressRecalculator;
 use App\Service\InventoryPostingService;
 use App\Service\StockReservationService;
 use App\Service\WarehouseStockService;
+use App\Workflow\History\GenericStatusHistoryRecorder;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -38,6 +39,7 @@ class InventoryPostingServiceTest extends TestCase
 	private WarehouseStockRepository&MockObject $warehouseStockRepository;
 	private UserManager&MockObject $userManager;
 	private StockReservationService&MockObject $stockReservationService;
+	private GenericStatusHistoryRecorder&MockObject $statusHistoryRecorder;
 	private InventoryPostingService $inventoryPostingService;
 
 	protected function setUp(): void
@@ -47,6 +49,7 @@ class InventoryPostingServiceTest extends TestCase
 		$this->warehouseStockRepository = $this->createMock(WarehouseStockRepository::class);
 		$this->userManager = $this->createMock(UserManager::class);
 		$this->stockReservationService = $this->createMock(StockReservationService::class);
+		$this->statusHistoryRecorder = $this->createMock(GenericStatusHistoryRecorder::class);
 		$this->userManager->method('getCurrentUser')->willReturn(null);
 		$this->entityManager->method('persist');
 		$this->entityManager->method('flush');
@@ -57,8 +60,9 @@ class InventoryPostingServiceTest extends TestCase
 			$this->entityManager,
 			$this->warehouseStockService,
 			$this->userManager,
-			new DocumentProgressRecalculator(new BusinessDocumentStatusSynchronizer($this->warehouseStockRepository)),
+			new DocumentProgressRecalculator(new BusinessDocumentStatusSynchronizer($this->warehouseStockRepository, $this->statusHistoryRecorder)),
 			$this->stockReservationService,
+			$this->statusHistoryRecorder,
 		);
 	}
 
@@ -73,6 +77,9 @@ class InventoryPostingServiceTest extends TestCase
 			->method('findOrCreate')
 			->with($warehouse, $product)
 			->willReturn($warehouseStock);
+		$this->statusHistoryRecorder->expects($this->once())
+			->method('recordChange')
+			->with($document, 'post', 'draft', 'posted', $this->anything());
 
 		$this->inventoryPostingService->post($document);
 		$line = $document->getLines()->first();
@@ -95,6 +102,7 @@ class InventoryPostingServiceTest extends TestCase
 			->addLine($this->line($product, $warehouse, InventoryDirection::OUT, '6.0000'));
 
 		$this->warehouseStockService->method('findOrCreate')->willReturn($warehouseStock);
+		$this->statusHistoryRecorder->expects($this->never())->method('recordChange');
 
 		$this->expectException(StockOperationException::class);
 
@@ -111,6 +119,7 @@ class InventoryPostingServiceTest extends TestCase
 			->addLine($this->line($product, $warehouse, InventoryDirection::IN, '2.0000', '5.0000'));
 
 		$this->warehouseStockService->method('findOrCreate')->willReturn($warehouseStock);
+		$this->statusHistoryRecorder->expects($this->exactly(2))->method('recordChange');
 
 		$reversal = $this->inventoryPostingService->cancel($document);
 		$reversalLine = $reversal?->getLines()->first();

@@ -7,7 +7,7 @@ use App\Entity\PurchaseStatus;
 use App\Workflow\Action\MarkPurchaseCanceledAction;
 use App\Workflow\Exception\UnknownTransitionException;
 use App\Workflow\Guard\PurchaseHasEntriesGuard;
-use App\Workflow\History\NullHistoryRecorder;
+use App\Workflow\History\GenericStatusHistoryRecorder;
 use App\Workflow\HistoryRecorderInterface;
 use App\Workflow\TransitionDefinition;
 use App\Workflow\WorkflowDefinitionInterface;
@@ -24,7 +24,7 @@ class PurchaseWorkflowDefinition implements WorkflowDefinitionInterface
 	public function __construct(
 		PurchaseHasEntriesGuard $purchaseHasEntriesGuard,
 		MarkPurchaseCanceledAction $markPurchaseCanceledAction,
-		private readonly NullHistoryRecorder $historyRecorder,
+		private readonly GenericStatusHistoryRecorder $historyRecorder,
 	)
 	{
 		$this->transitions = [

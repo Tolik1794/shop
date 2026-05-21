@@ -11,7 +11,7 @@ use App\Workflow\Exception\UnknownTransitionException;
 use App\Workflow\Guard\ProductionHasMaterialsGuard;
 use App\Workflow\Guard\ProductionMaterialsAvailableGuard;
 use App\Workflow\Guard\ProductionWarehouseRequiredGuard;
-use App\Workflow\History\NullHistoryRecorder;
+use App\Workflow\History\GenericStatusHistoryRecorder;
 use App\Workflow\HistoryRecorderInterface;
 use App\Workflow\TransitionDefinition;
 use App\Workflow\WorkflowDefinitionInterface;
@@ -29,7 +29,7 @@ class ProductionOrderWorkflowDefinition implements WorkflowDefinitionInterface
 		MarkProductionOrderStartedAction $markStartedAction,
 		MarkProductionOrderCompletedAction $markCompletedAction,
 		MarkProductionOrderCanceledAction $markCanceledAction,
-		private readonly NullHistoryRecorder $historyRecorder,
+		private readonly GenericStatusHistoryRecorder $historyRecorder,
 	)
 	{
 		$this->transitions = [

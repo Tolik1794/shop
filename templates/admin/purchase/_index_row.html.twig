@@ -5,6 +5,7 @@
 		data-action="click->reload-card#reloadDocumentCards click->reload-card#tableActivate"
 		data-show-link="{{ path('app_admin_purchase_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
 		data-payments-link="{{ path('app_admin_payment_purchase_document', {store_id: app.request.attributes.get('store_id'), purchase_id: entity.id}) }}"
+		data-history-link="{{ path('app_admin_purchase_history', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
 		data-payment-complete="{{ entity.paymentStatus.value in ['paid', 'overpaid'] ? '1' : '0' }}"
 >
 	<td>
