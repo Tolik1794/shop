@@ -114,7 +114,21 @@
             </form>
         {% endif %}
 
-        {% if entity.status.value != 'canceled' %}
+        {% if entity.status.value == 'shipped' %}
+            <form method="post" action="{{ path('app_admin_order_mark_delivered', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction">
+                <input type="hidden" name="_token" value="{{ csrf_token('mark_delivered_order_' ~ entity.id) }}">
+                <button class="btn btn-success btn-sm" type="submit">Mark delivered</button>
+            </form>
+        {% endif %}
+
+        {% if entity.status.value == 'delivered' %}
+            <form method="post" action="{{ path('app_admin_order_complete', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="Complete order?">
+                <input type="hidden" name="_token" value="{{ csrf_token('complete_order_' ~ entity.id) }}">
+                <button class="btn btn-success btn-sm" type="submit">Complete</button>
+            </form>
+        {% endif %}
+
+        {% if entity.status.value not in ['canceled', 'completed'] %}
             <form method="post" action="{{ path('app_admin_order_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="Cancel order?">
                 <input type="hidden" name="_token" value="{{ csrf_token('cancel_order_' ~ entity.id) }}">
                 <button class="btn btn-danger btn-sm" type="submit">Cancel</button>

@@ -41,11 +41,26 @@ class OrderWorkflowDefinition implements WorkflowDefinitionInterface
 				toStatus: OrderStatus::DRAFT->value,
 				historyEventKey: 'order.status_changed',
 			),
+			'mark_delivered' => new TransitionDefinition(
+				key: 'mark_delivered',
+				fromStatuses: [OrderStatus::SHIPPED->value],
+				toStatus: OrderStatus::DELIVERED->value,
+				historyEventKey: 'order.status_changed',
+			),
+			'complete' => new TransitionDefinition(
+				key: 'complete',
+				fromStatuses: [OrderStatus::DELIVERED->value],
+				toStatus: OrderStatus::COMPLETED->value,
+				historyEventKey: 'order.status_changed',
+			),
 			'cancel' => new TransitionDefinition(
 				key: 'cancel',
 				fromStatuses: array_values(array_filter(
 					array_map(static fn (OrderStatus $status): string => $status->value, OrderStatus::cases()),
-					static fn (string $status): bool => $status !== OrderStatus::CANCELED->value,
+					static fn (string $status): bool => !in_array($status, [
+						OrderStatus::CANCELED->value,
+						OrderStatus::COMPLETED->value,
+					], true),
 				)),
 				toStatus: OrderStatus::CANCELED->value,
 				afterActions: [$markOrderCanceledAction],

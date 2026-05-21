@@ -15,6 +15,7 @@ component "ReferenceArchivePolicy" as ReferenceArchivePolicy <<partial>>
 package "Implemented coverage" as Implemented {
 	[Order base workflow]
 	[Order inventory-derived statuses]
+	[12.5.1 Order delivery and close workflow]
 	[Purchase base workflow]
 	[Purchase inventory-derived statuses]
 	[Production order workflow]
@@ -24,7 +25,6 @@ package "Implemented coverage" as Implemented {
 }
 
 package "Remaining transition tasks" as Remaining {
-	[12.5.1 Order delivery and close workflow]
 	[12.5.2 Purchase close and post-receipt cancellation rules]
 	[12.5.3 Inventory document workflow boundary decision]
 	[12.5.4 Reference ActiveStatus lifecycle consistency]
@@ -51,12 +51,13 @@ note right of Implemented
 
   Orders:
   - Implemented by OrderWorkflowDefinition:
-    confirm, return_to_draft, cancel.
+    confirm, return_to_draft, mark_delivered,
+    complete, cancel.
   - Implemented as inventory-derived synchronization:
     awaiting_stock, ready_to_ship, partially_shipped, shipped,
     partially_returned, returned.
-  - Not implemented as explicit business transitions:
-    delivered and completed.
+  - Optional business decision remains open:
+    whether returned can move to completed, or whether returned is terminal.
 
   Purchases:
   - Implemented by PurchaseWorkflowDefinition:
@@ -86,24 +87,23 @@ note right of [12.5.1 Order delivery and close workflow]
   Goal:
   Add explicit order transitions for customer delivery and final close.
 
-  Missing transitions to define:
+  Implemented transitions:
   - mark_delivered: shipped -> delivered.
   - complete: delivered -> completed.
-  - Optional business decision:
-    whether returned can move to completed, or whether returned is terminal.
+  - completed is not cancelable.
 
-  Implementation steps:
-  1. Confirm business rules for delivered/completed terminal states.
-  2. Add transitions to OrderWorkflowDefinition.
-  3. Add actions only if audit fields are required
-     (for example deliveredAt/completedAt).
-  4. If new audit fields are required, add entity fields and a new migration;
-     do not edit existing migrations.
-  5. Add OrderManager methods and admin POST actions with CSRF protection.
-  6. Update order show/index action buttons without changing existing
-     response fragments or selectors unnecessarily.
-  7. Record OrderHistory through OrderHistoryRecorder.
-  8. Add tests for allowed, blocked and terminal paths.
+  Implemented steps:
+  1. Added transitions to OrderWorkflowDefinition.
+  2. Added OrderManager methods.
+  3. Added admin POST actions with CSRF protection.
+  4. Added show-card action buttons.
+  5. Kept OrderHistoryRecorder as the audit source.
+  6. Added tests for allowed and blocked paths.
+
+  Deferred business decision:
+  - Whether returned can move to completed, or whether returned is terminal.
+  - No deliveredAt/completedAt fields were added; add them later only if
+    audit timestamps must be queryable outside OrderHistory.
 
   Dependencies:
   - OrderWorkflowDefinition.

@@ -141,6 +141,22 @@ class OrderManager extends AbstractManager
 		});
 	}
 
+	public function markDelivered(Order $order): void
+	{
+		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->statusTransitionService->apply($order, 'mark_delivered', $this->transitionContext());
+			$this->saveOrder($order);
+		});
+	}
+
+	public function complete(Order $order): void
+	{
+		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->statusTransitionService->apply($order, 'complete', $this->transitionContext());
+			$this->saveOrder($order);
+		});
+	}
+
 	public function recalculate(Order $order): void
 	{
 		foreach ($order->getOrderEntries() as $orderEntry) {

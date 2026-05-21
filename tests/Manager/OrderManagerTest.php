@@ -222,6 +222,80 @@ class OrderManagerTest extends KernelTestCase
 		$this->orderManager->returnToDraft($order);
 	}
 
+	public function testMarkDeliveredMovesShippedOrderToDelivered(): void
+	{
+		$currency = $this->persistCurrency('L' . substr(uniqid(), -2), 'Delivery currency');
+		$store = $this->persistStore('order-delivered-' . uniqid(), $currency);
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+		$order->setStatus(OrderStatus::SHIPPED);
+		$this->entityManager->flush();
+
+		$this->orderManager->markDelivered($order);
+
+		self::assertSame(OrderStatus::DELIVERED, $order->getStatus());
+		$history = $this->entityManager->getRepository(OrderHistory::class)->findOneBy([
+			'order' => $order,
+			'eventKey' => 'order.status_changed',
+		], ['id' => 'DESC']);
+
+		self::assertInstanceOf(OrderHistory::class, $history);
+		self::assertSame([
+			'status' => ['from' => OrderStatus::SHIPPED->value, 'to' => OrderStatus::DELIVERED->value],
+		], $history->getChanges());
+	}
+
+	public function testCompleteMovesDeliveredOrderToCompleted(): void
+	{
+		$currency = $this->persistCurrency('F' . substr(uniqid(), -2), 'Complete currency');
+		$store = $this->persistStore('order-complete-' . uniqid(), $currency);
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+		$order->setStatus(OrderStatus::DELIVERED);
+		$this->entityManager->flush();
+
+		$this->orderManager->complete($order);
+
+		self::assertSame(OrderStatus::COMPLETED, $order->getStatus());
+		$history = $this->entityManager->getRepository(OrderHistory::class)->findOneBy([
+			'order' => $order,
+			'eventKey' => 'order.status_changed',
+		], ['id' => 'DESC']);
+
+		self::assertInstanceOf(OrderHistory::class, $history);
+		self::assertSame([
+			'status' => ['from' => OrderStatus::DELIVERED->value, 'to' => OrderStatus::COMPLETED->value],
+		], $history->getChanges());
+	}
+
+	public function testCompleteIsBlockedBeforeDelivery(): void
+	{
+		$currency = $this->persistCurrency('Y' . substr(uniqid(), -2), 'Blocked complete currency');
+		$store = $this->persistStore('order-complete-blocked-' . uniqid(), $currency);
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+		$order->setStatus(OrderStatus::SHIPPED);
+		$this->entityManager->flush();
+
+		$this->expectException(RuntimeException::class);
+
+		$this->orderManager->complete($order);
+	}
+
+	public function testCancelIsBlockedAfterCompletion(): void
+	{
+		$currency = $this->persistCurrency('Z' . substr(uniqid(), -2), 'Completed cancel currency');
+		$store = $this->persistStore('order-cancel-completed-' . uniqid(), $currency);
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+		$order->setStatus(OrderStatus::COMPLETED);
+		$this->entityManager->flush();
+
+		$this->expectException(RuntimeException::class);
+
+		$this->orderManager->cancel($order);
+	}
+
 	public function testSaveOrderRecordsOnlyRealDecimalEntryChanges(): void
 	{
 		$currency = $this->persistCurrency('D' . substr(uniqid(), -2), 'Decimal history currency');

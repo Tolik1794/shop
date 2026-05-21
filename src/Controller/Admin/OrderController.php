@@ -316,6 +316,62 @@ class OrderController extends AbstractAdvancedController
 		return $this->quickActionResponse($request, $store, $order);
 	}
 
+	#[Route('/{id}/mark-delivered', name: 'mark_delivered', methods: ['POST'])]
+	public function markDelivered(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Order $order,
+	): Response
+	{
+		$this->denyOrderOutsideStore($order, $store);
+
+		if (!$this->isCsrfTokenValid('mark_delivered_order_' . $order->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Order action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		try {
+			$this->orderManager->markDelivered($order);
+			$this->addFlash('success', 'Order marked as delivered.');
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->quickActionResponse($request, $store, $order);
+	}
+
+	#[Route('/{id}/complete', name: 'complete', methods: ['POST'])]
+	public function complete(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Order $order,
+	): Response
+	{
+		$this->denyOrderOutsideStore($order, $store);
+
+		if (!$this->isCsrfTokenValid('complete_order_' . $order->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Order action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		try {
+			$this->orderManager->complete($order);
+			$this->addFlash('success', 'Order completed.');
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->quickActionResponse($request, $store, $order);
+	}
+
 	#[Route('/{id}/comment', name: 'comment_add', methods: ['POST'])]
 	public function addComment(
 		Request $request,
