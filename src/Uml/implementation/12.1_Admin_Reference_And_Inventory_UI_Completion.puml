@@ -13,13 +13,13 @@ entity InventoryDocumentLine
 entity StockMovement
 entity StatusHistory
 
-class CurrencyController <<admin>>
+class CurrencyFixturePolicy <<policy>>
 class UnitController <<admin>>
 class InventoryReasonController <<admin>>
 class InventoryDocumentController <<admin>>
 class StatusTimelineComponent <<twig>>
 
-CurrencyController --> Currency : manage if editable
+CurrencyFixturePolicy --> Currency : fixture-only dictionary
 UnitController --> Unit : manage per store
 InventoryReasonController --> InventoryReason : manage stock reasons
 InventoryDocumentController --> InventoryDocument : inspect documents
@@ -35,20 +35,24 @@ note right of Currency
   - No dedicated Currency admin controller exists.
 
   Decision:
-  - If currencies stay dictionary-only, document that they are fixture/admin
-    seed data and do not add UI.
-  - If store admins must edit them, add a restricted admin CRUD
-    with strong guards because historical documents depend on currencies.
+  - Currencies stay fixture/admin seed data for now.
+  - Do not add store-admin Currency CRUD in 12.1 because historical
+    prices, payments and inventory documents depend on stable codes,
+    decimal places and symbols.
+  - If editable currency dictionaries become necessary later, add a
+    restricted super-admin flow with explicit historical-data guards.
 end note
 
 note right of Unit
   Current status:
   - Unit entity exists and Product forms use it.
-  - No dedicated Unit admin CRUD exists.
+  - Dedicated Unit admin index/new/edit/show exists.
+  - Archive action uses inactive status + deletedAt,
+    without hard deleting historical reference data.
 
-  Required completion:
-  - Add Unit index/new/edit/show scoped by Store.
-  - Use inactive/deletedAt instead of destructive removal.
+  Remaining completion:
+  - Re-check product selection behavior before deciding whether
+    inactive-but-not-archived units should be hidden from new products.
   - Keep old product/order snapshots readable.
 end note
 
@@ -56,36 +60,40 @@ note right of InventoryReason
   Current status:
   - InventoryReason entity exists.
   - Inventory documents can reference a reason.
-  - No full admin workflow exists for maintaining reason dictionary.
+  - Dedicated InventoryReason admin index/new/edit/show exists.
+  - Store + type + name uniqueness is validated before save.
+  - Archive action uses inactive status + deletedAt.
 
-  Required completion:
-  - Add InventoryReason CRUD/filter scoped by Store.
-  - Validate store + type + name uniqueness.
-  - Use inactive/deletedAt for archive behavior.
+  Remaining completion:
+  - Reuse this dictionary in write-off and stock-adjustment
+    document creation flows when those screens are added.
 end note
 
 note right of InventoryDocument
   Current status:
   - Backend posting/cancel/reversal exists.
   - StatusHistory is written for post/cancel.
-  - There is no dedicated admin list/show for InventoryDocument.
+  - Dedicated admin index/show/history exists.
+  - Show renders header, lines, posted stock movements,
+    linked order/purchase/production document and generic status timeline.
+  - Post/cancel actions are CSRF-protected and delegate to
+    InventoryPostingService.
 
-  Required completion:
-  - Add read-first admin index/show for InventoryDocument.
-  - Show document header, lines, stock movements and linked business document.
-  - Reuse generic status timeline component.
-  - Keep post/cancel actions CSRF-protected and permission checked.
+  Remaining completion:
+  - Creation flows for returns, write-off, adjustment and transfer
+    stay in 12.4 advanced inventory operations.
 end note
 
 note bottom
   Suggested implementation order:
 
-  1. Add Unit admin CRUD because Product forms already depend on it.
-  2. Add InventoryReason admin CRUD for stock adjustment/write-off flows.
-  3. Add read-only InventoryDocument index/show with line/movement details.
-  4. Attach StatusHistory timeline to InventoryDocument show.
-  5. Decide whether Currency CRUD is needed or document fixture-only policy.
-  6. Add controller tests for store scoping, soft archive and timeline render.
+  1. Unit admin CRUD because Product forms already depend on it. [done]
+  2. InventoryReason admin CRUD for stock adjustment/write-off flows. [done]
+  3. InventoryDocument index/show with line/movement details. [done]
+  4. StatusHistory timeline on InventoryDocument show. [done]
+  5. Currency remains fixture-only for 12.1. [done]
+  6. Controller tests for store scoping, soft archive, posting
+     and timeline render. [done]
 end note
 
 @enduml

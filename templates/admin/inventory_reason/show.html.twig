@@ -1,0 +1,43 @@
+{% set actions %}
+    <a class="btn btn-light btn-sm" href="{{ path('app_admin_inventory_reason_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>Edit</a>
+{% endset %}
+
+<div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+    <div class="card-header">
+        {% if actions|trim %}
+            {{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
+        {% endif %}
+        <h5 class="card-title mb-0">{{ entity.name }}</h5>
+    </div>
+    <div class="card-body">
+        <table class="table table-sm mt-2 mb-4">
+            <tbody>
+            <tr>
+                <th>Name</th>
+                <td>{{ entity.name }}</td>
+            </tr>
+            <tr>
+                <th>Type</th>
+                <td>{{ entity.type.value }}</td>
+            </tr>
+            <tr>
+                <th>Status</th>
+                <td>{{ entity.status.value }}</td>
+            </tr>
+            <tr>
+                <th>Documents</th>
+                <td>{{ entity.inventoryDocuments|length }}</td>
+            </tr>
+            <tr>
+                <th>Store</th>
+                <td>{{ entity.store }}</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <form method="post" action="{{ path('app_admin_inventory_reason_archive', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" onsubmit="return confirm('Archive inventory reason?');">
+            <input type="hidden" name="_token" value="{{ csrf_token('archive_inventory_reason_' ~ entity.id) }}">
+            <button class="btn btn-danger btn-sm" type="submit">Archive</button>
+        </form>
+    </div>
+</div>

@@ -100,6 +100,17 @@ final class MenuBuilder
 			]
 		]);
 
+		$menu->addChild('Inventory documents', [
+			'route' => 'app_admin_inventory_document_index',
+			'routeParameters' => ['store_id' => $storeId],
+			'attributes' => [
+				'class' => 'sidebar-item',
+			],
+			'linkAttributes' => [
+				'class' => 'sidebar-link'
+			]
+		]);
+
 		$menu->addChild('Customers', [
 			'route' => 'app_admin_customer_index',
 			'routeParameters' => ['store_id' => $storeId],
@@ -159,8 +170,30 @@ final class MenuBuilder
 				]
 			]);
 
+			$item->addChild('Units', [
+				'route' => 'app_admin_unit_index',
+				'routeParameters' => ['store_id' => $storeId],
+				'attributes' => [
+					'class' => 'sidebar-item',
+				],
+				'linkAttributes' => [
+					'class' => 'sidebar-link'
+				]
+			]);
+
 			$item->addChild('Warehouses', [
 				'route' => 'app_admin_warehouse_index',
+				'routeParameters' => ['store_id' => $storeId],
+				'attributes' => [
+					'class' => 'sidebar-item',
+				],
+				'linkAttributes' => [
+					'class' => 'sidebar-link'
+				]
+			]);
+
+			$item->addChild('Inventory reasons', [
+				'route' => 'app_admin_inventory_reason_index',
 				'routeParameters' => ['store_id' => $storeId],
 				'attributes' => [
 					'class' => 'sidebar-item',

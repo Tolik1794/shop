@@ -29,6 +29,7 @@ class InventoryReasonRepository extends ServiceEntityRepository
 		return $this->createQueryBuilder('inventoryReason')
 			->andWhere('inventoryReason.store = :store')
 			->andWhere('inventoryReason.status != :deleted')
+			->andWhere('inventoryReason.deletedAt IS NULL')
 			->setParameter('store', $store)
 			->setParameter('deleted', ActiveStatusEnum::DELETED);
 	}
