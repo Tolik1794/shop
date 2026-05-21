@@ -51,6 +51,18 @@
 - `Action/MarkOrderCanceledAction.php`
 - `History/OrderHistoryRecorder.php`
 
+## Inventory document status
+
+`InventoryDocument` реалізує `WorkflowSubjectInterface`, але його `post` / `cancel` flow навмисно залишається у `InventoryPostingService`.
+
+Причина: posting не є простою зміною статусу. Він має транзакційні побічні ефекти: stock movements, average cost, reservation completion, reversal document creation і перерахунок progress/status пов’язаних `Order`, `Purchase`, `ProductionOrder`.
+
+Тому для inventory documents діє спеціалізований workflow:
+
+- `InventoryPostingService` змінює статус і пише `StatusHistory` через `GenericStatusHistoryRecorder`.
+- `DocumentProgressRecalculator` перераховує progress після posting/cancel.
+- `BusinessDocumentStatusSynchronizer` пише derived `OrderHistory` / `StatusHistory`, коли статус пов’язаного бізнес-документа справді змінився.
+
 ## Як додати новий workflow
 
 1. Реалізувати `WorkflowSubjectInterface` у сутності.

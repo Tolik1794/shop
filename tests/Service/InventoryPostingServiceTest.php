@@ -28,6 +28,7 @@ use App\Service\InventoryPostingService;
 use App\Service\StockReservationService;
 use App\Service\WarehouseStockService;
 use App\Workflow\History\GenericStatusHistoryRecorder;
+use App\Workflow\History\OrderHistoryRecorder;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -40,6 +41,7 @@ class InventoryPostingServiceTest extends TestCase
 	private UserManager&MockObject $userManager;
 	private StockReservationService&MockObject $stockReservationService;
 	private GenericStatusHistoryRecorder&MockObject $statusHistoryRecorder;
+	private OrderHistoryRecorder&MockObject $orderHistoryRecorder;
 	private InventoryPostingService $inventoryPostingService;
 
 	protected function setUp(): void
@@ -50,6 +52,7 @@ class InventoryPostingServiceTest extends TestCase
 		$this->userManager = $this->createMock(UserManager::class);
 		$this->stockReservationService = $this->createMock(StockReservationService::class);
 		$this->statusHistoryRecorder = $this->createMock(GenericStatusHistoryRecorder::class);
+		$this->orderHistoryRecorder = $this->createMock(OrderHistoryRecorder::class);
 		$this->userManager->method('getCurrentUser')->willReturn(null);
 		$this->entityManager->method('persist');
 		$this->entityManager->method('flush');
@@ -60,7 +63,7 @@ class InventoryPostingServiceTest extends TestCase
 			$this->entityManager,
 			$this->warehouseStockService,
 			$this->userManager,
-			new DocumentProgressRecalculator(new BusinessDocumentStatusSynchronizer($this->warehouseStockRepository, $this->statusHistoryRecorder)),
+			new DocumentProgressRecalculator(new BusinessDocumentStatusSynchronizer($this->warehouseStockRepository, $this->statusHistoryRecorder, $this->orderHistoryRecorder)),
 			$this->stockReservationService,
 			$this->statusHistoryRecorder,
 		);
@@ -227,6 +230,9 @@ class InventoryPostingServiceTest extends TestCase
 		$this->stockReservationService->expects($this->once())
 			->method('completeForOrderEntry')
 			->with($orderEntry, '2.0000', false);
+		$this->orderHistoryRecorder->expects($this->once())
+			->method('recordStatusChanged')
+			->with($order, 'sync_progress', 'confirmed', 'shipped', $this->anything());
 
 		$this->inventoryPostingService->post($document);
 
@@ -234,6 +240,56 @@ class InventoryPostingServiceTest extends TestCase
 		self::assertSame('0.0000', $orderEntry->getReturnedQuantity());
 		self::assertSame(OrderStatus::SHIPPED, $order->getStatus());
 		self::assertSame('6.0000', $document->getLines()->first()->getStockMovements()->first()->getUnitCost());
+	}
+
+	public function testCancelPostedSaleShipmentRecordsOrderStatusDriftBackToReadyToShip(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$order = (new Order())
+			->setStore($store)
+			->setNumber('SO-' . uniqid())
+			->setStatus(OrderStatus::CONFIRMED);
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('2.0000')
+			->setUnitPrice('10.0000')
+			->setUnitPriceBase('10.0000')
+			->setTotalPrice('20.0000')
+			->setTotalPriceBase('20.0000')
+			->setProductNameSnapshot('Inventory product')
+			->setProductCodeSnapshot('inventory-product')
+			->setUnitCodeSnapshot('pc')
+			->setUnitNameSnapshot('Piece');
+		$order->addOrderEntry($orderEntry);
+		$warehouseStock = $this->warehouseStock($warehouse, $product, '2.0000', '6.0000');
+		$document = $this->document($store)
+			->setType(InventoryDocumentType::SALE_SHIPMENT)
+			->setOrder($order)
+			->addLine($this->line($product, $warehouse, InventoryDirection::OUT, '2.0000', '10.0000')
+				->setOrderEntry($orderEntry));
+		$historyCalls = [];
+
+		$this->warehouseStockService->method('findOrCreate')->willReturn($warehouseStock);
+		$this->warehouseStockRepository->method('findOneByProductAndWarehouse')->willReturn($warehouseStock);
+		$this->orderHistoryRecorder->expects($this->exactly(2))
+			->method('recordStatusChanged')
+			->willReturnCallback(static function (Order $orderArg, string $transitionKey, string $fromStatus, string $toStatus) use ($order, &$historyCalls): void {
+				self::assertSame($order, $orderArg);
+				self::assertSame('sync_progress', $transitionKey);
+				$historyCalls[] = [$fromStatus, $toStatus];
+			});
+
+		$this->inventoryPostingService->post($document);
+		$this->inventoryPostingService->cancel($document);
+
+		self::assertSame([
+			['confirmed', 'shipped'],
+			['shipped', 'ready_to_ship'],
+		], $historyCalls);
+		self::assertSame(OrderStatus::READY_TO_SHIP, $order->getStatus());
+		self::assertSame('0.0000', $orderEntry->getShippedQuantity());
+		self::assertSame('2.0000', $warehouseStock->getQuantityOnHand());
 	}
 
 	public function testDirectReversalPostingIsBlocked(): void
