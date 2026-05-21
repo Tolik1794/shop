@@ -32,6 +32,7 @@ class ProductionRecipeType extends AbstractType
 			->add('isDefault')
 			->add('status', EnumType::class, [
 				'class' => ActiveStatusEnum::class,
+				'choices' => ActiveStatusEnum::userSelectableCases(),
 				'choice_label' => fn (ActiveStatusEnum $choice): string => $choice->value,
 			])
 			->add('items', CollectionType::class, [

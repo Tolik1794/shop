@@ -43,6 +43,7 @@ class UnitFilterType extends AbstractType
 			])
 			->add('status', EnumType::class, [
 				'class' => ActiveStatusEnum::class,
+				'choices' => ActiveStatusEnum::userSelectableCases(),
 				'choice_label' => fn(ActiveStatusEnum $choice): string => $choice->value,
 				'required' => false,
 				'mapped' => false,

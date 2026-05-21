@@ -4,7 +4,6 @@ namespace App\Repository;
 
 use App\Entity\InventoryReason;
 use App\Entity\Store;
-use App\Enum\ActiveStatusEnum;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -28,9 +27,7 @@ class InventoryReasonRepository extends ServiceEntityRepository
 	{
 		return $this->createQueryBuilder('inventoryReason')
 			->andWhere('inventoryReason.store = :store')
-			->andWhere('inventoryReason.status != :deleted')
 			->andWhere('inventoryReason.deletedAt IS NULL')
-			->setParameter('store', $store)
-			->setParameter('deleted', ActiveStatusEnum::DELETED);
+			->setParameter('store', $store);
 	}
 }

@@ -42,7 +42,8 @@ class StoreType extends AbstractType
 			->add('email')
 			->add('description')
 			->add('status', EnumType::class, [
-				'class' => ActiveStatusEnum::class
+				'class' => ActiveStatusEnum::class,
+				'choices' => ActiveStatusEnum::userSelectableCases(),
 			])
 			->add('costingMethod', EnumType::class, [
 				'class' => CostingMethodEnum::class,
