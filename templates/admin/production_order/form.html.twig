@@ -1,0 +1,88 @@
+{% extends 'admin/_store_components/layout.html.twig' %}
+
+{% block title %}Production order{% endblock %}
+
+{% block navbar_breadcrumb %}
+	{{ include('admin/_components/_breadcrumb.html.twig', {
+		breadcrumb_class: 'mb-0',
+		items: [
+			{
+				label: 'Production orders',
+				url: entity.id
+					? path('app_admin_production_order_index', {store_id: app.request.attributes.get('store_id'), id: entity.id, page: order_index_page})
+					: path('app_admin_production_order_index', {store_id: app.request.attributes.get('store_id')})
+			},
+			{label: entity.id ? '#' ~ entity.id : 'New'}
+		]
+	}) }}
+{% endblock %}
+
+{% block main_content %}
+	<main class="content" {{ stimulus_controller('production-form select-two') }}>
+		<div class="container-fluid p-0">
+			<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+				<div>
+					<h1 class="h3 mb-1">Production order #{{ entity.id }}</h1>
+					<div class="text-muted">{{ entity.product.name }} · {{ entity.status.value }}</div>
+				</div>
+				<div class="d-flex flex-wrap gap-2">
+					<button form="production-order-form" type="submit" class="btn btn-primary">Save</button>
+					<button form="production-order-form" name="save" value="stay" type="submit" class="btn btn-outline-primary">Save and continue</button>
+					<a href="{{ path('app_admin_production_order_index', app.request.query.all|merge({store_id: app.request.attributes.get('store_id'), id: entity.id, page: order_index_page})) }}" class="btn btn-light">Cancel</a>
+				</div>
+			</div>
+
+			{{ form_start(form, {attr: {id: 'production-order-form', 'data-select-two-target': 'form'}}) }}
+				{{ form_errors(form) }}
+				<div class="row g-3">
+					<div class="col-12 col-xl-4">
+						<div class="card">
+							<div class="card-header">
+								<h5 class="card-title mb-0">General</h5>
+							</div>
+							<div class="card-body">
+								<div class="mb-3">
+									<label class="form-label">Product</label>
+									<div>{{ entity.product.name }}</div>
+								</div>
+								<div class="mb-3">
+									<label class="form-label">Recipe</label>
+									<div>{{ entity.recipe ? entity.recipe.name : '' }}</div>
+								</div>
+								{{ form_row(form.warehouse) }}
+								{{ form_row(form.plannedQuantity) }}
+								{{ form_row(form.plannedStartAt) }}
+								{{ form_row(form.plannedEndAt) }}
+								{{ form_row(form.comment) }}
+							</div>
+						</div>
+					</div>
+					<div class="col-12 col-xl-8">
+						<div class="card">
+							<div class="card-header d-flex justify-content-between align-items-center">
+								<h5 class="card-title mb-0">Materials</h5>
+								<button type="button" class="btn btn-light btn-sm" data-action="production-form#addEntry">
+									<i class="fa-solid fa-plus me-1"></i>Add material
+								</button>
+							</div>
+							<div class="card-body">
+								<div data-production-form-target="entries">
+									{% for material in form.materials %}
+										{{ include('admin/production_order/_material_row.html.twig', {material: material}) }}
+									{% endfor %}
+								</div>
+								<div class="text-muted {{ form.materials|length > 0 ? 'd-none' : '' }}" data-production-form-target="emptyState">
+									No materials added.
+								</div>
+								<template data-production-form-target="prototype">
+									{{ include('admin/production_order/_material_row.html.twig', {material: form.materials.vars.prototype}) }}
+								</template>
+							</div>
+						</div>
+					</div>
+				</div>
+				{{ form_widget(form._token) }}
+			{{ form_end(form, {'render_rest': false}) }}
+		</div>
+	</main>
+{% endblock %}

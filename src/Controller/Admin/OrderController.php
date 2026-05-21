@@ -30,6 +30,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/admin/store/{store_id}/order', name: 'app_admin_order_'), IsGranted('ROLE_STORE_ADMIN')]
 class OrderController extends AbstractAdvancedController
 {
+	use QuickActionResponseTrait;
+
 	private const int DEFAULT_PAGE_LIMIT = 20;
 
 	public function __construct(
@@ -240,18 +242,22 @@ class OrderController extends AbstractAdvancedController
 	{
 		$this->denyOrderOutsideStore($order, $store);
 
-		if ($this->isCsrfTokenValid('confirm_order_' . $order->getId(), (string) $request->request->get('_token'))) {
-			try {
-				$this->orderManager->confirm($order);
-			} catch (RuntimeException) {
-			}
+		if (!$this->isCsrfTokenValid('confirm_order_' . $order->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Order action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
 		}
 
-		return $this->redirectToRoute('app_admin_order_index', [
-			'store_id' => $store->getId(),
-			'id' => $order->getId(),
-			'page' => $this->orderManager->getRepository()->getIndexPage($order, self::DEFAULT_PAGE_LIMIT),
-		]);
+		try {
+			$this->orderManager->confirm($order);
+			$this->addFlash('success', 'Order confirmed.');
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->quickActionResponse($request, $store, $order);
 	}
 
 	#[Route('/{id}/cancel', name: 'cancel', methods: ['POST'])]
@@ -264,15 +270,22 @@ class OrderController extends AbstractAdvancedController
 	{
 		$this->denyOrderOutsideStore($order, $store);
 
-		if ($this->isCsrfTokenValid('cancel_order_' . $order->getId(), (string) $request->request->get('_token'))) {
-			$this->orderManager->cancel($order);
+		if (!$this->isCsrfTokenValid('cancel_order_' . $order->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Order action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
 		}
 
-		return $this->redirectToRoute('app_admin_order_index', [
-			'store_id' => $store->getId(),
-			'id' => $order->getId(),
-			'page' => $this->orderManager->getRepository()->getIndexPage($order, self::DEFAULT_PAGE_LIMIT),
-		]);
+		try {
+			$this->orderManager->cancel($order);
+			$this->addFlash('success', 'Order canceled.');
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->quickActionResponse($request, $store, $order);
 	}
 
 	#[Route('/{id}/return-to-draft', name: 'return_to_draft', methods: ['POST'])]
@@ -285,18 +298,22 @@ class OrderController extends AbstractAdvancedController
 	{
 		$this->denyOrderOutsideStore($order, $store);
 
-		if ($this->isCsrfTokenValid('return_to_draft_order_' . $order->getId(), (string) $request->request->get('_token'))) {
-			try {
-				$this->orderManager->returnToDraft($order);
-			} catch (RuntimeException) {
-			}
+		if (!$this->isCsrfTokenValid('return_to_draft_order_' . $order->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Order action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
 		}
 
-		return $this->redirectToRoute('app_admin_order_index', [
-			'store_id' => $store->getId(),
-			'id' => $order->getId(),
-			'page' => $this->orderManager->getRepository()->getIndexPage($order, self::DEFAULT_PAGE_LIMIT),
-		]);
+		try {
+			$this->orderManager->returnToDraft($order);
+			$this->addFlash('success', 'Order returned to draft.');
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->quickActionResponse($request, $store, $order);
 	}
 
 	#[Route('/{id}/comment', name: 'comment_add', methods: ['POST'])]
@@ -468,6 +485,24 @@ class OrderController extends AbstractAdvancedController
 			'id' => $order->getId(),
 			'page' => $this->orderManager->getRepository()->getIndexPage($order, self::DEFAULT_PAGE_LIMIT),
 		]);
+	}
+
+	private function quickActionResponse(Request $request, Store $store, Order $order, int $status = Response::HTTP_OK): Response
+	{
+		if (!$this->wantsQuickActionJson($request)) {
+			return $this->redirectToOrderIndex($store, $order);
+		}
+
+		return $this->quickActionJsonResponse($request, [
+			'card' => $this->renderView('admin/order/show.html.twig', [
+				'entity' => $order,
+				'query_params' => $request->query->all(),
+			]),
+			'row' => $this->renderView('admin/order/_index_row.html.twig', [
+				'entity' => $order,
+				'first_entity' => $order,
+			]),
+		], $status);
 	}
 
 	/**

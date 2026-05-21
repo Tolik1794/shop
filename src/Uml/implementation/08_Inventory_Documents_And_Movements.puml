@@ -154,9 +154,10 @@ note right of InventoryDocument
   - currency fields are optional for purely technical documents.
 
   Remaining integration:
-  - ProductionOrder is not implemented yet.
+  - ProductionOrder exists, can be linked to production documents
+    and can complete through production document posting.
   - InventoryReason CRUD/validation can be expanded for UI workflows.
-  - transfer and production document flows are later stages.
+  - transfer document flow is a later stage.
 end note
 
 note right of InventoryReason
@@ -205,7 +206,7 @@ note bottom
 
   Deferred:
 
-  7. Add transfer and production document flows later.
+  7. Add transfer document flow later.
   8. Expand InventoryReason validation for adjustment/write-off
      UI workflows.
 

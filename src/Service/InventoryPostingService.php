@@ -6,6 +6,7 @@ use App\Entity\InventoryDocument;
 use App\Entity\InventoryDocumentLine;
 use App\Entity\Order;
 use App\Entity\OrderEntry;
+use App\Entity\ProductionOrder;
 use App\Entity\Purchase;
 use App\Entity\StockMovement;
 use App\Entity\Store;
@@ -65,7 +66,8 @@ class InventoryPostingService
 			->setComment(sprintf('Reversal of inventory document %s', $document->getNumber()))
 			->setReversedDocument($document)
 			->setOrder($document->getOrder())
-			->setPurchase($document->getPurchase());
+			->setPurchase($document->getPurchase())
+			->setProductionOrder($document->getProductionOrder());
 
 		foreach ($document->getLines() as $line) {
 			$reversal->addLine((new InventoryDocumentLine())
@@ -235,7 +237,8 @@ class InventoryPostingService
 	private function assertSingleBusinessDocument(InventoryDocument $document): void
 	{
 		$targetCount = (int) ($document->getOrder() instanceof Order)
-			+ (int) ($document->getPurchase() instanceof Purchase);
+			+ (int) ($document->getPurchase() instanceof Purchase)
+			+ (int) ($document->getProductionOrder() instanceof ProductionOrder);
 
 		if ($targetCount > 1) {
 			throw new RuntimeException('Inventory document can be linked to only one business document.');

@@ -1,0 +1,15 @@
+<div
+		class="position-fixed bottom-0 end-0 p-3 quick-action-flashes"
+		style="z-index: 1080; max-width: min(420px, calc(100vw - 1rem));"
+		{{ stimulus_target('reload-card', 'flashContainer') }}
+>
+	{% for type, messages in app.flashes %}
+		{% for message in messages %}
+			{% set alert_type = type == 'error' ? 'danger' : type %}
+			<div class="alert alert-{{ alert_type }} alert-dismissible mb-2 quick-action-flash" role="alert">
+				<button type="button" class="btn-close" aria-label="Close" data-action="reload-card#dismissFlash"></button>
+				<div class="alert-message">{{ message }}</div>
+			</div>
+		{% endfor %}
+	{% endfor %}
+</div>

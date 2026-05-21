@@ -1,0 +1,60 @@
+<tr
+		id="{{ entity.id }}"
+		data-id-column="id"
+		class="{{ first_entity and entity.id == first_entity.id ? 'table-active' : '' }}"
+		data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
+		data-link="{{ path('app_admin_production_order_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+		onclick="document.getElementById('first-tab').click()"
+>
+	<td>
+		<table class="table table-sm mb-2">
+			<thead>
+			<tr>
+				<th>ID</th>
+				<th>Product</th>
+				<th>Status</th>
+				<th>Planned</th>
+				<th>Completed</th>
+				<th>Warehouse</th>
+			</tr>
+			</thead>
+			<tbody>
+			<tr>
+				<td><strong>#{{ entity.id }}</strong></td>
+				<td><strong>{{ entity.product.name }}</strong></td>
+				<td>{{ entity.status.value }}</td>
+				<td>{{ entity.plannedQuantity }}</td>
+				<td>{{ entity.completedQuantity }}</td>
+				<td>{{ entity.warehouse ? entity.warehouse.name : '' }}</td>
+			</tr>
+			</tbody>
+		</table>
+
+		{% if entity.materials|length > 0 %}
+			<table class="table table-sm mb-0">
+				<thead>
+				<tr>
+					<th>Material</th>
+					<th>Code</th>
+					<th>Planned qty</th>
+					<th>Waste %</th>
+					<th>Comment</th>
+				</tr>
+				</thead>
+				<tbody>
+				{% for material in entity.materials %}
+					<tr>
+						<td><strong>{{ material.material.name }}</strong></td>
+						<td>{{ material.material.code }}</td>
+						<td>{{ material.plannedQuantity }}</td>
+						<td>{{ material.wastePercent }}</td>
+						<td>{{ material.comment }}</td>
+					</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+		{% else %}
+			<span class="text-muted small">No materials</span>
+		{% endif %}
+	</td>
+</tr>

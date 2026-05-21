@@ -1,0 +1,68 @@
+<tr
+		id="{{ entity.id }}"
+		data-id-column="id"
+		class="{{ first_entity and entity.id == first_entity.id ? 'table-active' : '' }}"
+		data-action="click->reload-card#reloadOrderCards click->reload-card#tableActivate"
+		data-show-link="{{ path('app_admin_order_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+		data-comments-link="{{ path('app_admin_order_comments', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+		data-history-link="{{ path('app_admin_order_history', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+		data-payments-link="{{ path('app_admin_payment_order_document', {store_id: app.request.attributes.get('store_id'), order_id: entity.id}) }}"
+		data-payment-complete="{{ entity.paymentStatus.value in ['paid', 'overpaid'] ? '1' : '0' }}"
+>
+	<td>
+		<table class="table table-sm mb-2">
+			<thead>
+			<tr>
+				<th>Number</th>
+				<th>Customer</th>
+				<th>Status</th>
+				<th>Total</th>
+				<th>Payment</th>
+			</tr>
+			</thead>
+			<tbody>
+			<tr>
+				<td><strong>{{ entity.number }}</strong></td>
+				<td><strong>{{ entity.customerNameSnapshot }}</strong></td>
+				<td>{{ entity.status.value }}</td>
+				<td><strong>{{ entity.totalAmount|money }} {{ entity.currency.code }}</strong></td>
+				<td>{{ entity.paymentStatus.value }}</td>
+			</tr>
+			</tbody>
+		</table>
+
+		{% if entity.orderEntries|length > 0 %}
+			<table class="table table-sm mb-0">
+				<thead>
+				<tr>
+					<th>Product</th>
+					<th>Qty</th>
+					<th>Unit</th>
+					<th>Price</th>
+					<th>Discount</th>
+					<th>Total</th>
+				</tr>
+				</thead>
+				<tbody>
+				{% for entry in entity.orderEntries %}
+					<tr>
+						<td>
+							<strong>{{ entry.productNameSnapshot }}</strong>
+							{% if entry.productCodeSnapshot %}
+								<div class="text-muted small">{{ entry.productCodeSnapshot }}</div>
+							{% endif %}
+						</td>
+						<td>{{ entry.quantity|number_format(2, '.', '') }}</td>
+						<td>{{ entry.unitCodeSnapshot }}</td>
+						<td>{{ entry.unitPrice|money }}</td>
+						<td>{{ entry.discountAmount ? entry.discountAmount|money : '' }}</td>
+						<td><strong>{{ entry.totalPrice|money }} {{ entity.currency.code }}</strong></td>
+					</tr>
+				{% endfor %}
+				</tbody>
+			</table>
+		{% else %}
+			<span class="text-muted small">No items</span>
+		{% endif %}
+	</td>
+</tr>

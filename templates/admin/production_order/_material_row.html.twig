@@ -1,0 +1,13 @@
+<div class="border rounded p-3 mb-3" data-production-form-target="row">
+	<div class="row g-3 align-items-end">
+		<div class="col-12 col-lg-4">{{ form_row(material.material) }}</div>
+		<div class="col-6 col-lg-2">{{ form_row(material.plannedQuantity) }}</div>
+		<div class="col-6 col-lg-2">{{ form_row(material.wastePercent) }}</div>
+		<div class="col-12 col-lg-3">{{ form_row(material.comment) }}</div>
+		<div class="col-12 col-lg-1 text-lg-end">
+			<button type="button" class="btn btn-light btn-sm" data-action="production-form#removeEntry">
+				<i class="fa-solid fa-trash"></i>
+			</button>
+		</div>
+	</div>
+</div>
