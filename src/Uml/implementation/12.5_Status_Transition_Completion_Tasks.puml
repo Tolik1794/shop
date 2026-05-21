@@ -24,12 +24,12 @@ package "Implemented coverage" as Implemented {
 	[12.5.3 Inventory document workflow boundary decision]
 	[Payment status cache]
 	[Stock reservation lifecycle]
+	[12.5.4 Reference ActiveStatus lifecycle consistency]
 }
 
 package "Remaining transition tasks" as Remaining {
 	[12.5.2 Deferred purchase receipt reversal policy]
 	[12.5.3 Optional generic inventory workflow]
-	[12.5.4 Reference ActiveStatus lifecycle consistency]
 }
 
 StatusTransitionService --> [Order base workflow]
@@ -210,21 +210,24 @@ note right of [12.5.4 Reference ActiveStatus lifecycle consistency]
   Goal:
   Decide how ActiveStatusEnum::DELETED is supposed to work.
 
+  Implemented decision:
+  - ActiveStatusEnum::DELETED is kept only as a legacy enum value.
+  - Reference archive/delete flows use status=inactive plus deletedAt.
+  - Admin forms and filters expose only active/inactive choices.
+  - Repository availability filters use deletedAt as the soft-delete marker.
+
   Current state:
   - active and inactive are used by forms and ReferenceArchivePolicy.
   - ReferenceArchivePolicy archives references as inactive plus deletedAt.
-  - ActiveStatusEnum::DELETED exists, but no service currently sets it.
+  - ActiveStatusEnum::DELETED exists for compatibility, but no service
+    should set it as the normal archive path.
 
-  Implementation steps:
-  1. Decide whether deleted is a real business status or legacy enum value.
-  2. If deleted is real, route delete/archive flows through a manager/service
-     that sets DELETED consistently and preserves historical references.
-  3. If deleted is not real, keep inactive plus deletedAt as the deletion
-     marker and remove deleted from admin choices where users should not
-     select it manually.
-  4. Align repository filters with the chosen rule.
-  5. Add tests for Product, Category, Unit, Warehouse, Customer,
-     Supplier and InventoryReason archive/delete behavior.
+  Implemented steps:
+  1. Added ActiveStatusEnum::userSelectableCases().
+  2. Updated admin status form/filter fields to exclude deleted.
+  3. Aligned InventoryReasonRepository with deletedAt filtering.
+  4. Extended ReferenceArchivePolicy tests to assert inactive, not deleted.
+  5. Added tests for enum choices, form/filter choices and repository rule.
 
   Dependencies:
   - ReferenceArchivePolicy.

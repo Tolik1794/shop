@@ -41,6 +41,7 @@ class ReferenceArchivePolicyTest extends TestCase
 			$this->policy->archive($reference, $archivedAt);
 
 			self::assertSame(ActiveStatusEnum::INACTIVE, $reference->getStatus());
+			self::assertNotSame(ActiveStatusEnum::DELETED, $reference->getStatus());
 			self::assertSame($archivedAt, $reference->getDeletedAt());
 			self::assertSame($archivedAt, $reference->getUpdatedAt());
 		}
