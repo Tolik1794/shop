@@ -42,4 +42,52 @@ class WorkflowStatusDriftTest extends TestCase
 
 		self::assertSame([], $violations);
 	}
+
+	public function testInventoryDocumentStatusWritesStayInsidePostingService(): void
+	{
+		$allowedFiles = [
+			'src/Service/InventoryPostingService.php',
+		];
+		$violations = [];
+		$sourceDir = __DIR__ . '/../../src/';
+		$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($sourceDir));
+
+		foreach ($iterator as $file) {
+			if (!$file instanceof SplFileInfo || $file->getExtension() !== 'php') {
+				continue;
+			}
+
+			$relativePath = 'src/' . str_replace('\\', '/', substr($file->getPathname(), strlen($sourceDir)));
+			if (in_array($relativePath, $allowedFiles, true)) {
+				continue;
+			}
+
+			$contents = file_get_contents($file->getPathname());
+			if ($contents !== false && preg_match('/->setStatus\\(\\s*InventoryDocumentStatus::/', $contents) === 1) {
+				$violations[] = $relativePath;
+			}
+		}
+
+		self::assertSame([], $violations);
+	}
+
+	public function testInventoryDocumentHasNoGenericWorkflowDefinition(): void
+	{
+		$definitionDir = __DIR__ . '/../../src/Workflow/Definition/';
+		$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($definitionDir));
+		$violations = [];
+
+		foreach ($iterator as $file) {
+			if (!$file instanceof SplFileInfo || $file->getExtension() !== 'php') {
+				continue;
+			}
+
+			$contents = file_get_contents($file->getPathname());
+			if ($contents !== false && str_contains($contents, 'InventoryDocument')) {
+				$violations[] = str_replace('\\', '/', substr($file->getPathname(), strlen(__DIR__ . '/../../')));
+			}
+		}
+
+		self::assertSame([], $violations);
+	}
 }

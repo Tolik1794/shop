@@ -41,6 +41,12 @@ class PurchaseWorkflowDefinition implements WorkflowDefinitionInterface
 				toStatus: PurchaseStatus::DRAFT->value,
 				historyEventKey: 'purchase.status_changed',
 			),
+			'complete' => new TransitionDefinition(
+				key: 'complete',
+				fromStatuses: [PurchaseStatus::RECEIVED->value],
+				toStatus: PurchaseStatus::COMPLETED->value,
+				historyEventKey: 'purchase.status_changed',
+			),
 			'cancel' => new TransitionDefinition(
 				key: 'cancel',
 				fromStatuses: [

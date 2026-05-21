@@ -62,6 +62,10 @@
 - `InventoryPostingService` змінює статус і пише `StatusHistory` через `GenericStatusHistoryRecorder`.
 - `DocumentProgressRecalculator` перераховує progress після posting/cancel.
 - `BusinessDocumentStatusSynchronizer` пише derived `OrderHistory` / `StatusHistory`, коли статус пов’язаного бізнес-документа справді змінився.
+- `InventoryDocumentWorkflowDefinition` не додається, доки немає окремого рішення переносити orchestration у generic workflow.
+- `WorkflowStatusDriftTest` фіксує цю межу: прямі зміни `InventoryDocumentStatus` дозволені лише в `InventoryPostingService`, а generic definition для `InventoryDocument` відсутня.
+
+Якщо пізніше буде прийняте рішення додати generic inventory workflow, definition має бути тонким orchestration-шаром і делегувати stock movements, average cost, reversal posting та progress sync у спеціалізовані сервіси. History має залишитися один раз на фактичний `post` або `cancel`.
 
 ## Як додати новий workflow
 
@@ -78,6 +82,7 @@
 ## Правила модуля
 
 - Не змінювати бізнес-статуси напряму поза transition service.
+- Виняток: `InventoryDocument` змінює статус у `InventoryPostingService`, бо posting/cancel має stock side effects і reversal flow.
 - Називати transitions діями бізнесу, а не назвами цільових статусів.
 - Зворотний перехід описувати окремо, якщо він справді дозволений.
 - Guards не повинні змінювати стан сутності.

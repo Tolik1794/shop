@@ -89,5 +89,12 @@
 				<button class="btn btn-danger btn-sm" type="submit">Cancel</button>
 			</form>
 		{% endif %}
+
+		{% if entity.status.value == 'received' %}
+			<form method="post" action="{{ path('app_admin_purchase_complete', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="Complete purchase?">
+				<input type="hidden" name="_token" value="{{ csrf_token('complete_purchase_' ~ entity.id) }}">
+				<button class="btn btn-success btn-sm" type="submit">Complete</button>
+			</form>
+		{% endif %}
 	</div>
 </div>

@@ -285,6 +285,34 @@ class PurchaseController extends AbstractAdvancedController
 		return $this->quickActionResponse($request, $store, $purchase);
 	}
 
+	#[Route('/{id}/complete', name: 'complete', methods: ['POST'])]
+	public function complete(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Purchase $purchase,
+	): Response
+	{
+		$this->denyPurchaseOutsideStore($purchase, $store);
+
+		if (!$this->isCsrfTokenValid('complete_purchase_' . $purchase->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Purchase action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $purchase, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		try {
+			$this->purchaseManager->complete($purchase);
+			$this->addFlash('success', 'Purchase completed.');
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $purchase, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->quickActionResponse($request, $store, $purchase);
+	}
+
 	private function createPurchaseForm(Purchase $purchase, Store $store): FormInterface
 	{
 		return $this->createForm(PurchaseType::class, $purchase, [

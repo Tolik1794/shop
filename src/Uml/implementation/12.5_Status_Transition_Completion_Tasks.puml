@@ -18,15 +18,17 @@ package "Implemented coverage" as Implemented {
 	[12.5.1 Order delivery and close workflow]
 	[Purchase base workflow]
 	[Purchase inventory-derived statuses]
+	[12.5.2 Purchase close workflow]
 	[Production order workflow]
 	[Inventory document post/cancel]
+	[12.5.3 Inventory document workflow boundary decision]
 	[Payment status cache]
 	[Stock reservation lifecycle]
 }
 
 package "Remaining transition tasks" as Remaining {
-	[12.5.2 Purchase close and post-receipt cancellation rules]
-	[12.5.3 Inventory document workflow boundary decision]
+	[12.5.2 Deferred purchase receipt reversal policy]
+	[12.5.3 Optional generic inventory workflow]
 	[12.5.4 Reference ActiveStatus lifecycle consistency]
 }
 
@@ -42,9 +44,11 @@ ReferenceArchivePolicy --> [12.5.4 Reference ActiveStatus lifecycle consistency]
 
 [Order base workflow] --> [12.5.1 Order delivery and close workflow]
 [Order inventory-derived statuses] --> [12.5.1 Order delivery and close workflow]
-[Purchase base workflow] --> [12.5.2 Purchase close and post-receipt cancellation rules]
-[Purchase inventory-derived statuses] --> [12.5.2 Purchase close and post-receipt cancellation rules]
+[Purchase base workflow] --> [12.5.2 Purchase close workflow]
+[Purchase inventory-derived statuses] --> [12.5.2 Purchase close workflow]
+[12.5.2 Purchase close workflow] --> [12.5.2 Deferred purchase receipt reversal policy]
 [Inventory document post/cancel] --> [12.5.3 Inventory document workflow boundary decision]
+[12.5.3 Inventory document workflow boundary decision] --> [12.5.3 Optional generic inventory workflow]
 
 note right of Implemented
   Audit result from current code:
@@ -61,14 +65,13 @@ note right of Implemented
 
   Purchases:
   - Implemented by PurchaseWorkflowDefinition:
-    order, return_to_draft, cancel for draft/ordered.
+    order, return_to_draft, complete, cancel for draft/ordered.
   - Implemented as inventory-derived synchronization:
     partially_received, received,
     partially_returned, returned.
-  - Not implemented as explicit business transition:
-    completed.
-  - Post-receipt cancellation is not implemented as a transition;
-    current cancellation only covers draft/ordered.
+  - completed is explicit: received -> completed.
+  - Post-receipt cancellation remains intentionally blocked until a
+    reversal/correction policy is defined.
 
   Production orders:
   - Implemented workflow covers all enum states:
@@ -114,29 +117,23 @@ note right of [12.5.1 Order delivery and close workflow]
     shipment and return statuses.
 end note
 
-note right of [12.5.2 Purchase close and post-receipt cancellation rules]
+note right of [12.5.2 Purchase close workflow]
   Goal:
   Complete purchase workflow around received/returned documents.
 
-  Missing transitions to define:
+  Implemented transitions:
   - complete: received -> completed.
-  - Optional business decision:
-    whether returned can move to completed, or whether returned is terminal.
-  - Optional business decision:
-    whether partially_received/received purchases can be canceled
-    only after inventory reversal, or must stay non-cancelable.
+  - returned remains terminal for now.
+  - partially_received/received cancellation remains blocked.
 
-  Implementation steps:
-  1. Confirm the close rule for received and returned purchases.
-  2. Confirm whether cancellation after receipt is allowed.
-  3. If allowed, design cancellation as reversal/correction workflow,
-     not direct status overwrite.
-  4. Add required transitions to PurchaseWorkflowDefinition.
-  5. Add PurchaseManager methods and admin POST actions with CSRF.
-  6. Keep receipt/return progress derived from InventoryDocument posting.
-  7. Record StatusHistory through GenericStatusHistoryRecorder.
-  8. Add tests for ordered, partial receipt, full receipt,
-     return, completion and blocked cancellation cases.
+  Implemented steps:
+  1. Added complete transition to PurchaseWorkflowDefinition.
+  2. Added PurchaseManager::complete().
+  3. Added admin POST action with CSRF protection.
+  4. Added show-card Complete button for received purchases.
+  5. Kept receipt/return progress derived from InventoryDocument posting.
+  6. Kept StatusHistory through GenericStatusHistoryRecorder.
+  7. Added tests for completion and blocked paths.
 
   Dependencies:
   - PurchaseWorkflowDefinition.
@@ -147,10 +144,30 @@ note right of [12.5.2 Purchase close and post-receipt cancellation rules]
   - Admin PurchaseController and purchase templates.
 end note
 
+note right of [12.5.2 Deferred purchase receipt reversal policy]
+  Deferred business decisions:
+  - Whether returned can move to completed, or whether returned is terminal.
+  - Whether partially_received/received purchases can be canceled only after
+    inventory reversal, or must stay non-cancelable.
+
+  If cancellation after receipt becomes allowed:
+  - design it as reversal/correction workflow,
+    not direct status overwrite;
+  - preserve InventoryDocument and StockMovement history;
+  - keep receipt/return progress derived from posted inventory documents.
+end note
+
 note right of [12.5.3 Inventory document workflow boundary decision]
   Goal:
   Remove ambiguity caused by InventoryDocument implementing
   WorkflowSubjectInterface while post/cancel remains specialized.
+
+  Implemented decision:
+  - Option A is selected.
+  - InventoryPostingService remains the workflow owner for
+    InventoryDocument post/cancel/reversal.
+  - No InventoryDocumentWorkflowDefinition is registered.
+  - WorkflowStatusDriftTest guards this boundary.
 
   Current state:
   - All InventoryDocumentStatus values are reachable:
@@ -159,21 +176,14 @@ note right of [12.5.3 Inventory document workflow boundary decision]
   - Generic StatusTransitionService cannot apply inventory post/cancel
     because no InventoryDocumentWorkflowDefinition is registered.
 
-  Implementation options:
-  A. Keep the specialized workflow and document it as intentional.
-  B. Add InventoryDocumentWorkflowDefinition as a thin orchestration layer
-     only if it delegates stock side effects to InventoryPostingService
-     actions and preserves one history record per transition.
-
-  Implementation steps:
-  1. Choose option A or B before editing runtime code.
-  2. If A, add a drift test/documentation assertion that inventory status
-     writes are allowed only inside InventoryPostingService.
-  3. If B, add post, cancel_draft and cancel_posted transitions.
-  4. Keep stock movements, average cost, reversals and progress sync inside
-     InventoryPostingService or dedicated actions/services.
-  5. Add tests for draft post, draft cancel, posted cancel with reversal,
-     blocked direct reversal posting and single history recording.
+  Implemented steps:
+  1. Documented the specialized boundary in src/Workflow/README.md.
+  2. Added a drift test that InventoryDocumentStatus direct writes are
+     allowed only inside InventoryPostingService.
+  3. Added a drift test that no generic InventoryDocument workflow
+     definition exists.
+  4. Kept stock movements, average cost, reversals and progress sync inside
+     InventoryPostingService and related specialized services.
 
   Dependencies:
   - InventoryPostingService.
@@ -181,6 +191,19 @@ note right of [12.5.3 Inventory document workflow boundary decision]
   - DocumentProgressRecalculator.
   - BusinessDocumentStatusSynchronizer.
   - WorkflowStatusDriftTest.
+end note
+
+note right of [12.5.3 Optional generic inventory workflow]
+  Deferred option B:
+  - Add InventoryDocumentWorkflowDefinition only if the project later needs
+    generic workflow orchestration for inventory documents.
+  - If added, it must delegate stock side effects to services/actions and
+    preserve one history record per transition.
+
+  Candidate transitions:
+  - post: draft -> posted.
+  - cancel_draft: draft -> canceled.
+  - cancel_posted: posted -> canceled with reversal side effect.
 end note
 
 note right of [12.5.4 Reference ActiveStatus lifecycle consistency]
