@@ -35,4 +35,39 @@ class InventoryDocumentRepository extends ServiceEntityRepository
 			->andWhere('inventoryDocument.store = :store')
 			->setParameter('store', $store);
 	}
+
+	public function findOneForStoreWithDetails(Store $store, int $id): ?InventoryDocument
+	{
+		return $this->createQueryBuilder('inventoryDocument')
+			->leftJoin('inventoryDocument.reason', 'reason')
+			->addSelect('reason')
+			->leftJoin('inventoryDocument.currency', 'currency')
+			->addSelect('currency')
+			->leftJoin('inventoryDocument.order', 'orders')
+			->addSelect('orders')
+			->leftJoin('inventoryDocument.purchase', 'purchase')
+			->addSelect('purchase')
+			->leftJoin('inventoryDocument.productionOrder', 'productionOrder')
+			->addSelect('productionOrder')
+			->leftJoin('inventoryDocument.reversedDocument', 'reversedDocument')
+			->addSelect('reversedDocument')
+			->leftJoin('inventoryDocument.lines', 'line')
+			->addSelect('line')
+			->leftJoin('line.product', 'product')
+			->addSelect('product')
+			->leftJoin('line.warehouse', 'warehouse')
+			->addSelect('warehouse')
+			->leftJoin('line.warehouseStock', 'warehouseStock')
+			->addSelect('warehouseStock')
+			->leftJoin('line.stockMovements', 'stockMovement')
+			->addSelect('stockMovement')
+			->andWhere('inventoryDocument.store = :store')
+			->andWhere('inventoryDocument.id = :id')
+			->setParameter('store', $store)
+			->setParameter('id', $id)
+			->orderBy('line.id', 'ASC')
+			->addOrderBy('stockMovement.id', 'ASC')
+			->getQuery()
+			->getOneOrNullResult();
+	}
 }

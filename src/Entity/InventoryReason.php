@@ -10,9 +10,15 @@ use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 #[ORM\Entity(repositoryClass: InventoryReasonRepository::class)]
 #[ORM\UniqueConstraint(name: 'uniq_inventory_reason_store_type_name', columns: ['store_id', 'type', 'name'])]
+#[UniqueEntity(
+	fields: ['store', 'type', 'name'],
+	errorPath: 'name',
+	message: 'There is already an inventory reason with this type and name.'
+)]
 class InventoryReason
 {
 	#[ORM\Id]

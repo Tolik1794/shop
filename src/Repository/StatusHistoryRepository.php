@@ -37,4 +37,19 @@ class StatusHistoryRepository extends ServiceEntityRepository
 			->getQuery()
 			->getResult();
 	}
+
+	public function hasTimelineFor(Store $store, StatusHistoryEntityType $entityType, int $entityId): bool
+	{
+		return (bool) $this->createQueryBuilder('statusHistory')
+			->select('1')
+			->andWhere('statusHistory.store = :store')
+			->andWhere('statusHistory.entityType = :entityType')
+			->andWhere('statusHistory.entityId = :entityId')
+			->setParameter('store', $store)
+			->setParameter('entityType', $entityType)
+			->setParameter('entityId', $entityId)
+			->setMaxResults(1)
+			->getQuery()
+			->getOneOrNullResult();
+	}
 }

@@ -40,6 +40,7 @@ class CustomerType extends AbstractType
 			->add('email')
 			->add('status', EnumType::class, [
 				'class' => ActiveStatusEnum::class,
+				'choices' => ActiveStatusEnum::userSelectableCases(),
 				'choice_label' => fn(ActiveStatusEnum $choice) => $choice->value,
 			])
 			->add('comment', TextareaType::class, [

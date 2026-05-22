@@ -1,0 +1,109 @@
+<div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+	<div class="card-header">
+		<h5 class="card-title mb-0">{{ entity.number }}</h5>
+	</div>
+	<div class="card-body">
+		<table class="table table-sm mt-2 mb-4">
+			<tbody>
+			<tr><th>Date</th><td>{{ entity.documentDate|date('Y-m-d') }}</td></tr>
+			<tr><th>Type</th><td>{{ entity.type.value }}</td></tr>
+			<tr><th>Status</th><td>{{ entity.status.value }}</td></tr>
+			<tr><th>Currency</th><td>{{ entity.currency ? entity.currency.code : '—' }}</td></tr>
+			<tr><th>Exchange rate</th><td>{{ entity.exchangeRateToBase ?: '—' }}</td></tr>
+			<tr><th>Total</th><td>{{ entity.totalAmount is not null ? entity.totalAmount|money : '—' }}</td></tr>
+			<tr><th>Total base</th><td>{{ entity.totalAmountBase is not null ? entity.totalAmountBase|money : '—' }}</td></tr>
+			<tr><th>Reason</th><td>{{ entity.reason ? entity.reason.name ~ ' (' ~ entity.reason.type.value ~ ')' : '—' }}</td></tr>
+			<tr>
+				<th>Linked document</th>
+				<td>
+					{% if entity.order %}
+						<a href="{{ path('app_admin_order_index', {store_id: app.request.attributes.get('store_id'), id: entity.order.id}) }}">Order {{ entity.order.number }}</a>
+					{% elseif entity.purchase %}
+						<a href="{{ path('app_admin_purchase_index', {store_id: app.request.attributes.get('store_id'), id: entity.purchase.id}) }}">Purchase {{ entity.purchase.number }}</a>
+					{% elseif entity.productionOrder %}
+						<a href="{{ path('app_admin_production_order_index', {store_id: app.request.attributes.get('store_id'), id: entity.productionOrder.id}) }}">Production #{{ entity.productionOrder.id }}</a>
+					{% else %}
+						<span class="text-muted">—</span>
+					{% endif %}
+				</td>
+			</tr>
+			<tr><th>Posted at</th><td>{{ entity.postedAt ? entity.postedAt|date('Y-m-d H:i') : '—' }}</td></tr>
+			<tr><th>Canceled at</th><td>{{ entity.canceledAt ? entity.canceledAt|date('Y-m-d H:i') : '—' }}</td></tr>
+			<tr><th>Reversed document</th><td>{{ entity.reversedDocument ? entity.reversedDocument.number : '—' }}</td></tr>
+			<tr><th>Comment</th><td>{{ entity.comment ?: '—' }}</td></tr>
+			</tbody>
+		</table>
+
+		{% if entity.status.value == 'draft' %}
+			<form method="post" action="{{ path('app_admin_inventory_document_post', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="Post inventory document?">
+				<input type="hidden" name="_token" value="{{ csrf_token('post_inventory_document_' ~ entity.id) }}">
+				<button class="btn btn-success btn-sm" type="submit"><i class="fa-solid fa-check me-1"></i>Post</button>
+			</form>
+		{% endif %}
+
+		{% if entity.status.value != 'canceled' %}
+			<form method="post" action="{{ path('app_admin_inventory_document_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="Cancel inventory document?">
+				<input type="hidden" name="_token" value="{{ csrf_token('cancel_inventory_document_' ~ entity.id) }}">
+				<button class="btn btn-danger btn-sm" type="submit"><i class="fa-solid fa-ban me-1"></i>Cancel</button>
+			</form>
+		{% endif %}
+
+		<h6 class="mt-4 mb-2">Lines</h6>
+		<table class="table table-sm mb-4">
+			<thead>
+			<tr>
+				<th>Product</th>
+				<th>Warehouse</th>
+				<th>Direction</th>
+				<th>Quantity</th>
+				<th>Unit price</th>
+				<th>Total</th>
+			</tr>
+			</thead>
+			<tbody>
+			{% for line in entity.lines %}
+				<tr>
+					<td>{{ line.product.name }} <span class="text-muted">({{ line.product.code }})</span></td>
+					<td>{{ line.warehouse.name }}</td>
+					<td>{{ line.direction.value }}</td>
+					<td>{{ line.quantity }}</td>
+					<td>{{ line.unitPrice is not null ? line.unitPrice|money : '—' }}</td>
+					<td>{{ line.totalPrice is not null ? line.totalPrice|money : '—' }}</td>
+				</tr>
+			{% else %}
+				<tr><td colspan="6" class="text-muted">No lines.</td></tr>
+			{% endfor %}
+			</tbody>
+		</table>
+
+		<h6 class="mt-4 mb-2">Stock movements</h6>
+		<table class="table table-sm mb-0">
+			<thead>
+			<tr>
+				<th>Line</th>
+				<th>Created</th>
+				<th>Quantity change</th>
+				<th>Unit cost</th>
+				<th>Balance after</th>
+			</tr>
+			</thead>
+			<tbody>
+			{% for line in entity.lines %}
+				{% for movement in line.stockMovements %}
+					<tr>
+						<td>{{ line.product.name }} · {{ line.warehouse.name }}</td>
+						<td>{{ movement.createdAt|date('Y-m-d H:i') }}</td>
+						<td>{{ movement.quantityChange }}</td>
+						<td>{{ movement.unitCost|money }}</td>
+						<td>{{ movement.balanceAfter ?: '—' }}</td>
+					</tr>
+				{% endfor %}
+			{% else %}
+			{% endfor %}
+			{% if entity.lines|filter(line => line.stockMovements|length > 0)|length == 0 %}
+				<tr><td colspan="5" class="text-muted">No stock movements yet.</td></tr>
+			{% endif %}
+			</tbody>
+		</table>
+	</div>
+</div>

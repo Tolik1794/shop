@@ -23,7 +23,7 @@ class DocumentProgressRecalculator
 	public function recalculateForInventoryDocument(InventoryDocument $document, ?TransitionContext $context = null): void
 	{
 		if ($document->getOrder() instanceof Order) {
-			$this->recalculateOrder($document->getOrder());
+			$this->recalculateOrder($document->getOrder(), $context);
 		}
 
 		if ($document->getPurchase() instanceof Purchase) {
@@ -40,13 +40,13 @@ class DocumentProgressRecalculator
 		}
 	}
 
-	public function recalculateOrder(Order $order): void
+	public function recalculateOrder(Order $order, ?TransitionContext $context = null): void
 	{
 		foreach ($order->getOrderEntries() as $entry) {
 			$this->recalculateOrderEntry($entry);
 		}
 
-		$this->statusSynchronizer->syncOrder($order);
+		$this->statusSynchronizer->syncOrder($order, $context);
 	}
 
 	public function recalculatePurchase(Purchase $purchase, ?TransitionContext $context = null): void

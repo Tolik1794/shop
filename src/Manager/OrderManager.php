@@ -13,6 +13,7 @@ use App\Entity\User\User;
 use App\Exception\StockOperationException;
 use App\Repository\OrderRepository;
 use App\Repository\WarehouseStockRepository;
+use App\Service\BusinessDocumentStatusSynchronizer;
 use App\Service\ExchangeRateResolver;
 use App\Service\Order\OrderEntryPricingService;
 use App\Service\Order\OrderEntrySnapshotter;
@@ -38,6 +39,7 @@ class OrderManager extends AbstractManager
 		private readonly UserManager $userManager,
 		private readonly WarehouseStockRepository $warehouseStockRepository,
 		private readonly StockReservationService $stockReservationService,
+		private readonly BusinessDocumentStatusSynchronizer $businessDocumentStatusSynchronizer,
 	)
 	{
 	}
@@ -113,9 +115,12 @@ class OrderManager extends AbstractManager
 	public function confirm(Order $order): void
 	{
 		$this->entityManager->wrapInTransaction(function () use ($order): void {
-			$this->statusTransitionService->apply($order, 'confirm', $this->transitionContext());
+			$context = $this->transitionContext();
+			$this->statusTransitionService->apply($order, 'confirm', $context);
 			$this->saveOrder($order);
 			$this->reserveStockForOrder($order);
+			$this->businessDocumentStatusSynchronizer->syncOrder($order, $context);
+			$this->entityManager->flush();
 		});
 	}
 
@@ -137,6 +142,22 @@ class OrderManager extends AbstractManager
 		$this->entityManager->wrapInTransaction(function () use ($order): void {
 			$this->statusTransitionService->apply($order, 'return_to_draft', $this->transitionContext());
 			$this->releaseActiveReservations($order);
+			$this->saveOrder($order);
+		});
+	}
+
+	public function markDelivered(Order $order): void
+	{
+		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->statusTransitionService->apply($order, 'mark_delivered', $this->transitionContext());
+			$this->saveOrder($order);
+		});
+	}
+
+	public function complete(Order $order): void
+	{
+		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->statusTransitionService->apply($order, 'complete', $this->transitionContext());
 			$this->saveOrder($order);
 		});
 	}

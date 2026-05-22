@@ -71,6 +71,27 @@ class OrderHistoryRecorder implements HistoryRecorderInterface
 		$this->create($order, 'order.updated', $this->sourceForActor($actor), 'Order updated', changes: $changes, actor: $actor);
 	}
 
+	public function recordStatusChanged(
+		Order $order,
+		string $transitionKey,
+		string $fromStatus,
+		string $toStatus,
+		TransitionContext $context,
+	): void
+	{
+		$this->create(
+			order: $order,
+			eventKey: 'order.status_changed',
+			source: $this->resolveSource($context->source),
+			title: 'Order status changed',
+			description: sprintf('Status changed from %s to %s.', $fromStatus, $toStatus),
+			changes: ['status' => ['from' => $fromStatus, 'to' => $toStatus]],
+			payload: array_replace(['transition' => $transitionKey], $context->payload),
+			actor: $context->actor,
+			occurredAt: $context->occurredAt,
+		);
+	}
+
 	/**
 	 * @param array<string, array{from: mixed, to: mixed}> $changes
 	 */

@@ -16,6 +16,7 @@ use App\Manager\OrderCommentManager;
 use App\Repository\CustomerRepository;
 use App\Repository\OrderHistoryRepository;
 use App\Service\FilterFormHandler;
+use App\Service\Inventory\OrderShipmentUseCase;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
 use RuntimeException;
@@ -39,6 +40,7 @@ class OrderController extends AbstractAdvancedController
 		private readonly OrderCommentManager $orderCommentManager,
 		private readonly CustomerRepository $customerRepository,
 		private readonly OrderHistoryRepository $orderHistoryRepository,
+		private readonly OrderShipmentUseCase $orderShipmentUseCase,
 	)
 	{
 	}
@@ -199,6 +201,7 @@ class OrderController extends AbstractAdvancedController
 			'entity' => $order,
 			...$this->getOrderDiscussionViewData($order),
 			'query_params' => $request->query->all(),
+			'can_ship' => $this->orderShipmentUseCase->hasShippableLines($order),
 		]);
 	}
 
@@ -314,6 +317,93 @@ class OrderController extends AbstractAdvancedController
 		}
 
 		return $this->quickActionResponse($request, $store, $order);
+	}
+
+	#[Route('/{id}/mark-delivered', name: 'mark_delivered', methods: ['POST'])]
+	public function markDelivered(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Order $order,
+	): Response
+	{
+		$this->denyOrderOutsideStore($order, $store);
+
+		if (!$this->isCsrfTokenValid('mark_delivered_order_' . $order->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Order action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		try {
+			$this->orderManager->markDelivered($order);
+			$this->addFlash('success', 'Order marked as delivered.');
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->quickActionResponse($request, $store, $order);
+	}
+
+	#[Route('/{id}/complete', name: 'complete', methods: ['POST'])]
+	public function complete(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Order $order,
+	): Response
+	{
+		$this->denyOrderOutsideStore($order, $store);
+
+		if (!$this->isCsrfTokenValid('complete_order_' . $order->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Order action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		try {
+			$this->orderManager->complete($order);
+			$this->addFlash('success', 'Order completed.');
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->quickActionResponse($request, $store, $order);
+	}
+
+	#[Route('/{id}/ship', name: 'ship', methods: ['POST'])]
+	public function ship(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Order $order,
+	): Response
+	{
+		$this->denyOrderOutsideStore($order, $store);
+
+		if (!$this->isCsrfTokenValid('ship_order_' . $order->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Order action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		try {
+			$inventoryDocument = $this->orderShipmentUseCase->createDraft($order);
+			$this->addFlash('success', 'Order shipment draft created. Review and post the inventory document to ship stock.');
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->redirectToRoute('app_admin_inventory_document_index', [
+			'store_id' => $store->getId(),
+			'id' => $inventoryDocument->getId(),
+		]);
 	}
 
 	#[Route('/{id}/comment', name: 'comment_add', methods: ['POST'])]
@@ -497,6 +587,7 @@ class OrderController extends AbstractAdvancedController
 			'card' => $this->renderView('admin/order/show.html.twig', [
 				'entity' => $order,
 				'query_params' => $request->query->all(),
+				'can_ship' => $this->orderShipmentUseCase->hasShippableLines($order),
 			]),
 			'row' => $this->renderView('admin/order/_index_row.html.twig', [
 				'entity' => $order,

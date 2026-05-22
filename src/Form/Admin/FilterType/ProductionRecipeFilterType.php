@@ -44,6 +44,7 @@ class ProductionRecipeFilterType extends AbstractType
 			])
 			->add('status', EnumType::class, [
 				'class' => ActiveStatusEnum::class,
+				'choices' => ActiveStatusEnum::userSelectableCases(),
 				'choice_label' => fn (ActiveStatusEnum $choice): string => $choice->value,
 				'label' => 'Status',
 				'required' => false,

@@ -80,6 +80,12 @@ class PurchaseManager extends AbstractManager
 		$this->savePurchase($purchase);
 	}
 
+	public function complete(Purchase $purchase): void
+	{
+		$this->statusTransitionService->apply($purchase, 'complete', $this->transitionContext());
+		$this->savePurchase($purchase);
+	}
+
 	public function getRepository(): PurchaseRepository
 	{
 		return $this->entityManager->getRepository(Purchase::class);

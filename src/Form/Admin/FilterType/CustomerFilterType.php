@@ -56,6 +56,7 @@ class CustomerFilterType extends AbstractType
 			])
 			->add('status', EnumType::class, [
 				'class' => ActiveStatusEnum::class,
+				'choices' => ActiveStatusEnum::userSelectableCases(),
 				'choice_label' => fn(ActiveStatusEnum $choice) => $choice->value,
 				'required' => false,
 				'mapped' => false,

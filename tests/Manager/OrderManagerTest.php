@@ -90,7 +90,7 @@ class OrderManagerTest extends KernelTestCase
 		self::assertSame('5.0000', $order->getOrderEntries()->first()->getUnitPrice());
 	}
 
-	public function testConfirmMovesDraftOrderToConfirmed(): void
+	public function testConfirmMovesDraftOrderWithoutStockToAwaitingStock(): void
 	{
 		$currency = $this->persistCurrency('S' . substr(uniqid(), -2), 'Sales currency');
 		$store = $this->persistStore('order-confirm-' . uniqid(), $currency);
@@ -106,14 +106,14 @@ class OrderManagerTest extends KernelTestCase
 		$this->orderManager->saveOrder($order);
 		$this->orderManager->confirm($order);
 
-		self::assertSame(OrderStatus::CONFIRMED, $order->getStatus());
+		self::assertSame(OrderStatus::AWAITING_STOCK, $order->getStatus());
 		self::assertNotNull($this->entityManager->getRepository(OrderHistory::class)->findOneBy([
 			'order' => $order,
 			'eventKey' => 'order.status_changed',
 		]));
 	}
 
-	public function testConfirmReservesStockBackedOrderEntries(): void
+	public function testConfirmReservesStockBackedOrderEntriesAndMarksReadyToShip(): void
 	{
 		$currency = $this->persistCurrency('T' . substr(uniqid(), -2), 'Reservation currency');
 		$store = $this->persistStore('order-reservation-' . uniqid(), $currency);
@@ -142,6 +142,32 @@ class OrderManagerTest extends KernelTestCase
 		self::assertSame(StockReservationStatus::ACTIVE, $reservation->getStatus());
 		self::assertSame('2.0000', $reservation->getQuantity());
 		self::assertSame('2.0000', $warehouseStock->getReservedQuantity());
+		self::assertSame(OrderStatus::READY_TO_SHIP, $order->getStatus());
+	}
+
+	public function testConfirmWithPartialBackorderMovesOrderToAwaitingStock(): void
+	{
+		$currency = $this->persistCurrency('W' . substr(uniqid(), -2), 'Backorder currency');
+		$store = $this->persistStore('order-backorder-' . uniqid(), $currency)
+			->setAllowBackorders(true);
+		$product = $this->persistProduct($store);
+		$warehouse = $this->persistWarehouse($store);
+		$warehouseStock = $this->persistWarehouseStock($warehouse, $product, '1.0000');
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('2.0000')
+			->setUnitPrice('10.0000');
+		$order->addOrderEntry($orderEntry);
+		$this->orderManager->saveOrder($order);
+		$this->orderManager->confirm($order);
+		$this->entityManager->refresh($warehouseStock);
+
+		self::assertSame(OrderStatus::AWAITING_STOCK, $order->getStatus());
+		self::assertSame('1.0000', $warehouseStock->getReservedQuantity());
 	}
 
 	public function testCancelMovesOrderToCanceledAndStoresTransitionTime(): void
@@ -157,7 +183,7 @@ class OrderManagerTest extends KernelTestCase
 		self::assertNotNull($order->getCanceledAt());
 	}
 
-	public function testReturnToDraftMovesConfirmedOrderBackToDraft(): void
+	public function testReturnToDraftMovesAwaitingStockOrderBackToDraft(): void
 	{
 		$currency = $this->persistCurrency('R' . substr(uniqid(), -2), 'Rollback currency');
 		$store = $this->persistStore('order-return-to-draft-' . uniqid(), $currency);
@@ -220,6 +246,80 @@ class OrderManagerTest extends KernelTestCase
 		$this->expectException(RuntimeException::class);
 
 		$this->orderManager->returnToDraft($order);
+	}
+
+	public function testMarkDeliveredMovesShippedOrderToDelivered(): void
+	{
+		$currency = $this->persistCurrency('L' . substr(uniqid(), -2), 'Delivery currency');
+		$store = $this->persistStore('order-delivered-' . uniqid(), $currency);
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+		$order->setStatus(OrderStatus::SHIPPED);
+		$this->entityManager->flush();
+
+		$this->orderManager->markDelivered($order);
+
+		self::assertSame(OrderStatus::DELIVERED, $order->getStatus());
+		$history = $this->entityManager->getRepository(OrderHistory::class)->findOneBy([
+			'order' => $order,
+			'eventKey' => 'order.status_changed',
+		], ['id' => 'DESC']);
+
+		self::assertInstanceOf(OrderHistory::class, $history);
+		self::assertSame([
+			'status' => ['from' => OrderStatus::SHIPPED->value, 'to' => OrderStatus::DELIVERED->value],
+		], $history->getChanges());
+	}
+
+	public function testCompleteMovesDeliveredOrderToCompleted(): void
+	{
+		$currency = $this->persistCurrency('F' . substr(uniqid(), -2), 'Complete currency');
+		$store = $this->persistStore('order-complete-' . uniqid(), $currency);
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+		$order->setStatus(OrderStatus::DELIVERED);
+		$this->entityManager->flush();
+
+		$this->orderManager->complete($order);
+
+		self::assertSame(OrderStatus::COMPLETED, $order->getStatus());
+		$history = $this->entityManager->getRepository(OrderHistory::class)->findOneBy([
+			'order' => $order,
+			'eventKey' => 'order.status_changed',
+		], ['id' => 'DESC']);
+
+		self::assertInstanceOf(OrderHistory::class, $history);
+		self::assertSame([
+			'status' => ['from' => OrderStatus::DELIVERED->value, 'to' => OrderStatus::COMPLETED->value],
+		], $history->getChanges());
+	}
+
+	public function testCompleteIsBlockedBeforeDelivery(): void
+	{
+		$currency = $this->persistCurrency('Y' . substr(uniqid(), -2), 'Blocked complete currency');
+		$store = $this->persistStore('order-complete-blocked-' . uniqid(), $currency);
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+		$order->setStatus(OrderStatus::SHIPPED);
+		$this->entityManager->flush();
+
+		$this->expectException(RuntimeException::class);
+
+		$this->orderManager->complete($order);
+	}
+
+	public function testCancelIsBlockedAfterCompletion(): void
+	{
+		$currency = $this->persistCurrency('Z' . substr(uniqid(), -2), 'Completed cancel currency');
+		$store = $this->persistStore('order-cancel-completed-' . uniqid(), $currency);
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+		$order->setStatus(OrderStatus::COMPLETED);
+		$this->entityManager->flush();
+
+		$this->expectException(RuntimeException::class);
+
+		$this->orderManager->cancel($order);
 	}
 
 	public function testSaveOrderRecordsOnlyRealDecimalEntryChanges(): void

@@ -4,6 +4,7 @@ namespace App\Tests\Service;
 
 use App\Entity\InventoryDocument;
 use App\Entity\InventoryDocumentLine;
+use App\Entity\InventoryReason;
 use App\Entity\Order;
 use App\Entity\OrderEntry;
 use App\Entity\OrderStatus;
@@ -18,6 +19,7 @@ use App\Entity\WarehouseStock;
 use App\Enum\InventoryDirection;
 use App\Enum\InventoryDocumentStatus;
 use App\Enum\InventoryDocumentType;
+use App\Enum\InventoryReasonType;
 use App\Enum\ProductKindEnum;
 use App\Exception\StockOperationException;
 use App\Manager\UserManager;
@@ -28,6 +30,7 @@ use App\Service\InventoryPostingService;
 use App\Service\StockReservationService;
 use App\Service\WarehouseStockService;
 use App\Workflow\History\GenericStatusHistoryRecorder;
+use App\Workflow\History\OrderHistoryRecorder;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -40,6 +43,7 @@ class InventoryPostingServiceTest extends TestCase
 	private UserManager&MockObject $userManager;
 	private StockReservationService&MockObject $stockReservationService;
 	private GenericStatusHistoryRecorder&MockObject $statusHistoryRecorder;
+	private OrderHistoryRecorder&MockObject $orderHistoryRecorder;
 	private InventoryPostingService $inventoryPostingService;
 
 	protected function setUp(): void
@@ -50,6 +54,7 @@ class InventoryPostingServiceTest extends TestCase
 		$this->userManager = $this->createMock(UserManager::class);
 		$this->stockReservationService = $this->createMock(StockReservationService::class);
 		$this->statusHistoryRecorder = $this->createMock(GenericStatusHistoryRecorder::class);
+		$this->orderHistoryRecorder = $this->createMock(OrderHistoryRecorder::class);
 		$this->userManager->method('getCurrentUser')->willReturn(null);
 		$this->entityManager->method('persist');
 		$this->entityManager->method('flush');
@@ -60,7 +65,7 @@ class InventoryPostingServiceTest extends TestCase
 			$this->entityManager,
 			$this->warehouseStockService,
 			$this->userManager,
-			new DocumentProgressRecalculator(new BusinessDocumentStatusSynchronizer($this->warehouseStockRepository, $this->statusHistoryRecorder)),
+			new DocumentProgressRecalculator(new BusinessDocumentStatusSynchronizer($this->warehouseStockRepository, $this->statusHistoryRecorder, $this->orderHistoryRecorder)),
 			$this->stockReservationService,
 			$this->statusHistoryRecorder,
 		);
@@ -227,6 +232,9 @@ class InventoryPostingServiceTest extends TestCase
 		$this->stockReservationService->expects($this->once())
 			->method('completeForOrderEntry')
 			->with($orderEntry, '2.0000', false);
+		$this->orderHistoryRecorder->expects($this->once())
+			->method('recordStatusChanged')
+			->with($order, 'sync_progress', 'confirmed', 'shipped', $this->anything());
 
 		$this->inventoryPostingService->post($document);
 
@@ -234,6 +242,56 @@ class InventoryPostingServiceTest extends TestCase
 		self::assertSame('0.0000', $orderEntry->getReturnedQuantity());
 		self::assertSame(OrderStatus::SHIPPED, $order->getStatus());
 		self::assertSame('6.0000', $document->getLines()->first()->getStockMovements()->first()->getUnitCost());
+	}
+
+	public function testCancelPostedSaleShipmentRecordsOrderStatusDriftBackToReadyToShip(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$order = (new Order())
+			->setStore($store)
+			->setNumber('SO-' . uniqid())
+			->setStatus(OrderStatus::CONFIRMED);
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('2.0000')
+			->setUnitPrice('10.0000')
+			->setUnitPriceBase('10.0000')
+			->setTotalPrice('20.0000')
+			->setTotalPriceBase('20.0000')
+			->setProductNameSnapshot('Inventory product')
+			->setProductCodeSnapshot('inventory-product')
+			->setUnitCodeSnapshot('pc')
+			->setUnitNameSnapshot('Piece');
+		$order->addOrderEntry($orderEntry);
+		$warehouseStock = $this->warehouseStock($warehouse, $product, '2.0000', '6.0000');
+		$document = $this->document($store)
+			->setType(InventoryDocumentType::SALE_SHIPMENT)
+			->setOrder($order)
+			->addLine($this->line($product, $warehouse, InventoryDirection::OUT, '2.0000', '10.0000')
+				->setOrderEntry($orderEntry));
+		$historyCalls = [];
+
+		$this->warehouseStockService->method('findOrCreate')->willReturn($warehouseStock);
+		$this->warehouseStockRepository->method('findOneByProductAndWarehouse')->willReturn($warehouseStock);
+		$this->orderHistoryRecorder->expects($this->exactly(2))
+			->method('recordStatusChanged')
+			->willReturnCallback(static function (Order $orderArg, string $transitionKey, string $fromStatus, string $toStatus) use ($order, &$historyCalls): void {
+				self::assertSame($order, $orderArg);
+				self::assertSame('sync_progress', $transitionKey);
+				$historyCalls[] = [$fromStatus, $toStatus];
+			});
+
+		$this->inventoryPostingService->post($document);
+		$this->inventoryPostingService->cancel($document);
+
+		self::assertSame([
+			['confirmed', 'shipped'],
+			['shipped', 'ready_to_ship'],
+		], $historyCalls);
+		self::assertSame(OrderStatus::READY_TO_SHIP, $order->getStatus());
+		self::assertSame('0.0000', $orderEntry->getShippedQuantity());
+		self::assertSame('2.0000', $warehouseStock->getQuantityOnHand());
 	}
 
 	public function testDirectReversalPostingIsBlocked(): void
@@ -251,6 +309,133 @@ class InventoryPostingServiceTest extends TestCase
 		$this->expectExceptionMessage('Reversal inventory documents can only be posted through cancel flow.');
 
 		$this->inventoryPostingService->post($reversal);
+	}
+
+	public function testTransferMovesBalancedPairWithSourceCostSnapshot(): void
+	{
+		[$store, $sourceWarehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$destinationWarehouse = (new Warehouse())
+			->setName('Destination warehouse')
+			->setStore($store);
+		$sourceStock = $this->warehouseStock($sourceWarehouse, $product, '5.0000', '7.0000');
+		$destinationStock = $this->warehouseStock($destinationWarehouse, $product, '1.0000', '2.0000');
+		$document = $this->document($store)
+			->setType(InventoryDocumentType::TRANSFER)
+			->setReason($this->reason($store, InventoryReasonType::TRANSFER))
+			->addLine($this->line($product, $sourceWarehouse, InventoryDirection::OUT, '2.0000'))
+			->addLine($this->line($product, $destinationWarehouse, InventoryDirection::IN, '2.0000'));
+
+		$this->warehouseStockService->method('findOrCreate')
+			->willReturnCallback(static fn (Warehouse $warehouseArg, Product $productArg): WarehouseStock => $warehouseArg === $sourceWarehouse ? $sourceStock : $destinationStock);
+
+		$this->inventoryPostingService->post($document);
+
+		$outLine = $document->getLines()->first();
+		$inLine = $document->getLines()->last();
+
+		self::assertSame('3.0000', $sourceStock->getQuantityOnHand());
+		self::assertSame('3.0000', $destinationStock->getQuantityOnHand());
+		self::assertSame('5.3333', $destinationStock->getAverageCost());
+		self::assertSame('7.0000', $outLine->getStockMovements()->first()->getUnitCost());
+		self::assertSame('7.0000', $inLine->getStockMovements()->first()->getUnitCost());
+	}
+
+	public function testTransferRequiresBalancedPair(): void
+	{
+		[$store, $sourceWarehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$destinationWarehouse = (new Warehouse())
+			->setName('Destination warehouse')
+			->setStore($store);
+		$document = $this->document($store)
+			->setType(InventoryDocumentType::TRANSFER)
+			->setReason($this->reason($store, InventoryReasonType::TRANSFER))
+			->addLine($this->line($product, $sourceWarehouse, InventoryDirection::OUT, '2.0000'))
+			->addLine($this->line($product, $destinationWarehouse, InventoryDirection::IN, '1.0000'));
+
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('Transfer inventory document OUT and IN quantities must match.');
+
+		$this->inventoryPostingService->post($document);
+	}
+
+	public function testCustomerReturnQuantityCannotExceedShippedQuantity(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$order = (new Order())
+			->setStore($store)
+			->setNumber('SO-' . uniqid())
+			->setStatus(OrderStatus::SHIPPED);
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('5.0000')
+			->setShippedQuantity('2.0000')
+			->setReturnedQuantity('1.0000');
+		$order->addOrderEntry($orderEntry);
+		$document = $this->document($store)
+			->setType(InventoryDocumentType::CUSTOMER_RETURN)
+			->setReason($this->reason($store, InventoryReasonType::RETURN))
+			->setOrder($order)
+			->addLine($this->line($product, $warehouse, InventoryDirection::IN, '2.0000')
+				->setOrderEntry($orderEntry));
+
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('Customer return quantity cannot exceed shipped quantity that has not already been returned.');
+
+		$this->inventoryPostingService->post($document);
+	}
+
+	public function testSupplierReturnQuantityCannotExceedReceivedQuantity(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$purchase = (new Purchase())
+			->setStore($store)
+			->setNumber('PO-' . uniqid())
+			->setStatus(PurchaseStatus::RECEIVED);
+		$purchaseEntry = (new PurchaseEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('5.0000')
+			->setReceivedQuantity('2.0000')
+			->setReturnedQuantity('1.0000');
+		$purchase->addPurchaseEntry($purchaseEntry);
+		$document = $this->document($store)
+			->setType(InventoryDocumentType::SUPPLIER_RETURN)
+			->setReason($this->reason($store, InventoryReasonType::RETURN))
+			->setPurchase($purchase)
+			->addLine($this->line($product, $warehouse, InventoryDirection::OUT, '2.0000')
+				->setPurchaseEntry($purchaseEntry));
+
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('Supplier return quantity cannot exceed received quantity that has not already been returned.');
+
+		$this->inventoryPostingService->post($document);
+	}
+
+	public function testWriteOffRequiresInventoryReason(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$document = $this->document($store)
+			->setType(InventoryDocumentType::WRITE_OFF)
+			->setReason(null)
+			->addLine($this->line($product, $warehouse, InventoryDirection::OUT, '1.0000'));
+
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('Inventory document type "write_off" requires an inventory reason.');
+
+		$this->inventoryPostingService->post($document);
+	}
+
+	public function testStockAdjustmentInLineRequiresExplicitCost(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$document = $this->document($store)
+			->addLine($this->line($product, $warehouse, InventoryDirection::IN, '1.0000'));
+
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('Stock adjustment IN lines require an explicit unit cost.');
+
+		$this->inventoryPostingService->post($document);
 	}
 
 	public function testCancelPostedPurchaseReceiptDowngradesProgressAndStatus(): void
@@ -360,7 +545,16 @@ class InventoryPostingServiceTest extends TestCase
 		return (new InventoryDocument())
 			->setStore($store)
 			->setNumber('INV-' . uniqid())
-			->setType(InventoryDocumentType::STOCK_ADJUSTMENT);
+			->setType(InventoryDocumentType::STOCK_ADJUSTMENT)
+			->setReason($this->reason($store, InventoryReasonType::STOCK_ADJUSTMENT));
+	}
+
+	private function reason(Store $store, InventoryReasonType $type): InventoryReason
+	{
+		return (new InventoryReason())
+			->setStore($store)
+			->setName($type->value . '-' . uniqid())
+			->setType($type);
 	}
 
 	private function line(

@@ -8,6 +8,8 @@ use App\Entity\ExchangeRate;
 use App\Entity\Product;
 use App\Entity\PurchaseEntry;
 use App\Entity\PurchaseStatus;
+use App\Entity\StatusHistory;
+use App\Entity\StatusHistoryEntityType;
 use App\Entity\Store;
 use App\Entity\Supplier;
 use App\Entity\Unit;
@@ -135,6 +137,57 @@ class PurchaseManagerTest extends KernelTestCase
 		$this->expectException(RuntimeException::class);
 
 		$this->purchaseManager->order($purchase);
+	}
+
+	public function testCompleteMovesReceivedPurchaseToCompleted(): void
+	{
+		$currency = $this->persistCurrency('C' . substr(uniqid(), -2), 'Completion currency');
+		$store = $this->persistStore('purchase-complete-' . uniqid(), $currency);
+		$purchase = $this->purchaseManager->createDraft($store);
+		$this->purchaseManager->savePurchase($purchase);
+		$purchase->setStatus(PurchaseStatus::RECEIVED);
+		$this->entityManager->flush();
+
+		$this->purchaseManager->complete($purchase);
+
+		self::assertSame(PurchaseStatus::COMPLETED, $purchase->getStatus());
+		$history = $this->entityManager->getRepository(StatusHistory::class)->findOneBy([
+			'entityType' => StatusHistoryEntityType::PURCHASE,
+			'entityId' => $purchase->getId(),
+			'oldStatus' => PurchaseStatus::RECEIVED->value,
+			'newStatus' => PurchaseStatus::COMPLETED->value,
+			'store' => $store,
+		]);
+
+		self::assertInstanceOf(StatusHistory::class, $history);
+	}
+
+	public function testCompleteIsBlockedBeforeReceived(): void
+	{
+		$currency = $this->persistCurrency('U' . substr(uniqid(), -2), 'Blocked complete currency');
+		$store = $this->persistStore('purchase-complete-blocked-' . uniqid(), $currency);
+		$purchase = $this->purchaseManager->createDraft($store);
+		$this->purchaseManager->savePurchase($purchase);
+		$purchase->setStatus(PurchaseStatus::ORDERED);
+		$this->entityManager->flush();
+
+		$this->expectException(RuntimeException::class);
+
+		$this->purchaseManager->complete($purchase);
+	}
+
+	public function testCancelIsBlockedAfterReceipt(): void
+	{
+		$currency = $this->persistCurrency('R' . substr(uniqid(), -2), 'Receipt cancel currency');
+		$store = $this->persistStore('purchase-cancel-received-' . uniqid(), $currency);
+		$purchase = $this->purchaseManager->createDraft($store);
+		$this->purchaseManager->savePurchase($purchase);
+		$purchase->setStatus(PurchaseStatus::RECEIVED);
+		$this->entityManager->flush();
+
+		$this->expectException(RuntimeException::class);
+
+		$this->purchaseManager->cancel($purchase);
 	}
 
 	private function persistCurrency(string $code, string $name): Currency

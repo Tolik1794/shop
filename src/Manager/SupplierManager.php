@@ -4,13 +4,14 @@ namespace App\Manager;
 
 use App\Entity\Supplier;
 use App\Repository\SupplierRepository;
-use DateTimeImmutable;
+use App\Service\Lifecycle\ReferenceArchivePolicy;
 use Doctrine\ORM\EntityManagerInterface;
 
 class SupplierManager extends AbstractManager
 {
 	public function __construct(
 		private readonly EntityManagerInterface $entityManager,
+		private readonly ReferenceArchivePolicy $referenceArchivePolicy,
 	)
 	{
 	}
@@ -22,7 +23,7 @@ class SupplierManager extends AbstractManager
 
 	public function softDelete(Supplier $supplier): void
 	{
-		$supplier->setDeletedAt(new DateTimeImmutable());
+		$this->referenceArchivePolicy->archive($supplier);
 		$this->save($supplier);
 	}
 
