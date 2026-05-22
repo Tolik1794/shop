@@ -37,7 +37,11 @@ class OrderWorkflowDefinition implements WorkflowDefinitionInterface
 			),
 			'return_to_draft' => new TransitionDefinition(
 				key: 'return_to_draft',
-				fromStatuses: [OrderStatus::CONFIRMED->value],
+				fromStatuses: [
+					OrderStatus::CONFIRMED->value,
+					OrderStatus::AWAITING_STOCK->value,
+					OrderStatus::READY_TO_SHIP->value,
+				],
 				toStatus: OrderStatus::DRAFT->value,
 				historyEventKey: 'order.status_changed',
 			),

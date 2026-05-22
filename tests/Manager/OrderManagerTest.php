@@ -90,7 +90,7 @@ class OrderManagerTest extends KernelTestCase
 		self::assertSame('5.0000', $order->getOrderEntries()->first()->getUnitPrice());
 	}
 
-	public function testConfirmMovesDraftOrderToConfirmed(): void
+	public function testConfirmMovesDraftOrderWithoutStockToAwaitingStock(): void
 	{
 		$currency = $this->persistCurrency('S' . substr(uniqid(), -2), 'Sales currency');
 		$store = $this->persistStore('order-confirm-' . uniqid(), $currency);
@@ -106,14 +106,14 @@ class OrderManagerTest extends KernelTestCase
 		$this->orderManager->saveOrder($order);
 		$this->orderManager->confirm($order);
 
-		self::assertSame(OrderStatus::CONFIRMED, $order->getStatus());
+		self::assertSame(OrderStatus::AWAITING_STOCK, $order->getStatus());
 		self::assertNotNull($this->entityManager->getRepository(OrderHistory::class)->findOneBy([
 			'order' => $order,
 			'eventKey' => 'order.status_changed',
 		]));
 	}
 
-	public function testConfirmReservesStockBackedOrderEntries(): void
+	public function testConfirmReservesStockBackedOrderEntriesAndMarksReadyToShip(): void
 	{
 		$currency = $this->persistCurrency('T' . substr(uniqid(), -2), 'Reservation currency');
 		$store = $this->persistStore('order-reservation-' . uniqid(), $currency);
@@ -142,6 +142,32 @@ class OrderManagerTest extends KernelTestCase
 		self::assertSame(StockReservationStatus::ACTIVE, $reservation->getStatus());
 		self::assertSame('2.0000', $reservation->getQuantity());
 		self::assertSame('2.0000', $warehouseStock->getReservedQuantity());
+		self::assertSame(OrderStatus::READY_TO_SHIP, $order->getStatus());
+	}
+
+	public function testConfirmWithPartialBackorderMovesOrderToAwaitingStock(): void
+	{
+		$currency = $this->persistCurrency('W' . substr(uniqid(), -2), 'Backorder currency');
+		$store = $this->persistStore('order-backorder-' . uniqid(), $currency)
+			->setAllowBackorders(true);
+		$product = $this->persistProduct($store);
+		$warehouse = $this->persistWarehouse($store);
+		$warehouseStock = $this->persistWarehouseStock($warehouse, $product, '1.0000');
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('2.0000')
+			->setUnitPrice('10.0000');
+		$order->addOrderEntry($orderEntry);
+		$this->orderManager->saveOrder($order);
+		$this->orderManager->confirm($order);
+		$this->entityManager->refresh($warehouseStock);
+
+		self::assertSame(OrderStatus::AWAITING_STOCK, $order->getStatus());
+		self::assertSame('1.0000', $warehouseStock->getReservedQuantity());
 	}
 
 	public function testCancelMovesOrderToCanceledAndStoresTransitionTime(): void
@@ -157,7 +183,7 @@ class OrderManagerTest extends KernelTestCase
 		self::assertNotNull($order->getCanceledAt());
 	}
 
-	public function testReturnToDraftMovesConfirmedOrderBackToDraft(): void
+	public function testReturnToDraftMovesAwaitingStockOrderBackToDraft(): void
 	{
 		$currency = $this->persistCurrency('R' . substr(uniqid(), -2), 'Rollback currency');
 		$store = $this->persistStore('order-return-to-draft-' . uniqid(), $currency);

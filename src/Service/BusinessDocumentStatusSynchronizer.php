@@ -7,6 +7,8 @@ use App\Entity\OrderEntry;
 use App\Entity\OrderStatus;
 use App\Entity\Purchase;
 use App\Entity\PurchaseStatus;
+use App\Entity\StockReservation;
+use App\Entity\StockReservationStatus;
 use App\Enum\ProductKindEnum;
 use App\Repository\WarehouseStockRepository;
 use App\Workflow\History\GenericStatusHistoryRecorder;
@@ -185,6 +187,15 @@ class BusinessDocumentStatusSynchronizer
 			- $this->numberValue($entry->getShippedQuantity()),
 		);
 		$available = $this->numberValue($warehouseStock->getQuantityOnHand()) - $this->numberValue($warehouseStock->getReservedQuantity());
+		foreach ($entry->getStockReservations() as $reservation) {
+			if (
+				$reservation instanceof StockReservation
+				&& $reservation->getStatus() === StockReservationStatus::ACTIVE
+				&& $reservation->getWarehouseStock() === $warehouseStock
+			) {
+				$available += $this->numberValue($reservation->getQuantity());
+			}
+		}
 
 		return $this->isEnough($available, $required);
 	}

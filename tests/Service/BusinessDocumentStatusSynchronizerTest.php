@@ -6,6 +6,8 @@ use App\Entity\Order;
 use App\Entity\OrderEntry;
 use App\Entity\OrderStatus;
 use App\Entity\Product;
+use App\Entity\StockReservation;
+use App\Entity\StockReservationStatus;
 use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
 use App\Enum\ProductKindEnum;
@@ -86,6 +88,53 @@ class BusinessDocumentStatusSynchronizerTest extends TestCase
 		$this->orderHistoryRecorder->expects($this->never())->method('recordStatusChanged');
 
 		$this->synchronizer->syncOrder($order, TransitionContext::system());
+	}
+
+	public function testOrderReadinessCountsActiveReservationForSameOrderEntry(): void
+	{
+		$order = $this->orderWithEntry('0.0000', '0.0000');
+		$orderEntry = $order->getOrderEntries()->first();
+		$warehouseStock = (new WarehouseStock())
+			->setQuantityOnHand('5.0000')
+			->setReservedQuantity('5.0000');
+		$reservation = (new StockReservation())
+			->setOrderEntry($orderEntry)
+			->setWarehouseStock($warehouseStock)
+			->setQuantity('5.0000')
+			->setStatus(StockReservationStatus::ACTIVE);
+		$orderEntry->addStockReservation($reservation);
+		$warehouseStock->addStockReservation($reservation);
+
+		$this->warehouseStockRepository->method('findOneByProductAndWarehouse')
+			->willReturn($warehouseStock);
+
+		$this->synchronizer->syncOrder($order, TransitionContext::system());
+
+		self::assertSame(OrderStatus::READY_TO_SHIP, $order->getStatus());
+	}
+
+	/**
+	 * @return iterable<string, array{OrderStatus}>
+	 */
+	public static function terminalOrManualOrderStatuses(): iterable
+	{
+		yield 'draft' => [OrderStatus::DRAFT];
+		yield 'canceled' => [OrderStatus::CANCELED];
+		yield 'delivered' => [OrderStatus::DELIVERED];
+		yield 'completed' => [OrderStatus::COMPLETED];
+	}
+
+	#[DataProvider('terminalOrManualOrderStatuses')]
+	public function testDoesNotOverwriteManualOrTerminalOrderStatuses(OrderStatus $status): void
+	{
+		$order = $this->orderWithEntry('0.0000', '0.0000')
+			->setStatus($status);
+
+		$this->orderHistoryRecorder->expects($this->never())->method('recordStatusChanged');
+
+		$this->synchronizer->syncOrder($order, TransitionContext::system());
+
+		self::assertSame($status, $order->getStatus());
 	}
 
 	private function orderWithEntry(string $shippedQuantity, string $returnedQuantity): Order

@@ -33,7 +33,7 @@ package "Executable from current UI" as CurrentUi {
 package "Not executable as a full commercial document cycle" as MissingUi {
 	[12.6.1 Purchase receipt UI action] <<implemented>>
 	[12.6.2 Order shipment UI action] <<implemented>>
-	[12.6.3 Immediate order readiness sync after confirm]
+	[12.6.3 Immediate order readiness sync after confirm] <<implemented>>
 	[12.6.4 Linked inventory document navigation and audit tests]
 }
 
@@ -182,26 +182,27 @@ note right of [12.6.3 Immediate order readiness sync after confirm]
   Goal:
   Avoid a UI dead end after confirming an order.
 
-  Current risk:
-  - OrderManager::confirm() reserves stock, but the visible order status
-    is set to confirmed by the workflow transition.
-  - awaiting_stock/ready_to_ship are derived statuses, and the current
-    confirm flow does not explicitly call DocumentProgressRecalculator
-    or BusinessDocumentStatusSynchronizer after reservation.
-
-  Implementation steps:
-  1. Add a narrow sync call after reserveStockForOrder().
-  2. Keep the source of truth in BusinessDocumentStatusSynchronizer.
-  3. Record the status change as sync_progress, not as a manual workflow
-     transition.
-  4. Add tests for:
+  Implemented:
+  1. OrderManager::confirm() now reserves stock and immediately calls
+     BusinessDocumentStatusSynchronizer::syncOrder().
+  2. The synchronizer remains the source of truth for derived
+     awaiting_stock/ready_to_ship statuses.
+  3. The sync records status changes with transition=sync_progress via
+     OrderHistoryRecorder.
+  4. Readiness calculation counts active stock reservations belonging to
+     the same order entry as available for that order, so the order's own
+     reservation does not make it look out of stock.
+  5. return_to_draft remains available from confirmed, awaiting_stock and
+     ready_to_ship before shipment.
+  6. Added tests for:
      confirmed order with enough stock becomes ready_to_ship;
      confirmed order without enough stock becomes awaiting_stock;
+     partial backorder reservation becomes awaiting_stock;
      draft/canceled/delivered/completed are not overwritten.
 
   Dependencies:
   - OrderManager.
-  - BusinessDocumentStatusSynchronizer or DocumentProgressRecalculator.
+  - BusinessDocumentStatusSynchronizer.
   - OrderHistoryRecorder status sync history.
   - WarehouseStockRepository and StockReservationService behavior.
 end note

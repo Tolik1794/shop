@@ -107,7 +107,7 @@
             </form>
         {% endif %}
 
-        {% if entity.status.value == 'confirmed' %}
+        {% if entity.status.value in ['confirmed', 'awaiting_stock', 'ready_to_ship'] %}
             <form method="post" action="{{ path('app_admin_order_return_to_draft', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="Return order to draft?">
                 <input type="hidden" name="_token" value="{{ csrf_token('return_to_draft_order_' ~ entity.id) }}">
                 <button class="btn btn-light btn-sm" type="submit">Return to draft</button>
