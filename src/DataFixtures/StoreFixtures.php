@@ -5,145 +5,108 @@ namespace App\DataFixtures;
 use App\Entity\Category;
 use App\Entity\Currency;
 use App\Entity\Store;
+use App\Entity\User\RoleEnum;
+use App\Entity\User\User;
+use App\Entity\Warehouse;
 use App\Enum\ActiveStatusEnum;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
-use Faker\Factory;
 use RuntimeException;
 
 class StoreFixtures extends Fixture implements DependentFixtureInterface
 {
+	public const STORE_REFERENCE = 'store.furniture_works';
+	public const WAREHOUSE_REFERENCE = 'warehouse.first';
+
 	public function getDependencies(): array
 	{
 		return [
 			CurrencyFixtures::class,
+			UserFixtures::class,
 		];
 	}
 
 	public function load(ObjectManager $manager): void
 	{
-		$faker = Factory::create();
-		$storeRepository = $manager->getRepository(Store::class);
 		$baseCurrency = $manager->getRepository(Currency::class)->find('UAH');
 
 		if (!$baseCurrency instanceof Currency) {
 			throw new RuntimeException('Load CurrencyFixtures before StoreFixtures.');
 		}
 
-		if ($storeRepository->findOneBy(['slug' => 'my_clothing_store'])) {
-			return;
+		$store = (new Store())
+			->setDescription('Furniture production and retail showroom for cabinet, dining, bedroom and office furniture.')
+			->setEmail('sales@furniture-works.test')
+			->setName('Furniture Works')
+			->setPhone('+380671234567')
+			->setSlug('furniture_works')
+			->setBaseCurrency($baseCurrency)
+			->setStatus(ActiveStatusEnum::ACTIVE);
+
+		foreach ($manager->getRepository(User::class)->findAll() as $user) {
+			if (in_array(RoleEnum::ROLE_STORE_ADMIN->name, $user->getRoles(), true)
+				|| in_array(RoleEnum::ROLE_STORE_MANAGER->name, $user->getRoles(), true)
+				|| in_array(RoleEnum::ROLE_SUPER_ADMIN->name, $user->getRoles(), true)
+			) {
+				$store->addManager($user);
+			}
 		}
 
-		$manager->persist($myClothingStore = (new Store())
-			->setDescription($faker->text())
-			->setEmail('my.clothing.store@store.ua')
-			->setName('My Clothing Store')
-			->setPhone(380666146554)
-			->setSlug('my_clothing_store')
-			->setBaseCurrency($baseCurrency)
-			->setStatus(ActiveStatusEnum::ACTIVE));
+		$manager->persist($store);
+		$this->addReference(self::STORE_REFERENCE, $store);
 
-		$manager->persist($fashion = (new Category())
-			->setName('Fashion')
-			->setLevel(1)
-			->setStore($myClothingStore));
+		$warehouse = (new Warehouse())
+			->setStore($store)
+			->setName('First Warehouse')
+			->setStatus(ActiveStatusEnum::ACTIVE);
 
-		$manager->persist($fashions[] = (new Category())
-			->setName('Male')
-			->setLevel(2)
-			->setFirstParent($fashion)
-			->setParent($fashion)
-			->setStore($myClothingStore));
+		$manager->persist($warehouse);
+		$this->addReference(self::WAREHOUSE_REFERENCE, $warehouse);
 
-		$manager->persist($fashions[] = (new Category())
-			->setName('Female')
-			->setLevel(2)
-			->setFirstParent($fashion)
-			->setParent($fashion)
-			->setStore($myClothingStore));
-
-		foreach ($fashions as $fashionCategory) {
-			$manager->persist($clothing = (new Category())
-				->setName('Clothing')
-				->setLevel(3)
-				->setFirstParent($fashion)
-				->setParent($fashionCategory)
-				->setStore($myClothingStore));
-
-			$manager->persist((new Category())
-				->setName('Outerwear')
-				->setLevel(4)
-				->setFirstParent($fashion)
-				->setParent($clothing)
-				->setStore($myClothingStore));
-
-			$manager->persist((new Category())
-				->setName('Sport')
-				->setLevel(4)
-				->setFirstParent($fashion)
-				->setParent($clothing)
-				->setStore($myClothingStore));
-
-			$manager->persist((new Category())
-				->setName('Shirts and T-shirts')
-				->setLevel(4)
-				->setFirstParent($fashion)
-				->setParent($clothing)
-				->setStore($myClothingStore));
-
-			$manager->persist((new Category())
-				->setName('Coats, sweaters and cardigans')
-				->setLevel(4)
-				->setFirstParent($fashion)
-				->setParent($clothing)
-				->setStore($myClothingStore));
-
-			$manager->persist((new Category())
-				->setName('Jeans, pants')
-				->setLevel(4)
-				->setFirstParent($fashion)
-				->setParent($clothing)
-				->setStore($myClothingStore));
-
-			$manager->persist((new Category())
-				->setName('Suits and jackets')
-				->setLevel(4)
-				->setFirstParent($fashion)
-				->setParent($clothing)
-				->setStore($myClothingStore));
-
-
-			$manager->persist($footgear = (new Category())
-				->setName('Footgear')
-				->setLevel(3)
-				->setFirstParent($fashion)
-				->setParent($fashionCategory)
-				->setStore($myClothingStore));
-
-
-			$manager->persist($accessories = (new Category())
-				->setName('Bags and accessories')
-				->setLevel(3)
-				->setFirstParent($fashion)
-				->setParent($fashionCategory)
-				->setStore($myClothingStore));
-		}
-
-		$manager->persist(($myToyStore = new Store())
-			->setDescription($faker->text())
-			->setEmail('my.toy.store@store.ua')
-			->setName('My Toy Store')
-			->setPhone(380956554307)
-			->setSlug('my_toy_store')
-			->setBaseCurrency($baseCurrency)
-			->setStatus(ActiveStatusEnum::ACTIVE));
-
-		$manager->persist((new Category())
-			->setName('Goods for children')
-			->setLevel(1)
-			->setStore($myToyStore));
+		$this->createCategories($manager, $store);
 
 		$manager->flush();
+	}
+
+	private function createCategories(ObjectManager $manager, Store $store): void
+	{
+		$finished = $this->category($manager, $store, 'Finished Furniture', null, 'Furniture ready for sale from showroom or made-to-order production.');
+		$materials = $this->category($manager, $store, 'Production Materials', null, 'Raw materials and components used in furniture manufacturing.');
+
+		foreach ([
+			'Living Room Furniture' => 'Sofas, coffee tables and TV units for living rooms.',
+			'Bedroom Furniture' => 'Beds, wardrobes and bedside furniture.',
+			'Dining Room Furniture' => 'Dining tables, chairs and sideboards.',
+			'Office Furniture' => 'Work desks, shelving and office storage.',
+		] as $name => $description) {
+			$this->category($manager, $store, $name, $finished, $description);
+		}
+
+		foreach ([
+			'Wood Boards and Panels' => 'Oak, ash, plywood, MDF and chipboard boards.',
+			'Furniture Hardware' => 'Hinges, runners, pulls, legs and assembly fittings.',
+			'Upholstery Materials' => 'Fabric, foam and upholstery consumables.',
+			'Finishing Materials' => 'Varnish, oil, glue and edge banding.',
+		] as $name => $description) {
+			$this->category($manager, $store, $name, $materials, $description);
+		}
+	}
+
+	private function category(ObjectManager $manager, Store $store, string $name, ?Category $parent, string $description): Category
+	{
+		$category = (new Category())
+			->setName($name)
+			->setDescription($description)
+			->setLevel($parent ? $parent->getLevel() + 1 : 1)
+			->setFirstParent($parent?->getFirstParent() ?? $parent)
+			->setParent($parent)
+			->setStore($store)
+			->setStatus(ActiveStatusEnum::ACTIVE);
+
+		$manager->persist($category);
+		$this->addReference('category.' . $name, $category);
+
+		return $category;
 	}
 }
