@@ -21,10 +21,20 @@
         {% endif %}
 
         <div class="row g-3 align-items-start">
+            <div class="col-12 col-lg-6">
+                {{ include('admin/order/_header_settings.html.twig', {order_form_id: order_form_id}) }}
+
+                {% if entity.id %}
+                    {{ include('admin/order/_discussion_card.html.twig') }}
+                {% else %}
+                    {{ include('admin/order/_draft_discussion_card.html.twig', {order_form_id: order_form_id}) }}
+                {% endif %}
+            </div>
+
             {{ form_start(form, {
                 attr: {
                     'id': order_form_id,
-                    'class': 'col-12 col-lg-6 order-1',
+                    'class': 'col-12 col-lg-6',
                     'data-order-form-target': 'form',
                     'data-order-form-summary-url': path('app_api_admin_order_summary', {store_id: app.request.attributes.get('store_id')}),
                     'data-order-form-customer-search-url': path('app_api_admin_order_customer_search', {store_id: app.request.attributes.get('store_id')}),
@@ -43,16 +53,6 @@
                 {% endif %}
 
             {{ form_end(form, {'render_rest': false}) }}
-
-            <div class="col-12 col-lg-6 order-3 order-lg-2">
-                {{ include('admin/order/_header_settings.html.twig', {order_form_id: order_form_id}) }}
-
-                {% if entity.id %}
-                    {{ include('admin/order/_discussion_card.html.twig') }}
-                {% else %}
-                    {{ include('admin/order/_draft_discussion_card.html.twig', {order_form_id: order_form_id}) }}
-                {% endif %}
-            </div>
         </div>
 
     </div>
