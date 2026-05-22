@@ -110,10 +110,10 @@ class PurchaseReceiptControllerTest extends WebTestCase
 		self::assertResponseRedirects(sprintf('/admin/store/%d/purchase/?id=%d&page=1', $store->getId(), $purchase->getId()));
 
 		$this->entityManager->clear();
-		$completedPurchase = $this->entityManager->getRepository(Purchase::class)->find($purchase->getId());
+		$receivedPurchase = $this->entityManager->getRepository(Purchase::class)->find($purchase->getId());
 
-		self::assertInstanceOf(Purchase::class, $completedPurchase);
-		self::assertSame(PurchaseStatus::COMPLETED, $completedPurchase->getStatus());
+		self::assertInstanceOf(Purchase::class, $receivedPurchase);
+		self::assertSame(PurchaseStatus::RECEIVED, $receivedPurchase->getStatus());
 	}
 
 	public function testReceiveActionRejectsInvalidCsrfToken(): void

@@ -520,7 +520,7 @@ class OrderController extends AbstractAdvancedController
 		$customer = $this->customerRepository->findOneAvailableByStoreAndPhone($store, $phone);
 
 		if (!$customer instanceof Customer) {
-			$customer = (new Customer())
+			$customer = new Customer()
 				->setStore($store)
 				->setPhone($phone)
 				->setName($name)

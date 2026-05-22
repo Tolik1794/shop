@@ -6,6 +6,7 @@ use App\Entity\Order;
 use App\Entity\OrderStatus;
 use App\Workflow\Action\MarkOrderCanceledAction;
 use App\Workflow\Exception\UnknownTransitionException;
+use App\Workflow\Guard\DocumentFullyPaidGuard;
 use App\Workflow\Guard\OrderHasEntriesGuard;
 use App\Workflow\History\OrderHistoryRecorder;
 use App\Workflow\HistoryRecorderInterface;
@@ -23,6 +24,7 @@ class OrderWorkflowDefinition implements WorkflowDefinitionInterface
 
 	public function __construct(
 		OrderHasEntriesGuard $orderHasEntriesGuard,
+		DocumentFullyPaidGuard $documentFullyPaidGuard,
 		MarkOrderCanceledAction $markOrderCanceledAction,
 		private readonly OrderHistoryRecorder $historyRecorder,
 	)
@@ -55,6 +57,7 @@ class OrderWorkflowDefinition implements WorkflowDefinitionInterface
 				key: 'complete',
 				fromStatuses: [OrderStatus::DELIVERED->value],
 				toStatus: OrderStatus::COMPLETED->value,
+				guards: [$documentFullyPaidGuard],
 				historyEventKey: 'order.status_changed',
 			),
 			'cancel' => new TransitionDefinition(

@@ -6,11 +6,11 @@ use App\Workflow\Event\StatusTransitionAppliedEvent;
 use App\Workflow\Exception\TransitionNotAllowedException;
 use App\Workflow\Exception\WorkflowException;
 
-class StatusTransitionService
+readonly class StatusTransitionService
 {
 	public function __construct(
-		private readonly WorkflowRegistry $workflowRegistry,
-		private readonly DomainEventDispatcher $domainEventDispatcher,
+		private WorkflowRegistry      $workflowRegistry,
+		private DomainEventDispatcher $domainEventDispatcher,
 	)
 	{
 	}

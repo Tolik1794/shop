@@ -129,10 +129,10 @@ class OrderShipmentControllerTest extends WebTestCase
 		self::assertResponseRedirects(sprintf('/admin/store/%d/order/?id=%d&page=1', $store->getId(), $order->getId()));
 
 		$this->entityManager->clear();
-		$completedOrder = $this->entityManager->getRepository(Order::class)->find($order->getId());
+		$deliveredOrder = $this->entityManager->getRepository(Order::class)->find($order->getId());
 
-		self::assertInstanceOf(Order::class, $completedOrder);
-		self::assertSame(OrderStatus::COMPLETED, $completedOrder->getStatus());
+		self::assertInstanceOf(Order::class, $deliveredOrder);
+		self::assertSame(OrderStatus::DELIVERED, $deliveredOrder->getStatus());
 	}
 
 	public function testShipActionRejectsInvalidCsrfToken(): void

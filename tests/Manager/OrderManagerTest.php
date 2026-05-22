@@ -15,6 +15,7 @@ use App\Entity\Store;
 use App\Entity\Unit;
 use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
+use App\Enum\PaymentStatusEnum;
 use App\Enum\ProductKindEnum;
 use App\Manager\OrderManager;
 use DateTimeImmutable;
@@ -277,7 +278,9 @@ class OrderManagerTest extends KernelTestCase
 		$store = $this->persistStore('order-complete-' . uniqid(), $currency);
 		$order = $this->orderManager->createDraft($store);
 		$this->orderManager->saveOrder($order);
-		$order->setStatus(OrderStatus::DELIVERED);
+		$order
+			->setStatus(OrderStatus::DELIVERED)
+			->setPaymentStatus(PaymentStatusEnum::PAID);
 		$this->entityManager->flush();
 
 		$this->orderManager->complete($order);
@@ -292,6 +295,21 @@ class OrderManagerTest extends KernelTestCase
 		self::assertSame([
 			'status' => ['from' => OrderStatus::DELIVERED->value, 'to' => OrderStatus::COMPLETED->value],
 		], $history->getChanges());
+	}
+
+	public function testCompleteIsBlockedBeforeFullPayment(): void
+	{
+		$currency = $this->persistCurrency('Q' . substr(uniqid(), -2), 'Unpaid complete currency');
+		$store = $this->persistStore('order-complete-unpaid-' . uniqid(), $currency);
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+		$order->setStatus(OrderStatus::DELIVERED);
+		$this->entityManager->flush();
+
+		$this->expectException(RuntimeException::class);
+		$this->expectExceptionMessage('Document must be fully paid before completion.');
+
+		$this->orderManager->complete($order);
 	}
 
 	public function testCompleteIsBlockedBeforeDelivery(): void

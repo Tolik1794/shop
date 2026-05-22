@@ -46,7 +46,7 @@ class OrderManager extends AbstractManager
 
 	public function createDraft(Store $store): Order
 	{
-		return (new Order())
+		return new Order()
 			->setStore($store)
 			->setCurrency($store->getBaseCurrency())
 			->setExchangeRateToBase('1.00000000')
@@ -85,7 +85,11 @@ class OrderManager extends AbstractManager
 
 		foreach ($order->getOrderEntries() as $orderEntry) {
 			if ($orderEntry->getId() === null) {
-				$this->orderHistoryRecorder->recordEntryAdded($order, $this->orderHistoryChangeSetBuilder->buildEntryPayload($orderEntry), $actor);
+				$this->orderHistoryRecorder->recordEntryAdded(
+					$order,
+					$this->orderHistoryChangeSetBuilder->buildEntryPayload($orderEntry),
+					$actor
+				);
 
 				continue;
 			}

@@ -14,6 +14,7 @@ use App\Entity\Store;
 use App\Entity\Supplier;
 use App\Entity\Unit;
 use App\Entity\Warehouse;
+use App\Enum\PaymentStatusEnum;
 use App\Enum\ProductKindEnum;
 use App\Manager\PurchaseManager;
 use DateTimeImmutable;
@@ -145,7 +146,9 @@ class PurchaseManagerTest extends KernelTestCase
 		$store = $this->persistStore('purchase-complete-' . uniqid(), $currency);
 		$purchase = $this->purchaseManager->createDraft($store);
 		$this->purchaseManager->savePurchase($purchase);
-		$purchase->setStatus(PurchaseStatus::RECEIVED);
+		$purchase
+			->setStatus(PurchaseStatus::RECEIVED)
+			->setPaymentStatus(PaymentStatusEnum::PAID);
 		$this->entityManager->flush();
 
 		$this->purchaseManager->complete($purchase);
@@ -160,6 +163,21 @@ class PurchaseManagerTest extends KernelTestCase
 		]);
 
 		self::assertInstanceOf(StatusHistory::class, $history);
+	}
+
+	public function testCompleteIsBlockedBeforeFullPayment(): void
+	{
+		$currency = $this->persistCurrency('Q' . substr(uniqid(), -2), 'Unpaid completion currency');
+		$store = $this->persistStore('purchase-complete-unpaid-' . uniqid(), $currency);
+		$purchase = $this->purchaseManager->createDraft($store);
+		$this->purchaseManager->savePurchase($purchase);
+		$purchase->setStatus(PurchaseStatus::RECEIVED);
+		$this->entityManager->flush();
+
+		$this->expectException(RuntimeException::class);
+		$this->expectExceptionMessage('Document must be fully paid before completion.');
+
+		$this->purchaseManager->complete($purchase);
 	}
 
 	public function testCompleteIsBlockedBeforeReceived(): void

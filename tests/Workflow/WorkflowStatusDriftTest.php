@@ -13,6 +13,7 @@ class WorkflowStatusDriftTest extends TestCase
 	{
 		$allowedFiles = [
 			'src/DataFixtures/CurrencyFixtures.php',
+			'src/DataFixtures/ProductFixtures.php',
 			'src/DataFixtures/StoreFixtures.php',
 			'src/DataFixtures/UnitFixtures.php',
 			'src/Service/BusinessDocumentStatusSynchronizer.php',
