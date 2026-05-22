@@ -12,6 +12,7 @@ use App\Form\Admin\Type\PurchaseType;
 use App\Manager\PurchaseManager;
 use App\Repository\StatusHistoryRepository;
 use App\Service\FilterFormHandler;
+use App\Service\Inventory\PurchaseReceiptUseCase;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
 use RuntimeException;
@@ -33,6 +34,7 @@ class PurchaseController extends AbstractAdvancedController
 	public function __construct(
 		private readonly PurchaseManager $purchaseManager,
 		private readonly StatusHistoryRepository $statusHistoryRepository,
+		private readonly PurchaseReceiptUseCase $purchaseReceiptUseCase,
 	)
 	{
 	}
@@ -183,6 +185,7 @@ class PurchaseController extends AbstractAdvancedController
 		return $this->render('admin/purchase/show.html.twig', [
 			'entity' => $purchase,
 			'query_params' => $request->query->all(),
+			'can_receive' => $this->purchaseReceiptUseCase->hasReceivableLines($purchase),
 		]);
 	}
 
@@ -313,6 +316,37 @@ class PurchaseController extends AbstractAdvancedController
 		return $this->quickActionResponse($request, $store, $purchase);
 	}
 
+	#[Route('/{id}/receive', name: 'receive', methods: ['POST'])]
+	public function receive(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Purchase $purchase,
+	): Response
+	{
+		$this->denyPurchaseOutsideStore($purchase, $store);
+
+		if (!$this->isCsrfTokenValid('receive_purchase_' . $purchase->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Purchase action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $purchase, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		try {
+			$inventoryDocument = $this->purchaseReceiptUseCase->createDraft($purchase);
+			$this->addFlash('success', 'Purchase receipt draft created. Review and post the inventory document to receive stock.');
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $purchase, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->redirectToRoute('app_admin_inventory_document_index', [
+			'store_id' => $store->getId(),
+			'id' => $inventoryDocument->getId(),
+		]);
+	}
+
 	private function createPurchaseForm(Purchase $purchase, Store $store): FormInterface
 	{
 		return $this->createForm(PurchaseType::class, $purchase, [
@@ -372,6 +406,7 @@ class PurchaseController extends AbstractAdvancedController
 			'card' => $this->renderView('admin/purchase/show.html.twig', [
 				'entity' => $purchase,
 				'query_params' => $request->query->all(),
+				'can_receive' => $this->purchaseReceiptUseCase->hasReceivableLines($purchase),
 			]),
 			'history' => $this->renderView('admin/purchase/history.html.twig', [
 				'entity' => $purchase,

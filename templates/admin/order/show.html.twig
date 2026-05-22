@@ -114,6 +114,13 @@
             </form>
         {% endif %}
 
+        {% if can_ship|default(false) %}
+            <form method="post" action="{{ path('app_admin_order_ship', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline">
+                <input type="hidden" name="_token" value="{{ csrf_token('ship_order_' ~ entity.id) }}">
+                <button class="btn btn-success btn-sm" type="submit"><i class="fa-solid fa-truck me-1"></i>Ship</button>
+            </form>
+        {% endif %}
+
         {% if entity.status.value == 'shipped' %}
             <form method="post" action="{{ path('app_admin_order_mark_delivered', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction">
                 <input type="hidden" name="_token" value="{{ csrf_token('mark_delivered_order_' ~ entity.id) }}">

@@ -1,0 +1,243 @@
+@startuml
+
+title 12.6. Order and purchase UI status cycle completion
+
+hide circle
+skinparam linetype ortho
+
+component "OrderController" as OrderController <<implemented>>
+component "PurchaseController" as PurchaseController <<implemented>>
+component "InventoryDocumentController" as InventoryDocumentController <<partial>>
+component "OrderWorkflowDefinition" as OrderWorkflowDefinition <<implemented>>
+component "PurchaseWorkflowDefinition" as PurchaseWorkflowDefinition <<implemented>>
+component "InventoryPostingService" as InventoryPostingService <<implemented>>
+component "DocumentProgressRecalculator" as DocumentProgressRecalculator <<implemented>>
+component "BusinessDocumentStatusSynchronizer" as BusinessDocumentStatusSynchronizer <<implemented>>
+component "PurchaseReceiptUseCase" as PurchaseReceiptUseCase <<implemented>>
+component "OrderShipmentUseCase" as OrderShipmentUseCase <<implemented>>
+
+package "Executable from current UI" as CurrentUi {
+	[Order: draft -> confirmed]
+	[Order: confirmed -> draft]
+	[Order: shipped -> delivered]
+	[Order: delivered -> completed]
+	[Order: not completed/canceled -> canceled]
+	[Purchase: draft -> ordered]
+	[Purchase: ordered -> draft]
+	[Purchase: draft/ordered -> canceled]
+	[Purchase: received -> completed]
+	[InventoryDocument: draft -> posted]
+	[InventoryDocument: draft/posted -> canceled]
+}
+
+package "Not executable as a full commercial document cycle" as MissingUi {
+	[12.6.1 Purchase receipt UI action] <<implemented>>
+	[12.6.2 Order shipment UI action] <<implemented>>
+	[12.6.3 Immediate order readiness sync after confirm]
+	[12.6.4 Linked inventory document navigation and audit tests]
+}
+
+package "Derived status source of truth" as Derived {
+	[Purchase: partially_received/received]
+	[Purchase: partially_returned/returned]
+	[Order: awaiting_stock/ready_to_ship]
+	[Order: partially_shipped/shipped]
+	[Order: partially_returned/returned]
+}
+
+OrderController --> [Order: draft -> confirmed]
+OrderController --> [Order: confirmed -> draft]
+OrderController --> [Order: shipped -> delivered]
+OrderController --> [Order: delivered -> completed]
+OrderController --> [Order: not completed/canceled -> canceled]
+PurchaseController --> [Purchase: draft -> ordered]
+PurchaseController --> [Purchase: ordered -> draft]
+PurchaseController --> [Purchase: draft/ordered -> canceled]
+PurchaseController --> [Purchase: received -> completed]
+InventoryDocumentController --> [InventoryDocument: draft -> posted]
+InventoryDocumentController --> [InventoryDocument: draft/posted -> canceled]
+
+OrderWorkflowDefinition --> OrderController
+PurchaseWorkflowDefinition --> PurchaseController
+InventoryPostingService --> InventoryDocumentController
+InventoryPostingService --> DocumentProgressRecalculator
+DocumentProgressRecalculator --> BusinessDocumentStatusSynchronizer
+BusinessDocumentStatusSynchronizer --> Derived
+PurchaseReceiptUseCase --> [12.6.1 Purchase receipt UI action]
+OrderShipmentUseCase --> [12.6.2 Order shipment UI action]
+
+[Purchase: partially_received/received] --> [12.6.1 Purchase receipt UI action]
+[Order: partially_shipped/shipped] --> [12.6.2 Order shipment UI action]
+[Order: awaiting_stock/ready_to_ship] --> [12.6.3 Immediate order readiness sync after confirm]
+[InventoryDocument: draft -> posted] --> [12.6.4 Linked inventory document navigation and audit tests]
+
+note right of CurrentUi
+  Audit result from current controllers/templates:
+
+  Order show card can execute:
+  - draft -> confirmed;
+  - confirmed -> draft;
+  - shipped -> delivered;
+  - delivered -> completed;
+  - cancel while not completed/canceled.
+
+  Purchase show card can execute:
+  - draft -> ordered;
+  - ordered -> draft;
+  - draft/ordered -> canceled;
+  - received -> completed.
+
+  Inventory document show card can execute:
+  - draft -> posted;
+  - draft/posted -> canceled.
+
+  These actions are covered by controllers and CSRF-protected forms,
+  but they do not create purchase receipts or order shipments.
+end note
+
+note right of Derived
+  Required model rule:
+
+  Do not set these statuses directly from a UI button:
+  - purchase received/shipping-return states;
+  - order stock readiness/shipment-return states.
+
+  They are derived from posted InventoryDocumentLine rows by:
+  - InventoryPostingService;
+  - DocumentProgressRecalculator;
+  - BusinessDocumentStatusSynchronizer.
+
+  Therefore the missing UI must create/post the correct linked
+  inventory documents instead of overwriting PurchaseStatus or
+  OrderStatus manually.
+end note
+
+note right of [12.6.1 Purchase receipt UI action]
+  Goal:
+  Make purchase ordered/partially_received -> received executable
+  from the purchase UI.
+
+  Implemented:
+  1. Added PurchaseReceiptUseCase in the business/service layer.
+  2. It builds a draft InventoryDocument with:
+     type=purchase_receipt, status=draft, store, currency,
+     exchangeRateToBase, purchase link and document date.
+  3. It adds one IN line per remaining receivable PurchaseEntry:
+     remaining = quantity - receivedQuantity.
+  4. It copies product, warehouse, remaining quantity, unit cost snapshots
+     and purchaseEntry link onto each line.
+  5. It sets line totals and document totals from the receipt quantities.
+  6. Added PurchaseController::receive() with CSRF protection.
+  7. Added a purchase show-card Receive button for
+     ordered/partially_received purchases with receivable lines.
+  8. The action creates a draft and redirects to the inventory document,
+     where the existing Post action performs the stock-changing receipt.
+  9. Added service and controller tests.
+
+  Dependencies:
+  - Purchase, PurchaseEntry mappings and snapshots.
+  - InventoryDocument and InventoryDocumentLine mappings.
+  - InventoryPostingService validation:
+    purchase_receipt requires IN lines.
+  - DocumentProgressRecalculator and BusinessDocumentStatusSynchronizer
+    for received/partially_received status.
+  - Existing admin purchase reload-card behavior.
+end note
+
+note right of [12.6.2 Order shipment UI action]
+  Goal:
+  Make order ready_to_ship/partially_shipped -> shipped executable
+  from the order UI.
+
+  Implemented:
+  1. Added OrderShipmentUseCase in the business/service layer.
+  2. It builds a draft InventoryDocument with:
+     type=sale_shipment, status=draft, store, currency,
+     exchangeRateToBase, order link and document date.
+  3. It adds one OUT line per remaining shippable OrderEntry:
+     remaining = quantity - canceledQuantity - shippedQuantity.
+  4. It copies product, warehouse, remaining quantity, price snapshots
+     and orderEntry link onto each line.
+  5. It sets line totals proportionally from the order entry total.
+  6. OUT movement cost still comes from InventoryPostingService and
+     WarehouseStock.averageCost during posting.
+  7. Added OrderController::ship() with CSRF protection.
+  8. Added an order show-card Ship button for
+     ready_to_ship/partially_shipped orders with shippable lines.
+  9. The action creates a draft and redirects to the inventory document,
+     where the existing Post action performs the stock-changing shipment.
+  10. Added service and controller tests.
+
+  Dependencies:
+  - Order, OrderEntry mappings and snapshots.
+  - StockReservationService completion during sale_shipment posting.
+  - InventoryPostingService validation:
+    sale_shipment requires OUT lines.
+  - DocumentProgressRecalculator and BusinessDocumentStatusSynchronizer
+    for partially_shipped/shipped status.
+  - Existing admin order reload-card behavior.
+end note
+
+note right of [12.6.3 Immediate order readiness sync after confirm]
+  Goal:
+  Avoid a UI dead end after confirming an order.
+
+  Current risk:
+  - OrderManager::confirm() reserves stock, but the visible order status
+    is set to confirmed by the workflow transition.
+  - awaiting_stock/ready_to_ship are derived statuses, and the current
+    confirm flow does not explicitly call DocumentProgressRecalculator
+    or BusinessDocumentStatusSynchronizer after reservation.
+
+  Implementation steps:
+  1. Add a narrow sync call after reserveStockForOrder().
+  2. Keep the source of truth in BusinessDocumentStatusSynchronizer.
+  3. Record the status change as sync_progress, not as a manual workflow
+     transition.
+  4. Add tests for:
+     confirmed order with enough stock becomes ready_to_ship;
+     confirmed order without enough stock becomes awaiting_stock;
+     draft/canceled/delivered/completed are not overwritten.
+
+  Dependencies:
+  - OrderManager.
+  - BusinessDocumentStatusSynchronizer or DocumentProgressRecalculator.
+  - OrderHistoryRecorder status sync history.
+  - WarehouseStockRepository and StockReservationService behavior.
+end note
+
+note right of [12.6.4 Linked inventory document navigation and audit tests]
+  Goal:
+  Make the full cycle testable and understandable from UI.
+
+  Implementation steps:
+  1. Show linked inventory documents on order and purchase show cards,
+     or add a compact link to filtered inventory document index.
+  2. From inventory document show card, keep current links back to order
+     or purchase.
+  3. Add controller tests for the new action buttons and CSRF failures.
+  4. Add use-case tests for draft document creation and remaining
+     quantity calculation.
+  5. Add integration tests that posting the generated document changes:
+     purchase ordered -> received -> completed;
+     order ready_to_ship -> shipped -> delivered -> completed.
+
+  Dependencies:
+  - Existing InventoryDocumentController show/post/cancel actions.
+  - Existing quick-action JSON keys: card, history, row.
+  - Status history for order, purchase and inventory documents.
+end note
+
+note bottom
+  Verification for implementation:
+
+  - docker compose exec php php bin/console lint:container
+  - docker compose exec php php bin/console lint:twig templates
+  - docker compose exec php vendor/bin/phpunit tests/Manager tests/Service tests/Controller
+  - docker compose exec php php bin/console doctrine:schema:validate --skip-sync
+
+  If JavaScript or SCSS is changed:
+  - docker compose exec php yarn encore dev
+end note
+
+@enduml

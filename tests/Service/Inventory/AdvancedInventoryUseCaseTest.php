@@ -6,9 +6,11 @@ use App\Entity\InventoryDocument;
 use App\Entity\InventoryReason;
 use App\Entity\Order;
 use App\Entity\OrderEntry;
+use App\Entity\OrderStatus;
 use App\Entity\Product;
 use App\Entity\Purchase;
 use App\Entity\PurchaseEntry;
+use App\Entity\PurchaseStatus;
 use App\Entity\Store;
 use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
@@ -19,6 +21,8 @@ use App\Enum\ProductKindEnum;
 use App\Repository\WarehouseStockRepository;
 use App\Service\Inventory\CustomerReturnUseCase;
 use App\Service\Inventory\InventoryTransferUseCase;
+use App\Service\Inventory\OrderShipmentUseCase;
+use App\Service\Inventory\PurchaseReceiptUseCase;
 use App\Service\Inventory\SupplierReturnUseCase;
 use App\Service\Inventory\WriteOffAdjustmentUseCase;
 use App\Service\InventoryPostingService;
@@ -79,6 +83,78 @@ class AdvancedInventoryUseCaseTest extends TestCase
 		self::assertSame($orderEntry, $line->getOrderEntry());
 	}
 
+	public function testOrderShipmentUseCaseCreatesDraftForRemainingOrderQuantities(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct();
+		$order = (new Order())
+			->setStore($store)
+			->setNumber('SO-1')
+			->setStatus(OrderStatus::PARTIALLY_SHIPPED)
+			->setCurrency($store->getBaseCurrency())
+			->setExchangeRateToBase('1.00000000');
+		$firstEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('5.0000')
+			->setCanceledQuantity('1.0000')
+			->setShippedQuantity('2.0000')
+			->setUnitPrice('10.0000')
+			->setUnitPriceBase('12.0000')
+			->setTotalPrice('50.0000')
+			->setTotalPriceBase('60.0000');
+		$secondEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('1.0000')
+			->setShippedQuantity('1.0000')
+			->setUnitPrice('9.0000')
+			->setUnitPriceBase('9.0000')
+			->setTotalPrice('9.0000')
+			->setTotalPriceBase('9.0000');
+		$order
+			->addOrderEntry($firstEntry)
+			->addOrderEntry($secondEntry);
+		$useCase = new OrderShipmentUseCase($this->entityManagerExpectingDraftPersist());
+
+		$document = $useCase->createDraft($order, 'SHP-1');
+		$line = $document->getLines()->first();
+
+		self::assertSame(InventoryDocumentType::SALE_SHIPMENT, $document->getType());
+		self::assertSame($order, $document->getOrder());
+		self::assertSame($order->getCurrency(), $document->getCurrency());
+		self::assertSame('1.00000000', $document->getExchangeRateToBase());
+		self::assertCount(1, $document->getLines());
+		self::assertSame(InventoryDirection::OUT, $line->getDirection());
+		self::assertSame($firstEntry, $line->getOrderEntry());
+		self::assertSame('2.0000', $line->getQuantity());
+		self::assertSame('10.0000', $line->getUnitPrice());
+		self::assertSame('12.0000', $line->getUnitPriceBase());
+		self::assertSame('20.0000', $line->getTotalPrice());
+		self::assertSame('24.0000', $line->getTotalPriceBase());
+		self::assertSame('20.0000', $document->getTotalAmount());
+		self::assertSame('24.0000', $document->getTotalAmountBase());
+	}
+
+	public function testOrderShipmentUseCaseRejectsOrderWithoutRemainingQuantity(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct();
+		$order = (new Order())
+			->setStore($store)
+			->setNumber('SO-1')
+			->setStatus(OrderStatus::READY_TO_SHIP);
+		$order->addOrderEntry((new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('2.0000')
+			->setShippedQuantity('2.0000'));
+		$useCase = new OrderShipmentUseCase($this->entityManagerExpectingNoDraftPersist());
+
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('Order has no remaining quantity to ship.');
+
+		$useCase->createDraft($order, 'SHP-1');
+	}
+
 	public function testSupplierReturnUseCaseCreatesDraftLinkedToPurchaseEntry(): void
 	{
 		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct();
@@ -99,6 +175,73 @@ class AdvancedInventoryUseCaseTest extends TestCase
 		self::assertSame(InventoryDirection::OUT, $line->getDirection());
 		self::assertSame($purchaseEntry, $line->getPurchaseEntry());
 		self::assertSame('6.5000', $line->getUnitPriceBase());
+	}
+
+	public function testPurchaseReceiptUseCaseCreatesDraftForRemainingPurchaseQuantities(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct();
+		$purchase = (new Purchase())
+			->setStore($store)
+			->setNumber('PO-1')
+			->setStatus(PurchaseStatus::PARTIALLY_RECEIVED)
+			->setCurrency($store->getBaseCurrency())
+			->setExchangeRateToBase('1.00000000');
+		$firstEntry = (new PurchaseEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('5.0000')
+			->setReceivedQuantity('2.0000')
+			->setUnitCost('6.5000')
+			->setUnitCostBase('7.0000');
+		$secondEntry = (new PurchaseEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('1.0000')
+			->setReceivedQuantity('1.0000')
+			->setUnitCost('9.0000')
+			->setUnitCostBase('9.0000');
+		$purchase
+			->addPurchaseEntry($firstEntry)
+			->addPurchaseEntry($secondEntry);
+		$useCase = new PurchaseReceiptUseCase($this->entityManagerExpectingDraftPersist());
+
+		$document = $useCase->createDraft($purchase, 'PRC-1');
+		$line = $document->getLines()->first();
+
+		self::assertSame(InventoryDocumentType::PURCHASE_RECEIPT, $document->getType());
+		self::assertSame($purchase, $document->getPurchase());
+		self::assertSame($purchase->getCurrency(), $document->getCurrency());
+		self::assertSame('1.00000000', $document->getExchangeRateToBase());
+		self::assertCount(1, $document->getLines());
+		self::assertSame(InventoryDirection::IN, $line->getDirection());
+		self::assertSame($firstEntry, $line->getPurchaseEntry());
+		self::assertSame('3.0000', $line->getQuantity());
+		self::assertSame('6.5000', $line->getUnitPrice());
+		self::assertSame('7.0000', $line->getUnitPriceBase());
+		self::assertSame('19.5000', $line->getTotalPrice());
+		self::assertSame('21.0000', $line->getTotalPriceBase());
+		self::assertSame('19.5000', $document->getTotalAmount());
+		self::assertSame('21.0000', $document->getTotalAmountBase());
+	}
+
+	public function testPurchaseReceiptUseCaseRejectsPurchaseWithoutRemainingQuantity(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct();
+		$purchase = (new Purchase())
+			->setStore($store)
+			->setNumber('PO-1')
+			->setStatus(PurchaseStatus::ORDERED);
+		$purchase->addPurchaseEntry((new PurchaseEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('2.0000')
+			->setReceivedQuantity('2.0000'));
+		$useCase = new PurchaseReceiptUseCase($this->entityManagerExpectingNoDraftPersist());
+
+		$this->expectException(\RuntimeException::class);
+		$this->expectExceptionMessage('Purchase has no remaining quantity to receive.');
+
+		$useCase->createDraft($purchase, 'PRC-1');
 	}
 
 	public function testWriteOffAdjustmentUseCaseCreatesReasonedDrafts(): void
@@ -162,6 +305,15 @@ class AdvancedInventoryUseCaseTest extends TestCase
 			->method('persist')
 			->with($this->isInstanceOf(InventoryDocument::class));
 		$entityManager->expects($this->exactly($times))->method('flush');
+
+		return $entityManager;
+	}
+
+	private function entityManagerExpectingNoDraftPersist(): EntityManagerInterface
+	{
+		$entityManager = $this->createMock(EntityManagerInterface::class);
+		$entityManager->expects($this->never())->method('persist');
+		$entityManager->expects($this->never())->method('flush');
 
 		return $entityManager;
 	}
