@@ -83,11 +83,12 @@ export default class extends Controller {
 
     formatQuantity(value, precision) {
         const unitPrecision = Number.parseInt(precision, 10)
+        const normalizedPrecision = Number.isFinite(unitPrecision) ? Math.min(4, Math.max(0, unitPrecision)) : 4
 
-        if (Number.isFinite(unitPrecision) && unitPrecision === 0) {
+        if (normalizedPrecision === 0) {
             return String(Math.trunc(value))
         }
 
-        return value.toFixed(Number.isFinite(unitPrecision) ? unitPrecision : 4)
+        return value.toFixed(normalizedPrecision)
     }
 }

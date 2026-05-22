@@ -55,7 +55,7 @@
 								<div class="text-muted small">{{ entry.productCodeSnapshot }}</div>
 							</td>
 							<td>{{ entry.warehouse.name }}</td>
-							<td>{{ entry.quantity }}</td>
+							<td>{{ entry.quantity|quantity(entry.product) }}</td>
 							<td>{{ entry.unitCodeSnapshot }}</td>
 							<td>{{ entry.unitCost|money }}</td>
 							<td>{{ entry.deliveryCost|money }}</td>

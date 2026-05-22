@@ -50,7 +50,7 @@
 								<div class="text-muted small">{{ entry.productCodeSnapshot }}</div>
 							{% endif %}
 						</td>
-						<td>{{ entry.quantity|number_format(2, '.', '') }}</td>
+						<td>{{ entry.quantity|quantity(entry.product) }}</td>
 						<td>{{ entry.unitCodeSnapshot }}</td>
 						<td>{{ entry.unitCost|money }}</td>
 						<td><strong>{{ entry.totalCost|money }} {{ entity.currency.code }}</strong></td>

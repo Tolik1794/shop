@@ -23,8 +23,8 @@
 				<td><strong>#{{ entity.id }}</strong></td>
 				<td><strong>{{ entity.product.name }}</strong></td>
 				<td>{{ entity.status.value }}</td>
-				<td>{{ entity.plannedQuantity }}</td>
-				<td>{{ entity.completedQuantity }}</td>
+				<td>{{ entity.plannedQuantity|quantity(entity.product) }}</td>
+				<td>{{ entity.completedQuantity|quantity(entity.product) }}</td>
 				<td>{{ entity.warehouse ? entity.warehouse.name : '' }}</td>
 			</tr>
 			</tbody>
@@ -46,7 +46,7 @@
 					<tr>
 						<td><strong>{{ material.material.name }}</strong></td>
 						<td>{{ material.material.code }}</td>
-						<td>{{ material.plannedQuantity }}</td>
+						<td>{{ material.plannedQuantity|quantity(material.material) }}</td>
 						<td>{{ material.wastePercent }}</td>
 						<td>{{ material.comment }}</td>
 					</tr>

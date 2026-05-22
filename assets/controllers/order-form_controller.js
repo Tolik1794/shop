@@ -249,6 +249,7 @@ export default class extends Controller {
         if (quantityInput && !this.numberValue(quantityInput.value)) {
             quantityInput.value = this.formatQuantity(1, product.unitPrecision)
         }
+        this.applyQuantityPrecision(quantityInput, product.unitPrecision)
 
         if (product.warehouseId && warehouseSelect) {
             this.setWarehouse(warehouseSelect, product.warehouseId)
@@ -385,6 +386,7 @@ export default class extends Controller {
 
     syncProductData(row) {
         const productSelect = row.querySelector('[data-order-entry-target~="product"]')
+        const quantityInput = row.querySelector('[data-order-entry-target~="quantity"]')
         const unitPriceInput = row.querySelector('[data-order-entry-target~="unitPrice"]')
         const availableTarget = row.querySelector('[data-order-entry-target~="available"]')
         const productLabel = row.querySelector('[data-order-entry-target~="productLabel"]')
@@ -396,6 +398,8 @@ export default class extends Controller {
         }
 
         row.dataset.productId = product.id || ''
+        row.dataset.unitPrecision = product.unitPrecision ?? '4'
+        this.applyQuantityPrecision(quantityInput, product.unitPrecision)
 
         if (product.available !== undefined) {
             row.dataset.available = product.available || '0.0000'
@@ -698,13 +702,31 @@ export default class extends Controller {
     }
 
     formatQuantity(value, precision) {
-        const unitPrecision = Number.parseInt(precision, 10)
+        const unitPrecision = this.normalizedUnitPrecision(precision)
 
-        if (Number.isFinite(unitPrecision) && unitPrecision === 0) {
+        if (unitPrecision === 0) {
             return String(Math.trunc(value))
         }
 
-        return value.toFixed(Number.isFinite(unitPrecision) ? unitPrecision : 4)
+        return value.toFixed(unitPrecision)
+    }
+
+    applyQuantityPrecision(input, precision) {
+        if (!input) {
+            return
+        }
+
+        const unitPrecision = this.normalizedUnitPrecision(precision)
+        const step = unitPrecision === 0 ? '1' : `0.${'0'.repeat(unitPrecision - 1)}1`
+
+        input.step = step
+        input.min = step
+    }
+
+    normalizedUnitPrecision(precision) {
+        const unitPrecision = Number.parseInt(precision, 10)
+
+        return Number.isFinite(unitPrecision) ? Math.min(4, Math.max(0, unitPrecision)) : 4
     }
 
     productName(text, code) {

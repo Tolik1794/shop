@@ -86,7 +86,7 @@
                                 {{ entry.productNameSnapshot }}
                                 <div class="text-muted small">{{ entry.productCodeSnapshot }}</div>
                             </td>
-                            <td>{{ entry.quantity }}</td>
+                            <td>{{ entry.quantity|quantity(entry.product) }}</td>
                             <td>{{ entry.unitCodeSnapshot }}</td>
                             <td>{{ entry.unitPrice|money }}</td>
                             <td>{{ entry.discountAmount|money }}</td>

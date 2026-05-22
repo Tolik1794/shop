@@ -8,6 +8,7 @@ use App\Entity\Store;
 use App\Entity\Warehouse;
 use App\Repository\ProductRepository;
 use App\Repository\WarehouseRepository;
+use App\Service\Quantity\QuantityFormatter;
 use App\Validator\Constraints\PurchaseEntryForStore;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -25,7 +26,10 @@ use Symfony\Component\Validator\Constraints\NotBlank;
 
 class PurchaseEntryType extends AbstractType
 {
-	public function __construct(private readonly ProductRepository $productRepository)
+	public function __construct(
+		private readonly ProductRepository $productRepository,
+		private readonly QuantityFormatter $quantityFormatter,
+	)
 	{
 	}
 
@@ -123,17 +127,18 @@ class PurchaseEntryType extends AbstractType
 				return;
 			}
 
-			$purchaseEntry->setQuantity($this->formatQuantityForModel($form->get('quantity')->getData()));
+			$purchaseEntry->setQuantity($this->quantityFormatter->formatForStorage($form->get('quantity')->getData()));
 		});
 	}
 
 	private function addQuantityField(FormBuilderInterface|FormInterface $form, ?Product $product = null, ?PurchaseEntry $purchaseEntry = null): void
 	{
-		$precision = max(0, (int) ($product?->getUnit()?->getPrecision() ?? 4));
+		$precision = $this->quantityFormatter->precisionForProduct($product);
 		$isIntegerQuantity = $precision === 0;
+		$step = $this->quantityFormatter->stepForPrecision($precision);
 		$options = [
 			'mapped' => false,
-			'data' => $this->formatQuantityForForm($purchaseEntry?->getQuantity(), $precision),
+			'data' => $this->quantityFormatter->formatForForm($purchaseEntry?->getQuantity(), $product),
 			'help' => $product?->getUnit()?->getCode() ?? ' ',
 			'constraints' => [
 				new GreaterThan([
@@ -142,8 +147,8 @@ class PurchaseEntryType extends AbstractType
 				]),
 			],
 			'attr' => [
-				'min' => 1,
-				'step' => 1,
+				'min' => $step,
+				'step' => $step,
 			],
 		];
 
@@ -152,8 +157,6 @@ class PurchaseEntryType extends AbstractType
 		} else {
 			$options['html5'] = true;
 			$options['scale'] = $precision;
-			$options['attr']['min'] = $this->quantityStep($precision);
-			$options['attr']['step'] = $this->quantityStep($precision);
 		}
 
 		$form->add('quantity', $isIntegerQuantity ? IntegerType::class : NumberType::class, $options);
@@ -173,33 +176,6 @@ class PurchaseEntryType extends AbstractType
 			],
 			'constraints' => [new NotBlank(['message' => 'Select product.'])],
 		]);
-	}
-
-	private function quantityStep(int $precision): string
-	{
-		return '0.' . str_repeat('0', max(0, $precision - 1)) . '1';
-	}
-
-	private function formatQuantityForForm(?string $quantity, int $precision): string|int|null
-	{
-		if ($quantity === null || $quantity === '') {
-			return null;
-		}
-
-		$value = (float) str_replace(',', '.', $quantity);
-
-		return $precision === 0
-			? (int) $value
-			: number_format($value, $precision, '.', '');
-	}
-
-	private function formatQuantityForModel(string|int|float|null $quantity): string
-	{
-		if ($quantity === null || $quantity === '') {
-			return '0.0000';
-		}
-
-		return number_format((float) str_replace(',', '.', (string) $quantity), 4, '.', '');
 	}
 
 	public function configureOptions(OptionsResolver $resolver): void

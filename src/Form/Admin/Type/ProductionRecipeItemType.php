@@ -7,8 +7,10 @@ use App\Entity\ProductionRecipeItem;
 use App\Entity\Store;
 use App\Enum\ProductKindEnum;
 use App\Repository\ProductRepository;
+use App\Service\Quantity\QuantityFormatter;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
@@ -21,7 +23,10 @@ use Symfony\Component\Validator\Constraints\NotBlank;
 
 class ProductionRecipeItemType extends AbstractType
 {
-	public function __construct(private readonly ProductRepository $productRepository)
+	public function __construct(
+		private readonly ProductRepository $productRepository,
+		private readonly QuantityFormatter $quantityFormatter,
+	)
 	{
 	}
 
@@ -31,22 +36,9 @@ class ProductionRecipeItemType extends AbstractType
 		$item = $builder->getData();
 
 		$this->addMaterialField($builder, $options, $item?->getMaterial());
+		$this->addQuantityField($builder, $item?->getMaterial(), $item);
 
 		$builder
-			->add('quantity', NumberType::class, [
-				'html5' => true,
-				'scale' => 4,
-				'attr' => [
-					'min' => '0.0001',
-					'step' => '0.0001',
-				],
-				'constraints' => [
-					new GreaterThan([
-						'value' => 0,
-						'message' => 'Quantity must be greater than zero.',
-					]),
-				],
-			])
 			->add('wastePercent', NumberType::class, [
 				'required' => false,
 				'html5' => true,
@@ -89,8 +81,53 @@ class ProductionRecipeItemType extends AbstractType
 
 			if ($material instanceof Product) {
 				$this->addMaterialField($event->getForm(), $options, $material);
+				$this->addQuantityField($event->getForm(), $material, $item);
 			}
 		});
+
+		$builder->addEventListener(FormEvents::POST_SUBMIT, function (FormEvent $event): void {
+			/** @var ProductionRecipeItem|null $item */
+			$item = $event->getData();
+			$form = $event->getForm();
+
+			if (!$item instanceof ProductionRecipeItem || !$form->has('quantity')) {
+				return;
+			}
+
+			$item->setQuantity($this->quantityFormatter->formatForStorage($form->get('quantity')->getData()));
+		});
+	}
+
+	private function addQuantityField(FormBuilderInterface|FormInterface $form, ?Product $material = null, ?ProductionRecipeItem $item = null): void
+	{
+		$precision = $this->quantityFormatter->precisionForProduct($material);
+		$isIntegerQuantity = $precision === 0;
+		$step = $this->quantityFormatter->stepForPrecision($precision);
+
+		$options = [
+			'mapped' => false,
+			'data' => $this->quantityFormatter->formatForForm($item?->getQuantity(), $material),
+			'help' => $material?->getUnit()?->getCode() ?? ' ',
+			'constraints' => [
+				new GreaterThan([
+					'value' => 0,
+					'message' => 'Quantity must be greater than zero.',
+				]),
+			],
+			'attr' => [
+				'min' => $step,
+				'step' => $step,
+			],
+		];
+
+		if ($isIntegerQuantity) {
+			$options['invalid_message'] = 'Quantity must be an integer.';
+		} else {
+			$options['html5'] = true;
+			$options['scale'] = $precision;
+		}
+
+		$form->add('quantity', $isIntegerQuantity ? IntegerType::class : NumberType::class, $options);
 	}
 
 	private function addMaterialField(FormBuilderInterface|FormInterface $form, array $options, ?Product $selectedProduct = null): void

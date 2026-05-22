@@ -18,8 +18,8 @@
 			<tr><th>Product</th><td>{{ entity.product.name }}</td></tr>
 			<tr><th>Recipe</th><td>{{ entity.recipe ? entity.recipe.name : '' }}</td></tr>
 			<tr><th>Warehouse</th><td>{{ entity.warehouse ? entity.warehouse.name : '' }}</td></tr>
-			<tr><th>Planned quantity</th><td>{{ entity.plannedQuantity }}</td></tr>
-			<tr><th>Completed quantity</th><td>{{ entity.completedQuantity }}</td></tr>
+			<tr><th>Planned quantity</th><td>{{ entity.plannedQuantity|quantity(entity.product) }}</td></tr>
+			<tr><th>Completed quantity</th><td>{{ entity.completedQuantity|quantity(entity.product) }}</td></tr>
 			<tr><th>Planned start</th><td>{{ entity.plannedStartAt ? entity.plannedStartAt|date('Y-m-d H:i') : '' }}</td></tr>
 			<tr><th>Planned end</th><td>{{ entity.plannedEndAt ? entity.plannedEndAt|date('Y-m-d H:i') : '' }}</td></tr>
 			<tr><th>Started</th><td>{{ entity.startedAt ? entity.startedAt|date('Y-m-d H:i') : '' }}</td></tr>
@@ -47,7 +47,7 @@
 						<tr>
 							<td>{{ material.material.name }}</td>
 							<td>{{ material.material.code }}</td>
-							<td>{{ material.plannedQuantity }}</td>
+							<td>{{ material.plannedQuantity|quantity(material.material) }}</td>
 							<td>{{ material.wastePercent }}</td>
 							<td>{{ material.comment }}</td>
 						</tr>

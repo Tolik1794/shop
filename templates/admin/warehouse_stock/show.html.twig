@@ -33,11 +33,11 @@
             </tr>
             <tr>
                 <th>Quantity on hand</th>
-                <td>{{ entity.quantityOnHand }}</td>
+                <td>{{ entity.quantityOnHand|quantity(entity.product) }}</td>
             </tr>
             <tr>
                 <th>Reserved quantity</th>
-                <td>{{ entity.reservedQuantity }}</td>
+                <td>{{ entity.reservedQuantity|quantity(entity.product) }}</td>
             </tr>
             </tbody>
         </table>
@@ -60,8 +60,8 @@
                     {% for batch in batches %}
                         <tr>
                             <td>{{ batch.receivedAt ? batch.receivedAt|date('Y-m-d H:i') : '' }}</td>
-                            <td>{{ batch.initialQuantity }}</td>
-                            <td>{{ batch.remainingQuantity }}</td>
+                            <td>{{ batch.initialQuantity|quantity(entity.product) }}</td>
+                            <td>{{ batch.remainingQuantity|quantity(entity.product) }}</td>
                             <td>{{ batch.unitCost|money }}</td>
                             <td>{{ batch.salePrice|money }}</td>
                             <td>{{ batch.purchaseEntry ? batch.purchaseEntry.id : '' }}</td>

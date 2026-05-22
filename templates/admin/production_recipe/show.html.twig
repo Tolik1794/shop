@@ -36,7 +36,7 @@
 						<tr>
 							<td>{{ item.material.name }}</td>
 							<td>{{ item.material.code }}</td>
-							<td>{{ item.quantity }}</td>
+							<td>{{ item.quantity|quantity(item.material) }}</td>
 							<td>{{ item.wastePercent }}</td>
 						</tr>
 					{% endfor %}

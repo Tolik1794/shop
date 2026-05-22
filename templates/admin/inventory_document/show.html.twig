@@ -66,7 +66,7 @@
 					<td>{{ line.product.name }} <span class="text-muted">({{ line.product.code }})</span></td>
 					<td>{{ line.warehouse.name }}</td>
 					<td>{{ line.direction.value }}</td>
-					<td>{{ line.quantity }}</td>
+					<td>{{ line.quantity|quantity(line.product) }}</td>
 					<td>{{ line.unitPrice is not null ? line.unitPrice|money : '—' }}</td>
 					<td>{{ line.totalPrice is not null ? line.totalPrice|money : '—' }}</td>
 				</tr>
@@ -93,9 +93,9 @@
 					<tr>
 						<td>{{ line.product.name }} · {{ line.warehouse.name }}</td>
 						<td>{{ movement.createdAt|date('Y-m-d H:i') }}</td>
-						<td>{{ movement.quantityChange }}</td>
+						<td>{{ movement.quantityChange|quantity(line.product) }}</td>
 						<td>{{ movement.unitCost|money }}</td>
-						<td>{{ movement.balanceAfter ?: '—' }}</td>
+						<td>{{ movement.balanceAfter is not null ? movement.balanceAfter|quantity(line.product) : '—' }}</td>
 					</tr>
 				{% endfor %}
 			{% else %}

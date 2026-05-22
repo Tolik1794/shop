@@ -70,6 +70,10 @@ class OrderHistoryChangeSetBuilderTest extends KernelTestCase
 
 	private function persistCurrency(string $code, string $name): Currency
 	{
+		while ($this->entityManager->find(Currency::class, $code) instanceof Currency) {
+			$code = 'H' . substr(strtoupper(bin2hex(random_bytes(2))), 0, 2);
+		}
+
 		$currency = (new Currency())
 			->setCode($code)
 			->setName($name)

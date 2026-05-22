@@ -87,7 +87,7 @@ class InventoryDocumentControllerTest extends WebTestCase
 		self::assertSelectorTextContains('body', $product->getName());
 		self::assertSelectorTextContains('body', $warehouse->getName());
 		self::assertSelectorTextContains('body', 'Stock movements');
-		self::assertSelectorTextContains('body', '5.0000');
+		self::assertSelectorTextContains('body', '5');
 	}
 
 	public function testShowRejectsInventoryDocumentFromAnotherStore(): void
