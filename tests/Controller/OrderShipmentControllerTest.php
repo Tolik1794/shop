@@ -74,8 +74,22 @@ class OrderShipmentControllerTest extends WebTestCase
 		self::assertSame('10.0000', $line->getUnitPriceBase());
 		self::assertSame($order->getOrderEntries()->first()->getId(), $line->getOrderEntry()?->getId());
 
-		$this->client->followRedirect();
+		$this->client->request('GET', sprintf(
+			'/admin/store/%d/order/%d/show',
+			$store->getId(),
+			$order->getId(),
+		));
 		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('body', 'Inventory documents');
+		self::assertSelectorTextContains('body', (string) $document->getNumber());
+
+		$this->client->request('GET', sprintf(
+			'/admin/store/%d/inventory-document/%d/show',
+			$store->getId(),
+			$document->getId(),
+		));
+		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('body', 'Order ' . $order->getNumber());
 		$this->client->submit($this->client->getCrawler()->selectButton('Post')->form());
 		self::assertResponseRedirects(sprintf('/admin/store/%d/inventory-document/?id=%d', $store->getId(), $document->getId()));
 
@@ -91,6 +105,34 @@ class OrderShipmentControllerTest extends WebTestCase
 		self::assertSame(OrderStatus::SHIPPED, $shippedOrder->getStatus());
 		self::assertSame('2.0000', $shippedOrder->getOrderEntries()->first()->getShippedQuantity());
 		self::assertSame('0.0000', $warehouseStock->getQuantityOnHand());
+
+		$crawler = $this->client->request('GET', sprintf(
+			'/admin/store/%d/order/%d/show',
+			$store->getId(),
+			$order->getId(),
+		));
+		self::assertResponseIsSuccessful();
+		self::assertGreaterThan(0, $crawler->selectButton('Mark delivered')->count());
+
+		$this->client->submit($crawler->selectButton('Mark delivered')->form());
+		self::assertResponseRedirects(sprintf('/admin/store/%d/order/?id=%d&page=1', $store->getId(), $order->getId()));
+
+		$crawler = $this->client->request('GET', sprintf(
+			'/admin/store/%d/order/%d/show',
+			$store->getId(),
+			$order->getId(),
+		));
+		self::assertResponseIsSuccessful();
+		self::assertGreaterThan(0, $crawler->selectButton('Complete')->count());
+
+		$this->client->submit($crawler->selectButton('Complete')->form());
+		self::assertResponseRedirects(sprintf('/admin/store/%d/order/?id=%d&page=1', $store->getId(), $order->getId()));
+
+		$this->entityManager->clear();
+		$completedOrder = $this->entityManager->getRepository(Order::class)->find($order->getId());
+
+		self::assertInstanceOf(Order::class, $completedOrder);
+		self::assertSame(OrderStatus::COMPLETED, $completedOrder->getStatus());
 	}
 
 	public function testShipActionRejectsInvalidCsrfToken(): void

@@ -6,6 +6,7 @@ use App\Entity\Category;
 use App\Entity\Currency;
 use App\Entity\InventoryDocument;
 use App\Entity\InventoryDocumentLine;
+use App\Entity\InventoryReason;
 use App\Entity\StatusHistory;
 use App\Entity\StatusHistoryEntityType;
 use App\Entity\Store;
@@ -19,6 +20,7 @@ use App\Entity\Product;
 use App\Enum\InventoryDirection;
 use App\Enum\InventoryDocumentStatus;
 use App\Enum\InventoryDocumentType;
+use App\Enum\InventoryReasonType;
 use App\Enum\ProductKindEnum;
 use DateTime;
 use DateTimeImmutable;
@@ -223,6 +225,7 @@ class InventoryDocumentControllerTest extends WebTestCase
 			->setExchangeRateToBase('1.00000000')
 			->setTotalAmount('8.0000')
 			->setTotalAmountBase('8.0000')
+			->setReason($this->createInventoryReason($store, 'Stock adjustment ' . $number, InventoryReasonType::STOCK_ADJUSTMENT))
 			->setComment('Inventory document test');
 
 		if ($status === InventoryDocumentStatus::POSTED) {
@@ -247,6 +250,18 @@ class InventoryDocumentControllerTest extends WebTestCase
 		$this->entityManager->flush();
 
 		return $document;
+	}
+
+	private function createInventoryReason(Store $store, string $name, InventoryReasonType $type): InventoryReason
+	{
+		$inventoryReason = (new InventoryReason())
+			->setStore($store)
+			->setName($name)
+			->setType($type);
+
+		$this->entityManager->persist($inventoryReason);
+
+		return $inventoryReason;
 	}
 
 	private function createWarehouseStock(Warehouse $warehouse, Product $product, string $quantity, string $averageCost): WarehouseStock

@@ -72,8 +72,22 @@ class PurchaseReceiptControllerTest extends WebTestCase
 		self::assertSame('4.0000', $line->getUnitPriceBase());
 		self::assertSame($purchase->getPurchaseEntries()->first()->getId(), $line->getPurchaseEntry()?->getId());
 
-		$this->client->followRedirect();
+		$this->client->request('GET', sprintf(
+			'/admin/store/%d/purchase/%d/show',
+			$store->getId(),
+			$purchase->getId(),
+		));
 		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('body', 'Inventory documents');
+		self::assertSelectorTextContains('body', (string) $document->getNumber());
+
+		$this->client->request('GET', sprintf(
+			'/admin/store/%d/inventory-document/%d/show',
+			$store->getId(),
+			$document->getId(),
+		));
+		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('body', 'Purchase ' . $purchase->getNumber());
 		$this->client->submit($this->client->getCrawler()->selectButton('Post')->form());
 		self::assertResponseRedirects(sprintf('/admin/store/%d/inventory-document/?id=%d', $store->getId(), $document->getId()));
 
@@ -83,6 +97,23 @@ class PurchaseReceiptControllerTest extends WebTestCase
 		self::assertInstanceOf(Purchase::class, $receivedPurchase);
 		self::assertSame(PurchaseStatus::RECEIVED, $receivedPurchase->getStatus());
 		self::assertSame('3.0000', $receivedPurchase->getPurchaseEntries()->first()->getReceivedQuantity());
+
+		$crawler = $this->client->request('GET', sprintf(
+			'/admin/store/%d/purchase/%d/show',
+			$store->getId(),
+			$purchase->getId(),
+		));
+		self::assertResponseIsSuccessful();
+		self::assertGreaterThan(0, $crawler->selectButton('Complete')->count());
+
+		$this->client->submit($crawler->selectButton('Complete')->form());
+		self::assertResponseRedirects(sprintf('/admin/store/%d/purchase/?id=%d&page=1', $store->getId(), $purchase->getId()));
+
+		$this->entityManager->clear();
+		$completedPurchase = $this->entityManager->getRepository(Purchase::class)->find($purchase->getId());
+
+		self::assertInstanceOf(Purchase::class, $completedPurchase);
+		self::assertSame(PurchaseStatus::COMPLETED, $completedPurchase->getStatus());
 	}
 
 	public function testReceiveActionRejectsInvalidCsrfToken(): void

@@ -34,7 +34,7 @@ package "Not executable as a full commercial document cycle" as MissingUi {
 	[12.6.1 Purchase receipt UI action] <<implemented>>
 	[12.6.2 Order shipment UI action] <<implemented>>
 	[12.6.3 Immediate order readiness sync after confirm] <<implemented>>
-	[12.6.4 Linked inventory document navigation and audit tests]
+	[12.6.4 Linked inventory document navigation and audit tests] <<implemented>>
 }
 
 package "Derived status source of truth" as Derived {
@@ -211,15 +211,18 @@ note right of [12.6.4 Linked inventory document navigation and audit tests]
   Goal:
   Make the full cycle testable and understandable from UI.
 
-  Implementation steps:
-  1. Show linked inventory documents on order and purchase show cards,
-     or add a compact link to filtered inventory document index.
-  2. From inventory document show card, keep current links back to order
+  Implemented:
+  1. Order show card displays linked inventory documents with compact
+     links to the inventory document index focused by id.
+  2. Purchase show card displays linked inventory documents with compact
+     links to the inventory document index focused by id.
+  3. Inventory document show card keeps links back to the linked order
      or purchase.
-  3. Add controller tests for the new action buttons and CSRF failures.
-  4. Add use-case tests for draft document creation and remaining
+  4. Controller tests cover the receipt and shipment action buttons,
+     invalid CSRF tokens, linked document navigation and redirects.
+  5. Use-case tests cover draft document creation and remaining
      quantity calculation.
-  5. Add integration tests that posting the generated document changes:
+  6. Integration-style controller tests cover:
      purchase ordered -> received -> completed;
      order ready_to_ship -> shipped -> delivered -> completed.
 
