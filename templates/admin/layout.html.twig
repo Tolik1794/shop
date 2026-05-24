@@ -12,7 +12,7 @@
                         <div class="simplebar-mask">
                             <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
                                 <div class="simplebar-content-wrapper" tabindex="0" role="region"
-                                     aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
+                                     aria-label="{{ 'scrollable content'|trans }}" style="height: 100%; overflow: hidden scroll;">
                                     <div class="simplebar-content" style="padding: 0px;">
                                         {% block sidebar_brand %}
                                             <a class="sidebar-brand" href="{{ path('admin_store_index', {'_locale': app.request.locale}) }}">

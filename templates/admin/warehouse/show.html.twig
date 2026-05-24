@@ -1,6 +1,6 @@
 {% set actions %}
-    <a class="btn btn-light btn-sm" href="{{ path('app_admin_warehouse_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>Edit</a>
-    <a class="btn btn-light btn-sm" href="{{ path('app_admin_warehouse_stock_index', {store_id: app.request.attributes.get('store_id'), warehouse_id: entity.id}) }}"><i class="fa-solid fa-boxes-stacked me-1"></i>Stock</a>
+    <a class="btn btn-light btn-sm" href="{{ path('app_admin_warehouse_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>{{ 'Edit'|trans }}</a>
+    <a class="btn btn-light btn-sm" href="{{ path('app_admin_warehouse_stock_index', {store_id: app.request.attributes.get('store_id'), warehouse_id: entity.id}) }}"><i class="fa-solid fa-boxes-stacked me-1"></i>{{ 'Stock'|trans }}</a>
 {% endset %}
 
 <div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
@@ -13,7 +13,7 @@
     <div class="card-body">
         <div class="row g-0">
             <div class="col-sm-9 col-xl-12 col-xxl-9">
-                <strong>Name</strong>
+                <strong>{{ 'Name'|trans }}</strong>
                 <p>{{ entity.name }}</p>
             </div>
         </div>
@@ -21,13 +21,13 @@
         <table class="table table-sm mt-2 mb-4">
             <tbody>
             <tr>
-                <th>Store</th>
+                <th>{{ 'Store'|trans }}</th>
                 <td>{{ entity.store }}</td>
             </tr>
             <tr>
-                <th>Stock</th>
+                <th>{{ 'Stock'|trans }}</th>
                 <td>
-                    <a href="{{ path('app_admin_warehouse_stock_index', {store_id: app.request.attributes.get('store_id'), warehouse_id: entity.id}) }}">Open</a>
+                    <a href="{{ path('app_admin_warehouse_stock_index', {store_id: app.request.attributes.get('store_id'), warehouse_id: entity.id}) }}">{{ 'Open'|trans }}</a>
                 </td>
             </tr>
             </tbody>

@@ -1,4 +1,4 @@
-<nav class="{{ breadcrumb_class|default('mb-3') }}" aria-label="breadcrumb">
+<nav class="{{ breadcrumb_class|default('mb-3') }}" aria-label="{{ 'breadcrumb'|trans }}">
     {% for item in items %}
         {% if item.url is defined and item.url %}
             <a href="{{ item.url }}">{{ item.label|trans }}</a>

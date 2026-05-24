@@ -40,11 +40,11 @@
 							first_entity ? render(controller(
 								'App\\Controller\\Admin\\InventoryDocumentController::show',
 								{ store_id: app.request.attributes.get('store_id'), id: first_entity.id, 'request': app.request }
-							)) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
+							)) : '<div class="card"><div class="card-body">' ~ 'Nothing to show...'|trans ~ '</div></div>',
 							first_entity ? render(controller(
 								'App\\Controller\\Admin\\InventoryDocumentController::history',
 								{ store_id: app.request.attributes.get('store_id'), id: first_entity.id }
-							)) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
+							)) : '<div class="card"><div class="card-body">' ~ 'Nothing to show...'|trans ~ '</div></div>',
 							include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
 						]
 					}) }}

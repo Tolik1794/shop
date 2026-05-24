@@ -4,15 +4,15 @@
 
 {% set table_actions %}
     {% if is_granted('ROLE_STORE_ADMIN') %}
-        <a class="btn btn-light btn-sm" href="{{ path('admin_store_new') }}"><i class="fa-solid fa-plus me-1"></i>New</a>
+        <a class="btn btn-light btn-sm" href="{{ path('admin_store_new') }}"><i class="fa-solid fa-plus me-1"></i>{{ 'New'|trans }}</a>
     {% endif %}
 {% endset %}
 
 {% set table_head %}
     <tr>
         <th>{{ 'Email'|trans }}</th>
-        <th>Nickname</th>
-        <th>Roles</th>
+        <th>{{ 'Nickname'|trans }}</th>
+        <th>{{ 'Roles'|trans }}</th>
     </tr>
 {% endset %}
 
@@ -49,7 +49,7 @@
                             first_entity ? render(controller(
                                 'App\\Controller\\Admin\\UserController::show',
                                 { 'user_id': first_entity.nickname, 'request': app.request }
-                            )) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
+                            )) : '<div class="card"><div class="card-body">' ~ 'Nothing to show...'|trans ~ '</div></div>',
                             include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
                         ]
                     }) }}

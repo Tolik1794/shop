@@ -13,10 +13,10 @@
 			<thead>
 			<tr>
 				<th>{{ 'Number'|trans }}</th>
-				<th>Supplier</th>
+				<th>{{ 'Supplier'|trans }}</th>
 				<th>{{ 'Status'|trans }}</th>
-				<th>Total</th>
-				<th>Payment</th>
+				<th>{{ 'Total'|trans }}</th>
+				<th>{{ 'Payment'|trans }}</th>
 			</tr>
 			</thead>
 			<tbody>
@@ -35,10 +35,10 @@
 				<thead>
 				<tr>
 					<th>{{ 'Product'|trans }}</th>
-					<th>Qty</th>
+					<th>{{ 'Qty'|trans }}</th>
 					<th>{{ 'Unit'|trans }}</th>
-					<th>Unit cost</th>
-					<th>Total</th>
+					<th>{{ 'Unit cost'|trans }}</th>
+					<th>{{ 'Total'|trans }}</th>
 				</tr>
 				</thead>
 				<tbody>
@@ -59,7 +59,7 @@
 				</tbody>
 			</table>
 		{% else %}
-			<span class="text-muted small">No items</span>
+			<span class="text-muted small">{{ 'No items'|trans }}</span>
 		{% endif %}
 	</td>
 </tr>

@@ -13,8 +13,8 @@
 				<th>ID</th>
 				<th>{{ 'Product'|trans }}</th>
 				<th>{{ 'Status'|trans }}</th>
-				<th>Planned</th>
-				<th>Completed</th>
+				<th>{{ 'Planned'|trans }}</th>
+				<th>{{ 'Completed'|trans }}</th>
 				<th>{{ 'Warehouse'|trans }}</th>
 			</tr>
 			</thead>
@@ -34,11 +34,11 @@
 			<table class="table table-sm mb-0">
 				<thead>
 				<tr>
-					<th>Material</th>
+					<th>{{ 'Material'|trans }}</th>
 					<th>{{ 'Code'|trans }}</th>
-					<th>Planned qty</th>
-					<th>Waste %</th>
-					<th>Comment</th>
+					<th>{{ 'Planned qty'|trans }}</th>
+					<th>{{ 'Waste %'|trans }}</th>
+					<th>{{ 'Comment'|trans }}</th>
 				</tr>
 				</thead>
 				<tbody>
@@ -54,7 +54,7 @@
 				</tbody>
 			</table>
 		{% else %}
-			<span class="text-muted small">No materials</span>
+			<span class="text-muted small">{{ 'No materials'|trans }}</span>
 		{% endif %}
 	</td>
 </tr>

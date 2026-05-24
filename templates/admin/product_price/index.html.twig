@@ -23,17 +23,17 @@
 
 {% set table_actions %}
     {% if is_granted('ROLE_STORE_ADMIN') %}
-        <a class="btn btn-light btn-sm" href="{{ path('app_admin_product_price_new', {store_id: app.request.attributes.get('store_id'), product_id: product.id}) }}"><i class="fa-solid fa-plus me-1"></i>New</a>
+        <a class="btn btn-light btn-sm" href="{{ path('app_admin_product_price_new', {store_id: app.request.attributes.get('store_id'), product_id: product.id}) }}"><i class="fa-solid fa-plus me-1"></i>{{ 'New'|trans }}</a>
     {% endif %}
 {% endset %}
 
 {% set table_head %}
     <tr>
         <th>{{ 'Type'|trans }}</th>
-        <th>Price</th>
+        <th>{{ 'Price'|trans }}</th>
         <th>{{ 'Currency'|trans }}</th>
-        <th>Base price</th>
-        <th>Valid from</th>
+        <th>{{ 'Base price'|trans }}</th>
+        <th>{{ 'Valid from'|trans }}</th>
     </tr>
 {% endset %}
 
@@ -69,7 +69,7 @@
                             first_entity ? render(controller(
                                 'App\\Controller\\Admin\\ProductPriceController::show',
                                 { store_id: app.request.attributes.get('store_id'), product_id: product.id, id: first_entity.id, 'request': app.request }
-                            )) : '<div class="card"><div class="card-body">Nothing to show...</div></div>'
+                            )) : '<div class="card"><div class="card-body">' ~ 'Nothing to show...'|trans ~ '</div></div>'
                         ]
                     }) }}
                 </div>

@@ -1,4 +1,4 @@
-<h6 class="mb-2">Payments</h6>
+<h6 class="mb-2">{{ 'Payments'|trans }}</h6>
 
 {% if payments|length > 0 %}
 	<div class="table-responsive">
@@ -6,11 +6,11 @@
 			<thead>
 			<tr>
 				<th>{{ 'Date'|trans }}</th>
-				<th>Direction</th>
+				<th>{{ 'Direction'|trans }}</th>
 				<th>{{ 'Type'|trans }}</th>
-				<th>Amount</th>
-				<th>Amount base</th>
-				<th>Correction</th>
+				<th>{{ 'Amount'|trans }}</th>
+				<th>{{ 'Amount base'|trans }}</th>
+				<th>{{ 'Correction'|trans }}</th>
 				<th>{{ 'Reason'|trans }}</th>
 			</tr>
 			</thead>
@@ -36,7 +36,7 @@
 		</table>
 	</div>
 {% else %}
-	<p class="text-muted">No payments.</p>
+	<p class="text-muted">{{ 'No payments.'|trans }}</p>
 {% endif %}
 
 <a class="btn btn-light btn-sm mb-3" href="{{ path('app_admin_payment_new', return_url is defined ? route_params|merge({return_url: return_url}) : route_params) }}">

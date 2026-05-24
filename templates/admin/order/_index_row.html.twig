@@ -14,10 +14,10 @@
 			<thead>
 			<tr>
 				<th>{{ 'Number'|trans }}</th>
-				<th>Customer</th>
+				<th>{{ 'Customer'|trans }}</th>
 				<th>{{ 'Status'|trans }}</th>
-				<th>Total</th>
-				<th>Payment</th>
+				<th>{{ 'Total'|trans }}</th>
+				<th>{{ 'Payment'|trans }}</th>
 			</tr>
 			</thead>
 			<tbody>
@@ -36,11 +36,11 @@
 				<thead>
 				<tr>
 					<th>{{ 'Product'|trans }}</th>
-					<th>Qty</th>
+					<th>{{ 'Qty'|trans }}</th>
 					<th>{{ 'Unit'|trans }}</th>
-					<th>Price</th>
-					<th>Discount</th>
-					<th>Total</th>
+					<th>{{ 'Price'|trans }}</th>
+					<th>{{ 'Discount'|trans }}</th>
+					<th>{{ 'Total'|trans }}</th>
 				</tr>
 				</thead>
 				<tbody>
@@ -62,7 +62,7 @@
 				</tbody>
 			</table>
 		{% else %}
-			<span class="text-muted small">No items</span>
+			<span class="text-muted small">{{ 'No items'|trans }}</span>
 		{% endif %}
 	</td>
 </tr>

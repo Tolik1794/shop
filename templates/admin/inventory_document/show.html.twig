@@ -9,55 +9,55 @@
 			<tr><th>{{ 'Type'|trans }}</th><td>{{ entity.type.value }}</td></tr>
 			<tr><th>{{ 'Status'|trans }}</th><td>{{ entity.status.value }}</td></tr>
 			<tr><th>{{ 'Currency'|trans }}</th><td>{{ entity.currency ? entity.currency.code : '—' }}</td></tr>
-			<tr><th>Exchange rate</th><td>{{ entity.exchangeRateToBase ?: '—' }}</td></tr>
-			<tr><th>Total</th><td>{{ entity.totalAmount is not null ? entity.totalAmount|money : '—' }}</td></tr>
-			<tr><th>Total base</th><td>{{ entity.totalAmountBase is not null ? entity.totalAmountBase|money : '—' }}</td></tr>
+			<tr><th>{{ 'Exchange rate'|trans }}</th><td>{{ entity.exchangeRateToBase ?: '—' }}</td></tr>
+			<tr><th>{{ 'Total'|trans }}</th><td>{{ entity.totalAmount is not null ? entity.totalAmount|money : '—' }}</td></tr>
+			<tr><th>{{ 'Total base'|trans }}</th><td>{{ entity.totalAmountBase is not null ? entity.totalAmountBase|money : '—' }}</td></tr>
 			<tr><th>{{ 'Reason'|trans }}</th><td>{{ entity.reason ? entity.reason.name ~ ' (' ~ entity.reason.type.value ~ ')' : '—' }}</td></tr>
 			<tr>
-				<th>Linked document</th>
+				<th>{{ 'Linked document'|trans }}</th>
 				<td>
 					{% if entity.order %}
-						<a href="{{ path('app_admin_order_index', {store_id: app.request.attributes.get('store_id'), id: entity.order.id}) }}">Order {{ entity.order.number }}</a>
+						<a href="{{ path('app_admin_order_index', {store_id: app.request.attributes.get('store_id'), id: entity.order.id}) }}">{{ 'Order'|trans }} {{ entity.order.number }}</a>
 					{% elseif entity.purchase %}
-						<a href="{{ path('app_admin_purchase_index', {store_id: app.request.attributes.get('store_id'), id: entity.purchase.id}) }}">Purchase {{ entity.purchase.number }}</a>
+						<a href="{{ path('app_admin_purchase_index', {store_id: app.request.attributes.get('store_id'), id: entity.purchase.id}) }}">{{ 'Purchase'|trans }} {{ entity.purchase.number }}</a>
 					{% elseif entity.productionOrder %}
-						<a href="{{ path('app_admin_production_order_index', {store_id: app.request.attributes.get('store_id'), id: entity.productionOrder.id}) }}">Production #{{ entity.productionOrder.id }}</a>
+						<a href="{{ path('app_admin_production_order_index', {store_id: app.request.attributes.get('store_id'), id: entity.productionOrder.id}) }}">{{ 'Production'|trans }} #{{ entity.productionOrder.id }}</a>
 					{% else %}
 						<span class="text-muted">—</span>
 					{% endif %}
 				</td>
 			</tr>
-			<tr><th>Posted at</th><td>{{ entity.postedAt ? entity.postedAt|date('Y-m-d H:i') : '—' }}</td></tr>
-			<tr><th>Canceled at</th><td>{{ entity.canceledAt ? entity.canceledAt|date('Y-m-d H:i') : '—' }}</td></tr>
-			<tr><th>Reversed document</th><td>{{ entity.reversedDocument ? entity.reversedDocument.number : '—' }}</td></tr>
-			<tr><th>Comment</th><td>{{ entity.comment ?: '—' }}</td></tr>
+			<tr><th>{{ 'Posted at'|trans }}</th><td>{{ entity.postedAt ? entity.postedAt|date('Y-m-d H:i') : '—' }}</td></tr>
+			<tr><th>{{ 'Canceled at'|trans }}</th><td>{{ entity.canceledAt ? entity.canceledAt|date('Y-m-d H:i') : '—' }}</td></tr>
+			<tr><th>{{ 'Reversed document'|trans }}</th><td>{{ entity.reversedDocument ? entity.reversedDocument.number : '—' }}</td></tr>
+			<tr><th>{{ 'Comment'|trans }}</th><td>{{ entity.comment ?: '—' }}</td></tr>
 			</tbody>
 		</table>
 
 		{% if entity.status.value == 'draft' %}
-			<form method="post" action="{{ path('app_admin_inventory_document_post', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="Post inventory document?">
+			<form method="post" action="{{ path('app_admin_inventory_document_post', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="{{ 'Post inventory document?'|trans }}">
 				<input type="hidden" name="_token" value="{{ csrf_token('post_inventory_document_' ~ entity.id) }}">
-				<button class="btn btn-success btn-sm" type="submit"><i class="fa-solid fa-check me-1"></i>Post</button>
+				<button class="btn btn-success btn-sm" type="submit"><i class="fa-solid fa-check me-1"></i>{{ 'Post'|trans }}</button>
 			</form>
 		{% endif %}
 
 		{% if entity.status.value != 'canceled' %}
-			<form method="post" action="{{ path('app_admin_inventory_document_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="Cancel inventory document?">
+			<form method="post" action="{{ path('app_admin_inventory_document_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="{{ 'Cancel inventory document?'|trans }}">
 				<input type="hidden" name="_token" value="{{ csrf_token('cancel_inventory_document_' ~ entity.id) }}">
-				<button class="btn btn-danger btn-sm" type="submit"><i class="fa-solid fa-ban me-1"></i>Cancel</button>
+				<button class="btn btn-danger btn-sm" type="submit"><i class="fa-solid fa-ban me-1"></i>{{ 'Cancel'|trans }}</button>
 			</form>
 		{% endif %}
 
-		<h6 class="mt-4 mb-2">Lines</h6>
+		<h6 class="mt-4 mb-2">{{ 'Lines'|trans }}</h6>
 		<table class="table table-sm mb-4">
 			<thead>
 			<tr>
 				<th>{{ 'Product'|trans }}</th>
 				<th>{{ 'Warehouse'|trans }}</th>
-				<th>Direction</th>
-				<th>Quantity</th>
-				<th>Unit price</th>
-				<th>Total</th>
+				<th>{{ 'Direction'|trans }}</th>
+				<th>{{ 'Quantity'|trans }}</th>
+				<th>{{ 'Unit price'|trans }}</th>
+				<th>{{ 'Total'|trans }}</th>
 			</tr>
 			</thead>
 			<tbody>
@@ -71,20 +71,20 @@
 					<td>{{ line.totalPrice is not null ? line.totalPrice|money : '—' }}</td>
 				</tr>
 			{% else %}
-				<tr><td colspan="6" class="text-muted">No lines.</td></tr>
+				<tr><td colspan="6" class="text-muted">{{ 'No lines.'|trans }}</td></tr>
 			{% endfor %}
 			</tbody>
 		</table>
 
-		<h6 class="mt-4 mb-2">Stock movements</h6>
+		<h6 class="mt-4 mb-2">{{ 'Stock movements'|trans }}</h6>
 		<table class="table table-sm mb-0">
 			<thead>
 			<tr>
-				<th>Line</th>
-				<th>Created</th>
-				<th>Quantity change</th>
-				<th>Unit cost</th>
-				<th>Balance after</th>
+				<th>{{ 'Line'|trans }}</th>
+				<th>{{ 'Created'|trans }}</th>
+				<th>{{ 'Quantity change'|trans }}</th>
+				<th>{{ 'Unit cost'|trans }}</th>
+				<th>{{ 'Balance after'|trans }}</th>
 			</tr>
 			</thead>
 			<tbody>
@@ -101,7 +101,7 @@
 			{% else %}
 			{% endfor %}
 			{% if entity.lines|filter(line => line.stockMovements|length > 0)|length == 0 %}
-				<tr><td colspan="5" class="text-muted">No stock movements yet.</td></tr>
+				<tr><td colspan="5" class="text-muted">{{ 'No stock movements yet.'|trans }}</td></tr>
 			{% endif %}
 			</tbody>
 		</table>

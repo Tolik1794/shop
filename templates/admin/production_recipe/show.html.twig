@@ -1,6 +1,6 @@
 {% set actions %}
-	<a class="btn btn-light btn-sm" href="{{ path('app_admin_production_recipe_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>Edit</a>
-	<a class="btn btn-light btn-sm" href="{{ path('app_admin_production_order_new', {store_id: app.request.attributes.get('store_id'), recipe_id: entity.id}) }}"><i class="fa-solid fa-plus me-1"></i>Order</a>
+	<a class="btn btn-light btn-sm" href="{{ path('app_admin_production_recipe_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>{{ 'Edit'|trans }}</a>
+	<a class="btn btn-light btn-sm" href="{{ path('app_admin_production_order_new', {store_id: app.request.attributes.get('store_id'), recipe_id: entity.id}) }}"><i class="fa-solid fa-plus me-1"></i>{{ 'Order'|trans }}</a>
 {% endset %}
 
 <div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
@@ -12,23 +12,23 @@
 		<table class="table table-sm mt-2 mb-4">
 			<tbody>
 			<tr><th>{{ 'Product'|trans }}</th><td>{{ entity.product.name }}</td></tr>
-			<tr><th>Product code</th><td>{{ entity.product.code }}</td></tr>
-			<tr><th>Default</th><td>{{ entity.default ? 'Yes' : 'No' }}</td></tr>
+			<tr><th>{{ 'Product code'|trans }}</th><td>{{ entity.product.code }}</td></tr>
+			<tr><th>{{ 'Default'|trans }}</th><td>{{ entity.default ? 'Yes'|trans : 'No'|trans }}</td></tr>
 			<tr><th>{{ 'Status'|trans }}</th><td>{{ entity.status.value }}</td></tr>
-			<tr><th>Updated</th><td>{{ entity.updatedAt|date('Y-m-d H:i') }}</td></tr>
+			<tr><th>{{ 'Updated'|trans }}</th><td>{{ entity.updatedAt|date('Y-m-d H:i') }}</td></tr>
 			</tbody>
 		</table>
 
-		<h6 class="mb-2">Materials</h6>
+		<h6 class="mb-2">{{ 'Materials'|trans }}</h6>
 		{% if entity.items|length > 0 %}
 			<div class="table-responsive">
 				<table class="table table-sm mb-0">
 					<thead>
 					<tr>
-						<th>Material</th>
+						<th>{{ 'Material'|trans }}</th>
 						<th>{{ 'Code'|trans }}</th>
-						<th>Quantity</th>
-						<th>Waste %</th>
+						<th>{{ 'Quantity'|trans }}</th>
+						<th>{{ 'Waste %'|trans }}</th>
 					</tr>
 					</thead>
 					<tbody>
@@ -44,7 +44,7 @@
 				</table>
 			</div>
 		{% else %}
-			<p class="text-muted">No materials.</p>
+			<p class="text-muted">{{ 'No materials.'|trans }}</p>
 		{% endif %}
 	</div>
 </div>

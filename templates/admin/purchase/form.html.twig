@@ -93,9 +93,9 @@
 									<h5 class="card-title mb-0">{{ 'admin.purchase.sections.summary'|trans }}</h5>
 								</div>
 								<div class="card-body">
-									<div>Total: <strong>{{ entity.totalAmount|money }} {{ entity.currency.code }}</strong></div>
-									<div>Total base: <strong>{{ entity.totalAmountBase|money }}</strong></div>
-									<div>Delivery: <strong>{{ entity.deliveryCost|money }} {{ entity.currency.code }}</strong></div>
+									<div>{{ 'Total'|trans }}: <strong>{{ entity.totalAmount|money }} {{ entity.currency.code }}</strong></div>
+									<div>{{ 'Total base'|trans }}: <strong>{{ entity.totalAmountBase|money }}</strong></div>
+									<div>{{ 'Delivery'|trans }}: <strong>{{ entity.deliveryCost|money }} {{ entity.currency.code }}</strong></div>
 								</div>
 							</div>
 						{% endif %}

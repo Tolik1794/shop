@@ -26,9 +26,9 @@
 					<div class="text-muted">{{ entity.product ? entity.product.name : '' }}</div>
 				</div>
 				<div class="d-flex flex-wrap gap-2">
-					<button form="production-recipe-form" type="submit" class="btn btn-primary">Save</button>
-					<button form="production-recipe-form" name="save" value="stay" type="submit" class="btn btn-outline-primary">Save and continue</button>
-					<a href="{{ path('app_admin_production_recipe_index', app.request.query.all|merge({store_id: app.request.attributes.get('store_id'), id: entity.id, page: recipe_index_page})) }}" class="btn btn-light">Cancel</a>
+					<button form="production-recipe-form" type="submit" class="btn btn-primary">{{ 'Save'|trans }}</button>
+					<button form="production-recipe-form" name="save" value="stay" type="submit" class="btn btn-outline-primary">{{ 'Save and continue'|trans }}</button>
+					<a href="{{ path('app_admin_production_recipe_index', app.request.query.all|merge({store_id: app.request.attributes.get('store_id'), id: entity.id, page: recipe_index_page})) }}" class="btn btn-light">{{ 'Cancel'|trans }}</a>
 				</div>
 			</div>
 
@@ -38,7 +38,7 @@
 					<div class="col-12 col-xl-4">
 						<div class="card">
 							<div class="card-header">
-								<h5 class="card-title mb-0">General</h5>
+								<h5 class="card-title mb-0">{{ 'General'|trans }}</h5>
 							</div>
 							<div class="card-body">
 								{{ form_row(form.name) }}
@@ -51,7 +51,7 @@
 					<div class="col-12 col-xl-8">
 						<div class="card">
 							<div class="card-header d-flex justify-content-between align-items-center">
-								<h5 class="card-title mb-0">Materials</h5>
+								<h5 class="card-title mb-0">{{ 'Materials'|trans }}</h5>
 								<button type="button" class="btn btn-light btn-sm" data-action="production-form#addEntry">
 									<i class="fa-solid fa-plus me-1"></i>Add material
 								</button>
@@ -63,7 +63,7 @@
 									{% endfor %}
 								</div>
 								<div class="text-muted {{ form.items|length > 0 ? 'd-none' : '' }}" data-production-form-target="emptyState">
-									No materials added.
+									{{ 'No materials added.'|trans }}
 								</div>
 								<template data-production-form-target="prototype">
 									{{ include('admin/production_recipe/_item_row.html.twig', {item: form.items.vars.prototype}) }}

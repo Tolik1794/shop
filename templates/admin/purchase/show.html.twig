@@ -1,6 +1,6 @@
 {% set actions %}
 	{% if entity.status.value == 'draft' %}
-		<a class="btn btn-light btn-sm" href="{{ path('app_admin_purchase_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>Edit</a>
+		<a class="btn btn-light btn-sm" href="{{ path('app_admin_purchase_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>{{ 'Edit'|trans }}</a>
 	{% endif %}
 {% endset %}
 
@@ -15,24 +15,24 @@
 		<table class="table table-sm mt-2 mb-4">
 			<tbody>
 			<tr><th>{{ 'Status'|trans }}</th><td>{{ entity.status.value }}</td></tr>
-			<tr><th>Supplier</th><td>{{ entity.supplierNameSnapshot }}</td></tr>
+			<tr><th>{{ 'Supplier'|trans }}</th><td>{{ entity.supplierNameSnapshot }}</td></tr>
 			<tr><th>{{ 'Phone'|trans }}</th><td>{{ entity.supplierPhoneSnapshot }}</td></tr>
 			<tr><th>{{ 'Email'|trans }}</th><td>{{ entity.supplierEmailSnapshot }}</td></tr>
 			<tr><th>{{ 'Currency'|trans }}</th><td>{{ entity.currency.code }}</td></tr>
-			<tr><th>Exchange rate</th><td>{{ entity.exchangeRateToBase }}</td></tr>
-			<tr><th>Invoice</th><td>{{ entity.invoiceNumber }}</td></tr>
-			<tr><th>Document date</th><td>{{ entity.documentDate ? entity.documentDate|date('Y-m-d') : '' }}</td></tr>
-			<tr><th>Delivery</th><td>{{ entity.deliveryCost|money }} {{ entity.currency.code }}</td></tr>
-			<tr><th>Total</th><td>{{ entity.totalAmount|money }} {{ entity.currency.code }}</td></tr>
-			<tr><th>Total base</th><td>{{ entity.totalAmountBase|money }}</td></tr>
-			<tr><th>Payment</th><td>{{ entity.paymentStatus.value }}</td></tr>
-			<tr><th>Paid amount base</th><td>{{ entity.paidAmountBase|money }}</td></tr>
-			<tr><th>Paid at</th><td>{{ entity.paidAt ? entity.paidAt|date('Y-m-d H:i') : '' }}</td></tr>
-			<tr><th>Comment</th><td>{{ entity.comment }}</td></tr>
+			<tr><th>{{ 'Exchange rate'|trans }}</th><td>{{ entity.exchangeRateToBase }}</td></tr>
+			<tr><th>{{ 'Invoice'|trans }}</th><td>{{ entity.invoiceNumber }}</td></tr>
+			<tr><th>{{ 'Document date'|trans }}</th><td>{{ entity.documentDate ? entity.documentDate|date('Y-m-d') : '' }}</td></tr>
+			<tr><th>{{ 'Delivery'|trans }}</th><td>{{ entity.deliveryCost|money }} {{ entity.currency.code }}</td></tr>
+			<tr><th>{{ 'Total'|trans }}</th><td>{{ entity.totalAmount|money }} {{ entity.currency.code }}</td></tr>
+			<tr><th>{{ 'Total base'|trans }}</th><td>{{ entity.totalAmountBase|money }}</td></tr>
+			<tr><th>{{ 'Payment'|trans }}</th><td>{{ entity.paymentStatus.value }}</td></tr>
+			<tr><th>{{ 'Paid amount base'|trans }}</th><td>{{ entity.paidAmountBase|money }}</td></tr>
+			<tr><th>{{ 'Paid at'|trans }}</th><td>{{ entity.paidAt ? entity.paidAt|date('Y-m-d H:i') : '' }}</td></tr>
+			<tr><th>{{ 'Comment'|trans }}</th><td>{{ entity.comment }}</td></tr>
 			</tbody>
 		</table>
 
-		<h6 class="mb-2">Products</h6>
+		<h6 class="mb-2">{{ 'Products'|trans }}</h6>
 		{% if entity.purchaseEntries|length > 0 %}
 			<div class="table-responsive">
 				<table class="table table-sm mb-3">
@@ -40,11 +40,11 @@
 					<tr>
 						<th>{{ 'Product'|trans }}</th>
 						<th>{{ 'Warehouse'|trans }}</th>
-						<th>Qty</th>
+						<th>{{ 'Qty'|trans }}</th>
 						<th>{{ 'Unit'|trans }}</th>
-						<th>Unit cost</th>
-						<th>Delivery</th>
-						<th>Total</th>
+						<th>{{ 'Unit cost'|trans }}</th>
+						<th>{{ 'Delivery'|trans }}</th>
+						<th>{{ 'Total'|trans }}</th>
 					</tr>
 					</thead>
 					<tbody>
@@ -66,11 +66,11 @@
 				</table>
 			</div>
 		{% else %}
-			<p class="text-muted">No products.</p>
+			<p class="text-muted">{{ 'No products.'|trans }}</p>
 		{% endif %}
 
 		{% if entity.inventoryDocuments|length > 0 %}
-			<h6 class="mb-2">Inventory documents</h6>
+			<h6 class="mb-2">{{ 'Inventory documents'|trans }}</h6>
 			<div class="table-responsive">
 				<table class="table table-sm mb-3">
 					<thead>
@@ -102,35 +102,35 @@
 		{% if entity.status.value == 'draft' %}
 			<form method="post" action="{{ path('app_admin_purchase_order', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction">
 				<input type="hidden" name="_token" value="{{ csrf_token('order_purchase_' ~ entity.id) }}">
-				<button class="btn btn-success btn-sm" type="submit" {{ entity.purchaseEntries|length == 0 ? 'disabled' : '' }}>Order</button>
+				<button class="btn btn-success btn-sm" type="submit" {{ entity.purchaseEntries|length == 0 ? 'disabled' : '' }}>{{ 'Order'|trans }}</button>
 			</form>
 		{% endif %}
 
 		{% if entity.status.value == 'ordered' %}
-			<form method="post" action="{{ path('app_admin_purchase_return_to_draft', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="Return purchase to draft?">
+			<form method="post" action="{{ path('app_admin_purchase_return_to_draft', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="{{ 'Return purchase to draft?'|trans }}">
 				<input type="hidden" name="_token" value="{{ csrf_token('return_to_draft_purchase_' ~ entity.id) }}">
-				<button class="btn btn-light btn-sm" type="submit">Return to draft</button>
+				<button class="btn btn-light btn-sm" type="submit">{{ 'Return to draft'|trans }}</button>
 			</form>
 		{% endif %}
 
 		{% if can_receive|default(false) %}
 			<form method="post" action="{{ path('app_admin_purchase_receive', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline">
 				<input type="hidden" name="_token" value="{{ csrf_token('receive_purchase_' ~ entity.id) }}">
-				<button class="btn btn-success btn-sm" type="submit"><i class="fa-solid fa-truck me-1"></i>Receive</button>
+				<button class="btn btn-success btn-sm" type="submit"><i class="fa-solid fa-truck me-1"></i>{{ 'Receive'|trans }}</button>
 			</form>
 		{% endif %}
 
 		{% if entity.status.value in ['draft', 'ordered'] %}
-			<form method="post" action="{{ path('app_admin_purchase_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="Cancel purchase?">
+			<form method="post" action="{{ path('app_admin_purchase_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="{{ 'Cancel purchase?'|trans }}">
 				<input type="hidden" name="_token" value="{{ csrf_token('cancel_purchase_' ~ entity.id) }}">
-				<button class="btn btn-danger btn-sm" type="submit">Cancel</button>
+				<button class="btn btn-danger btn-sm" type="submit">{{ 'Cancel'|trans }}</button>
 			</form>
 		{% endif %}
 
 		{% if entity.status.value == 'received' %}
-			<form method="post" action="{{ path('app_admin_purchase_complete', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="Complete purchase?">
+			<form method="post" action="{{ path('app_admin_purchase_complete', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="{{ 'Complete purchase?'|trans }}">
 				<input type="hidden" name="_token" value="{{ csrf_token('complete_purchase_' ~ entity.id) }}">
-				<button class="btn btn-success btn-sm" type="submit">Complete</button>
+				<button class="btn btn-success btn-sm" type="submit">{{ 'Complete'|trans }}</button>
 			</form>
 		{% endif %}
 	</div>

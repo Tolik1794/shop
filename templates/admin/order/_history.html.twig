@@ -1,4 +1,4 @@
-<h5 class="card-title mb-3">History</h5>
+<h5 class="card-title mb-3">{{ 'History'|trans }}</h5>
 <div class="order-discussion-scroll-frame">
     <div class="order-discussion-scroll order-discussion-history">
         {% set current_history_date = null %}
@@ -30,7 +30,7 @@
                 {% endif %}
             </div>
         {% else %}
-            <p class="text-muted mb-0">No history yet.</p>
+            <p class="text-muted mb-0">{{ 'No history yet.'|trans }}</p>
         {% endfor %}
     </div>
 </div>

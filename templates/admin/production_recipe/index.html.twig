@@ -3,17 +3,17 @@
 {% block title %}Production recipes{% endblock %}
 
 {% set table_actions %}
-	<a class="btn btn-light btn-sm" href="{{ path('app_admin_production_recipe_new', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-plus me-1"></i>New</a>
-	<a class="btn btn-light btn-sm" href="{{ path('app_admin_production_order_index', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-industry me-1"></i>Orders</a>
+	<a class="btn btn-light btn-sm" href="{{ path('app_admin_production_recipe_new', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-plus me-1"></i>{{ 'New'|trans }}</a>
+	<a class="btn btn-light btn-sm" href="{{ path('app_admin_production_order_index', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-industry me-1"></i>{{ 'Orders'|trans }}</a>
 {% endset %}
 
 {% set table_head %}
 	<tr>
 		<th>{{ 'Name'|trans }}</th>
 		<th>{{ 'Product'|trans }}</th>
-		<th>Default</th>
+		<th>{{ 'Default'|trans }}</th>
 		<th>{{ 'Status'|trans }}</th>
-		<th>Materials</th>
+		<th>{{ 'Materials'|trans }}</th>
 	</tr>
 {% endset %}
 
@@ -52,7 +52,7 @@
 							first_entity ? render(controller(
 								'App\\Controller\\Admin\\ProductionRecipeController::show',
 								{ store_id: app.request.attributes.get('store_id'), id: first_entity.id, 'request': app.request }
-							)) : '<div class="card"><div class="card-body">Nothing to show...</div></div>',
+							)) : '<div class="card"><div class="card-body">' ~ 'Nothing to show...'|trans ~ '</div></div>',
 							include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
 						]
 					}) }}

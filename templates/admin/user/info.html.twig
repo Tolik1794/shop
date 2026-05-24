@@ -20,18 +20,18 @@
             <tbody>
             {% if entity.parent %}
                 <tr>
-                    <th>Boss email</th>
+                    <th>{{ 'Boss email'|trans }}</th>
                     <td>{{ entity.parent.email }}</td>
                 </tr>
             {% endif %}
             {% if entity.nickname %}
                 <tr>
-                    <th>Nickname</th>
+                    <th>{{ 'Nickname'|trans }}</th>
                     <td>{{ entity.nickname }}</td>
                 </tr>
             {% endif %}
             <tr>
-                <th>Roles</th>
+                <th>{{ 'Roles'|trans }}</th>
                 <td>{{ entity.roles|join(', ') }}</td>
             </tr>
             </tbody>

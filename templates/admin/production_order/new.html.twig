@@ -7,18 +7,18 @@
 		<div class="container-fluid p-0">
 			<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
 				<div>
-					<h1 class="h3 mb-1">New production order</h1>
+					<h1 class="h3 mb-1">{{ 'New production order'|trans }}</h1>
 				</div>
 				<div class="d-flex flex-wrap gap-2">
-					<button form="production-order-create-form" type="submit" class="btn btn-primary">Create</button>
-					<button form="production-order-create-form" name="save" value="stay" type="submit" class="btn btn-outline-primary">Create and continue</button>
-					<a href="{{ path('app_admin_production_order_index', {store_id: app.request.attributes.get('store_id')}) }}" class="btn btn-light">Cancel</a>
+					<button form="production-order-create-form" type="submit" class="btn btn-primary">{{ 'Create'|trans }}</button>
+					<button form="production-order-create-form" name="save" value="stay" type="submit" class="btn btn-outline-primary">{{ 'Create and continue'|trans }}</button>
+					<a href="{{ path('app_admin_production_order_index', {store_id: app.request.attributes.get('store_id')}) }}" class="btn btn-light">{{ 'Cancel'|trans }}</a>
 				</div>
 			</div>
 
 			<div class="card">
 				<div class="card-header">
-					<h5 class="card-title mb-0">Create from recipe</h5>
+					<h5 class="card-title mb-0">{{ 'Create from recipe'|trans }}</h5>
 				</div>
 				<div class="card-body">
 					{{ form_start(form, {attr: {id: 'production-order-create-form', 'data-select-two-target': 'form'}}) }}

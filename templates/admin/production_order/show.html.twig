@@ -1,6 +1,6 @@
 {% set actions %}
 	{% if entity.status.value in ['draft', 'planned'] %}
-		<a class="btn btn-light btn-sm" href="{{ path('app_admin_production_order_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>Edit</a>
+		<a class="btn btn-light btn-sm" href="{{ path('app_admin_production_order_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>{{ 'Edit'|trans }}</a>
 	{% endif %}
 {% endset %}
 
@@ -16,30 +16,30 @@
 			<tbody>
 			<tr><th>{{ 'Status'|trans }}</th><td>{{ entity.status.value }}</td></tr>
 			<tr><th>{{ 'Product'|trans }}</th><td>{{ entity.product.name }}</td></tr>
-			<tr><th>Recipe</th><td>{{ entity.recipe ? entity.recipe.name : '' }}</td></tr>
+			<tr><th>{{ 'Recipe'|trans }}</th><td>{{ entity.recipe ? entity.recipe.name : '' }}</td></tr>
 			<tr><th>{{ 'Warehouse'|trans }}</th><td>{{ entity.warehouse ? entity.warehouse.name : '' }}</td></tr>
-			<tr><th>Planned quantity</th><td>{{ entity.plannedQuantity|quantity(entity.product) }}</td></tr>
-			<tr><th>Completed quantity</th><td>{{ entity.completedQuantity|quantity(entity.product) }}</td></tr>
-			<tr><th>Planned start</th><td>{{ entity.plannedStartAt ? entity.plannedStartAt|date('Y-m-d H:i') : '' }}</td></tr>
-			<tr><th>Planned end</th><td>{{ entity.plannedEndAt ? entity.plannedEndAt|date('Y-m-d H:i') : '' }}</td></tr>
-			<tr><th>Started</th><td>{{ entity.startedAt ? entity.startedAt|date('Y-m-d H:i') : '' }}</td></tr>
-			<tr><th>Completed</th><td>{{ entity.completedAt ? entity.completedAt|date('Y-m-d H:i') : '' }}</td></tr>
-			<tr><th>Canceled</th><td>{{ entity.canceledAt ? entity.canceledAt|date('Y-m-d H:i') : '' }}</td></tr>
-			<tr><th>Comment</th><td>{{ entity.comment }}</td></tr>
+			<tr><th>{{ 'Planned quantity'|trans }}</th><td>{{ entity.plannedQuantity|quantity(entity.product) }}</td></tr>
+			<tr><th>{{ 'Completed quantity'|trans }}</th><td>{{ entity.completedQuantity|quantity(entity.product) }}</td></tr>
+			<tr><th>{{ 'Planned start'|trans }}</th><td>{{ entity.plannedStartAt ? entity.plannedStartAt|date('Y-m-d H:i') : '' }}</td></tr>
+			<tr><th>{{ 'Planned end'|trans }}</th><td>{{ entity.plannedEndAt ? entity.plannedEndAt|date('Y-m-d H:i') : '' }}</td></tr>
+			<tr><th>{{ 'Started'|trans }}</th><td>{{ entity.startedAt ? entity.startedAt|date('Y-m-d H:i') : '' }}</td></tr>
+			<tr><th>{{ 'Completed'|trans }}</th><td>{{ entity.completedAt ? entity.completedAt|date('Y-m-d H:i') : '' }}</td></tr>
+			<tr><th>{{ 'Canceled'|trans }}</th><td>{{ entity.canceledAt ? entity.canceledAt|date('Y-m-d H:i') : '' }}</td></tr>
+			<tr><th>{{ 'Comment'|trans }}</th><td>{{ entity.comment }}</td></tr>
 			</tbody>
 		</table>
 
-		<h6 class="mb-2">Materials</h6>
+		<h6 class="mb-2">{{ 'Materials'|trans }}</h6>
 		{% if entity.materials|length > 0 %}
 			<div class="table-responsive">
 				<table class="table table-sm mb-3">
 					<thead>
 					<tr>
-						<th>Material</th>
+						<th>{{ 'Material'|trans }}</th>
 						<th>{{ 'Code'|trans }}</th>
-						<th>Planned qty</th>
-						<th>Waste %</th>
-						<th>Comment</th>
+						<th>{{ 'Planned qty'|trans }}</th>
+						<th>{{ 'Waste %'|trans }}</th>
+						<th>{{ 'Comment'|trans }}</th>
 					</tr>
 					</thead>
 					<tbody>
@@ -56,27 +56,27 @@
 				</table>
 			</div>
 		{% else %}
-			<p class="text-muted">No materials.</p>
+			<p class="text-muted">{{ 'No materials.'|trans }}</p>
 		{% endif %}
 
 		{% if entity.status.value == 'draft' %}
 			<form method="post" action="{{ path('app_admin_production_order_plan', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction">
 				<input type="hidden" name="_token" value="{{ csrf_token('plan_production_order_' ~ entity.id) }}">
-				<button class="btn btn-success btn-sm" type="submit" {{ entity.materials|length == 0 ? 'disabled' : '' }}>Plan</button>
+				<button class="btn btn-success btn-sm" type="submit" {{ entity.materials|length == 0 ? 'disabled' : '' }}>{{ 'Plan'|trans }}</button>
 			</form>
 		{% endif %}
 
 		{% if entity.status.value == 'planned' %}
 			<form method="post" action="{{ path('app_admin_production_order_reserve_materials', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction">
 				<input type="hidden" name="_token" value="{{ csrf_token('reserve_production_order_' ~ entity.id) }}">
-				<button class="btn btn-success btn-sm" type="submit" {{ entity.warehouse ? '' : 'disabled' }}>Reserve materials</button>
+				<button class="btn btn-success btn-sm" type="submit" {{ entity.warehouse ? '' : 'disabled' }}>{{ 'Reserve materials'|trans }}</button>
 			</form>
 		{% endif %}
 
 		{% if entity.status.value == 'materials_reserved' %}
 			<form method="post" action="{{ path('app_admin_production_order_start', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction">
 				<input type="hidden" name="_token" value="{{ csrf_token('start_production_order_' ~ entity.id) }}">
-				<button class="btn btn-success btn-sm" type="submit">Start</button>
+				<button class="btn btn-success btn-sm" type="submit">{{ 'Start'|trans }}</button>
 			</form>
 		{% endif %}
 
@@ -84,14 +84,14 @@
 			<form method="post" action="{{ path('app_admin_production_order_complete', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction">
 				<input type="hidden" name="_token" value="{{ csrf_token('complete_production_order_' ~ entity.id) }}">
 				<input type="hidden" name="completedQuantity" value="{{ entity.plannedQuantity }}">
-				<button class="btn btn-primary btn-sm" type="submit">Complete</button>
+				<button class="btn btn-primary btn-sm" type="submit">{{ 'Complete'|trans }}</button>
 			</form>
 		{% endif %}
 
 		{% if entity.status.value in ['draft', 'planned', 'materials_reserved', 'in_progress'] %}
-			<form method="post" action="{{ path('app_admin_production_order_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="Cancel production order?">
+			<form method="post" action="{{ path('app_admin_production_order_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="{{ 'Cancel production order?'|trans }}">
 				<input type="hidden" name="_token" value="{{ csrf_token('cancel_production_order_' ~ entity.id) }}">
-				<button class="btn btn-danger btn-sm" type="submit">Cancel</button>
+				<button class="btn btn-danger btn-sm" type="submit">{{ 'Cancel'|trans }}</button>
 			</form>
 		{% endif %}
 	</div>

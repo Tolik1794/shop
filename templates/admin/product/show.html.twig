@@ -1,7 +1,7 @@
 {% set actions %}
 {#    {% if is_granted('POST_EDIT', entity) %}#}
-        <a class="btn btn-light btn-sm" href="{{ path('admin_product_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>Edit</a>
-        <a class="btn btn-light btn-sm" href="{{ path('app_admin_product_price_index', {store_id: app.request.attributes.get('store_id'), product_id: entity.id}) }}"><i class="fa-solid fa-tags me-1"></i>Prices</a>
+        <a class="btn btn-light btn-sm" href="{{ path('admin_product_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>{{ 'Edit'|trans }}</a>
+        <a class="btn btn-light btn-sm" href="{{ path('app_admin_product_price_index', {store_id: app.request.attributes.get('store_id'), product_id: entity.id}) }}"><i class="fa-solid fa-tags me-1"></i>{{ 'Prices'|trans }}</a>
 {#    {% endif %}#}
 {% endset %}
 
@@ -15,7 +15,7 @@
     <div class="card-body">
         <div class="row g-0">
             <div class="col-sm-9 col-xl-12 col-xxl-9">
-                <strong>Name</strong>
+                <strong>{{ 'Name'|trans }}</strong>
                 <p>{{ entity.name }}</p>
             </div>
         </div>
@@ -27,11 +27,11 @@
                 <td>{{ entity.code }}</td>
             </tr>
             <tr>
-                <th>Category</th>
+                <th>{{ 'Category'|trans }}</th>
                 <td>{{ entity.category }}</td>
             </tr>
             <tr>
-                <th>Product kind</th>
+                <th>{{ 'Product kind'|trans }}</th>
                 <td>{{ entity.productKind.value }}</td>
             </tr>
             <tr>
@@ -39,11 +39,11 @@
                 <td>{{ entity.unit.name }}</td>
             </tr>
             <tr>
-                <th>Base sale price</th>
+                <th>{{ 'Base sale price'|trans }}</th>
                 <td>{{ entity.baseSalePrice|money }}</td>
             </tr>
             <tr>
-                <th>Current price</th>
+                <th>{{ 'Current price'|trans }}</th>
                 <td>
                     {% if current_price %}
                         {{ current_price.price|money }} {{ current_price.currency.code }}
@@ -51,21 +51,21 @@
                 </td>
             </tr>
             <tr>
-                <th>Prices</th>
+                <th>{{ 'Prices'|trans }}</th>
                 <td>
-                    <a href="{{ path('app_admin_product_price_index', {store_id: app.request.attributes.get('store_id'), product_id: entity.id}) }}">Open</a>
+                    <a href="{{ path('app_admin_product_price_index', {store_id: app.request.attributes.get('store_id'), product_id: entity.id}) }}">{{ 'Open'|trans }}</a>
                 </td>
             </tr>
             <tr>
-                <th>Can be sold</th>
+                <th>{{ 'Can be sold'|trans }}</th>
                 <td>{{ entity.canBeSold ? 'Yes' : 'No' }}</td>
             </tr>
             <tr>
-                <th>Can be purchased</th>
+                <th>{{ 'Can be purchased'|trans }}</th>
                 <td>{{ entity.canBePurchased ? 'Yes' : 'No' }}</td>
             </tr>
             <tr>
-                <th>Can be manufactured</th>
+                <th>{{ 'Can be manufactured'|trans }}</th>
                 <td>{{ entity.canBeManufactured ? 'Yes' : 'No' }}</td>
             </tr>
             </tbody>

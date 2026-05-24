@@ -1,6 +1,6 @@
 {% set actions %}
     {% if entity.nickname == app.user.nickname %}
-        <a class="btn btn-light btn-sm" href="{{ path('admin_user_profile', query_params) }}"><i class="fa-solid fa-pen me-1"></i>Edit</a>
+        <a class="btn btn-light btn-sm" href="{{ path('admin_user_profile', query_params) }}"><i class="fa-solid fa-pen me-1"></i>{{ 'Edit'|trans }}</a>
     {% elseif is_granted('POST_EDIT', entity) %}
         <a class="btn btn-light btn-sm" href="{{ path('admin_user_edit', query_params|merge({user_id: entity.nickname})) }}">
             <i class="fa-solid fa-pen me-1"></i>Edit
@@ -33,12 +33,12 @@
             <tbody>
             {% if entity.parent %}
                 <tr>
-                    <th>Director email</th>
+                    <th>{{ 'Director email'|trans }}</th>
                     <td>{{ entity.parent.email }}</td>
                 </tr>
             {% endif %}
             <tr>
-                <th>Nickname</th>
+                <th>{{ 'Nickname'|trans }}</th>
                 <td>{{ entity.nickname }}</td>
             </tr>
             <tr>
@@ -50,11 +50,11 @@
                 <td>{{ entity.lastName }}</td>
             </tr>
             <tr>
-                <th>Date of birth</th>
+                <th>{{ 'Date of birth'|trans }}</th>
                 <td>{{ entity.dateOfBirth ? entity.dateOfBirth|date : '' }}</td>
             </tr>
             <tr>
-                <th>Roles</th>
+                <th>{{ 'Roles'|trans }}</th>
                 <td>{{ entity.roles|join(', ') }}</td>
             </tr>
             </tbody>
