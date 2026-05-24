@@ -11,6 +11,7 @@ use App\Entity\StockReservationStatus;
 use App\Entity\Store;
 use App\Entity\User\User;
 use App\Exception\StockOperationException;
+use App\Repository\OrderHistoryRepository;
 use App\Repository\OrderRepository;
 use App\Repository\WarehouseStockRepository;
 use App\Service\BusinessDocumentStatusSynchronizer;
@@ -23,7 +24,9 @@ use App\Workflow\History\OrderHistoryChangeSetBuilder;
 use App\Workflow\History\OrderHistoryRecorder;
 use App\Workflow\StatusTransitionService;
 use App\Workflow\TransitionContext;
+use App\Workflow\TransitionDefinition;
 use Doctrine\ORM\EntityManagerInterface;
+use RuntimeException;
 
 class OrderManager extends AbstractManager
 {
@@ -36,6 +39,7 @@ class OrderManager extends AbstractManager
 		private readonly StatusTransitionService $statusTransitionService,
 		private readonly OrderHistoryChangeSetBuilder $orderHistoryChangeSetBuilder,
 		private readonly OrderHistoryRecorder $orderHistoryRecorder,
+		private readonly OrderHistoryRepository $orderHistoryRepository,
 		private readonly UserManager $userManager,
 		private readonly WarehouseStockRepository $warehouseStockRepository,
 		private readonly StockReservationService $stockReservationService,
@@ -150,6 +154,53 @@ class OrderManager extends AbstractManager
 		});
 	}
 
+	public function canRollbackStatus(Order $order): bool
+	{
+		return $this->resolveRollbackTargetStatus($order) instanceof OrderStatus;
+	}
+
+	public function rollbackStatus(Order $order): void
+	{
+		$targetStatus = $this->rollbackTargetStatus($order);
+
+		$this->entityManager->wrapInTransaction(function () use ($order, $targetStatus): void {
+			$fromStatus = $order->getStatus();
+			if (!$fromStatus instanceof OrderStatus) {
+				throw new RuntimeException('Order status is not set.');
+			}
+
+			$context = $this->transitionContext(['transition' => 'rollback_status']);
+			$this->statusTransitionService->applyTransition(
+				$order,
+				new TransitionDefinition(
+					key: 'rollback_status',
+					fromStatuses: [$fromStatus->value],
+					toStatus: $targetStatus->value,
+					historyEventKey: 'order.status_changed',
+				),
+				$context,
+			);
+
+			if ($fromStatus === OrderStatus::CANCELED && $targetStatus !== OrderStatus::CANCELED) {
+				$order
+					->setCanceledAt(null)
+					->setCanceledBy(null);
+			}
+
+			if ($targetStatus === OrderStatus::DRAFT) {
+				$this->releaseActiveReservations($order);
+			}
+
+			$this->saveOrder($order);
+
+			if ($this->shouldRefreshReservationsAfterRollback($targetStatus)) {
+				$this->reserveStockForOrder($order);
+				$this->businessDocumentStatusSynchronizer->syncOrder($order, $this->transitionContext());
+				$this->entityManager->flush();
+			}
+		});
+	}
+
 	public function markDelivered(Order $order): void
 	{
 		$this->entityManager->wrapInTransaction(function () use ($order): void {
@@ -218,13 +269,53 @@ class OrderManager extends AbstractManager
 		return $user instanceof User ? $user : null;
 	}
 
-	private function transitionContext(): TransitionContext
+	/**
+	 * @param array<string, mixed> $payload
+	 */
+	private function transitionContext(array $payload = []): TransitionContext
 	{
 		$actor = $this->currentActor();
 
 		return $actor instanceof User
-			? TransitionContext::manual($actor)
-			: TransitionContext::system();
+			? TransitionContext::manual($actor, $payload)
+			: TransitionContext::system($payload);
+	}
+
+	private function rollbackTargetStatus(Order $order): OrderStatus
+	{
+		$targetStatus = $this->resolveRollbackTargetStatus($order);
+
+		if (!$targetStatus instanceof OrderStatus) {
+			throw new RuntimeException('Order has no previous status to rollback to.');
+		}
+
+		return $targetStatus;
+	}
+
+	private function resolveRollbackTargetStatus(Order $order): ?OrderStatus
+	{
+		$currentStatus = $order->getStatus();
+		if (!$currentStatus instanceof OrderStatus) {
+			return null;
+		}
+
+		$historyEntry = $this->orderHistoryRepository->findLatestStatusChangeToStatus($order, $currentStatus->value);
+		$targetStatus = $historyEntry?->getChanges()['status']['from'] ?? null;
+
+		if (!is_string($targetStatus) || $targetStatus === $currentStatus->value) {
+			return null;
+		}
+
+		return OrderStatus::tryFrom($targetStatus);
+	}
+
+	private function shouldRefreshReservationsAfterRollback(OrderStatus $status): bool
+	{
+		return in_array($status, [
+			OrderStatus::CONFIRMED,
+			OrderStatus::AWAITING_STOCK,
+			OrderStatus::READY_TO_SHIP,
+		], true);
 	}
 
 	private function reserveStockForOrder(Order $order): void

@@ -144,6 +144,13 @@
             </form>
         {% endif %}
 
+        {% if can_rollback_status|default(false) %}
+            <form method="post" action="{{ path('app_admin_order_rollback_status', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="Rollback order status?">
+                <input type="hidden" name="_token" value="{{ csrf_token('rollback_status_order_' ~ entity.id) }}">
+                <button class="btn btn-light btn-sm" type="submit">Rollback status</button>
+            </form>
+        {% endif %}
+
         {% if can_ship|default(false) %}
             <form method="post" action="{{ path('app_admin_order_ship', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline">
                 <input type="hidden" name="_token" value="{{ csrf_token('ship_order_' ~ entity.id) }}">

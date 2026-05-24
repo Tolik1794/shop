@@ -340,6 +340,88 @@ class OrderManagerTest extends KernelTestCase
 		$this->orderManager->cancel($order);
 	}
 
+	public function testRollbackStatusRestoresCanceledOrderAndReservations(): void
+	{
+		$currency = $this->persistCurrency('V' . substr(uniqid(), -2), 'Canceled rollback reservation currency');
+		$store = $this->persistStore('order-canceled-rollback-reservation-' . uniqid(), $currency);
+		$product = $this->persistProduct($store);
+		$warehouse = $this->persistWarehouse($store);
+		$warehouseStock = $this->persistWarehouseStock($warehouse, $product, '3.0000');
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('2.0000')
+			->setUnitPrice('10.0000');
+		$order->addOrderEntry($orderEntry);
+		$this->orderManager->saveOrder($order);
+		$this->orderManager->confirm($order);
+		$this->orderManager->cancel($order);
+		$this->entityManager->refresh($warehouseStock);
+
+		self::assertSame(OrderStatus::CANCELED, $order->getStatus());
+		self::assertNotNull($order->getCanceledAt());
+		self::assertSame('0.0000', $warehouseStock->getReservedQuantity());
+		self::assertTrue($this->orderManager->canRollbackStatus($order));
+
+		$this->orderManager->rollbackStatus($order);
+		$this->entityManager->refresh($warehouseStock);
+
+		$activeReservations = $this->entityManager->getRepository(StockReservation::class)->findBy([
+			'orderEntry' => $orderEntry,
+			'status' => StockReservationStatus::ACTIVE,
+		]);
+
+		self::assertSame(OrderStatus::READY_TO_SHIP, $order->getStatus());
+		self::assertNull($order->getCanceledAt());
+		self::assertSame('2.0000', $warehouseStock->getReservedQuantity());
+		self::assertCount(1, $activeReservations);
+	}
+
+	public function testRollbackStatusRestoresCompletedOrderToDelivered(): void
+	{
+		$currency = $this->persistCurrency('M' . substr(uniqid(), -2), 'Completed rollback currency');
+		$store = $this->persistStore('order-completed-rollback-' . uniqid(), $currency);
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+		$order
+			->setStatus(OrderStatus::DELIVERED)
+			->setPaymentStatus(PaymentStatusEnum::PAID);
+		$this->entityManager->flush();
+		$this->orderManager->complete($order);
+
+		$this->orderManager->rollbackStatus($order);
+
+		$history = $this->entityManager->getRepository(OrderHistory::class)->findOneBy([
+			'order' => $order,
+			'eventKey' => 'order.status_changed',
+		], ['id' => 'DESC']);
+
+		self::assertSame(OrderStatus::DELIVERED, $order->getStatus());
+		self::assertInstanceOf(OrderHistory::class, $history);
+		self::assertSame([
+			'status' => ['from' => OrderStatus::COMPLETED->value, 'to' => OrderStatus::DELIVERED->value],
+		], $history->getChanges());
+		self::assertSame(['transition' => 'rollback_status'], $history->getPayload());
+	}
+
+	public function testRollbackStatusRequiresPreviousStatusHistory(): void
+	{
+		$currency = $this->persistCurrency('N' . substr(uniqid(), -2), 'No rollback history currency');
+		$store = $this->persistStore('order-no-rollback-history-' . uniqid(), $currency);
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+
+		self::assertFalse($this->orderManager->canRollbackStatus($order));
+
+		$this->expectException(RuntimeException::class);
+		$this->expectExceptionMessage('Order has no previous status to rollback to.');
+
+		$this->orderManager->rollbackStatus($order);
+	}
+
 	public function testSaveOrderRecordsOnlyRealDecimalEntryChanges(): void
 	{
 		$currency = $this->persistCurrency('D' . substr(uniqid(), -2), 'Decimal history currency');

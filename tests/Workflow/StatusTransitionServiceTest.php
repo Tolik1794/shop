@@ -63,6 +63,32 @@ class StatusTransitionServiceTest extends TestCase
 		self::assertNull($historyRecorder->result);
 	}
 
+	public function testApplyTransitionSupportsRuntimeTransitionDefinitions(): void
+	{
+		$subject = new StatusTransitionTestSubject();
+		$historyRecorder = new StatusTransitionTestHistoryRecorder();
+		$service = $this->createService(new StatusTransitionTestDefinition(
+			new TransitionDefinition(
+				key: 'unused',
+				fromStatuses: ['draft'],
+				toStatus: 'confirmed',
+			),
+			$historyRecorder,
+		));
+
+		$result = $service->applyTransition($subject, new TransitionDefinition(
+			key: 'rollback_status',
+			fromStatuses: ['draft'],
+			toStatus: 'confirmed',
+		), TransitionContext::system(['transition' => 'rollback_status']));
+
+		self::assertSame('confirmed', $subject->getStatusValue());
+		self::assertSame('rollback_status', $result->transitionKey);
+		self::assertSame('draft', $result->fromStatus);
+		self::assertSame('confirmed', $result->toStatus);
+		self::assertSame($result, $historyRecorder->result);
+	}
+
 	private function createService(WorkflowDefinitionInterface $definition): StatusTransitionService
 	{
 		return new StatusTransitionService(

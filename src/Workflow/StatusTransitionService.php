@@ -25,29 +25,22 @@ readonly class StatusTransitionService
 	): TransitionResult
 	{
 		[$definition, $transition, $fromStatus] = $this->resolve($subject, $transitionKey);
-		$this->assertAllowed($subject, $transition, $context, $fromStatus);
 
-		foreach ($transition->beforeActions as $beforeAction) {
-			$beforeAction->execute($subject, $transition, $context);
-		}
+		return $this->applyResolved($definition, $subject, $transition, $context, $fromStatus);
+	}
 
-		$subject->setStatusValue($transition->toStatus);
+	/**
+	 * Applies a transition built at runtime while keeping the workflow history and events centralized.
+	 */
+	public function applyTransition(
+		WorkflowSubjectInterface $subject,
+		TransitionDefinition $transition,
+		TransitionContext $context,
+	): TransitionResult
+	{
+		$definition = $this->workflowRegistry->getFor($subject);
 
-		foreach ($transition->afterActions as $afterAction) {
-			$afterAction->execute($subject, $transition, $context);
-		}
-
-		$result = new TransitionResult(
-			entity: $subject,
-			transitionKey: $transition->key,
-			fromStatus: $fromStatus,
-			toStatus: $transition->toStatus,
-		);
-
-		$definition->getHistoryRecorder()->record($subject, $transition, $context, $result);
-		$this->domainEventDispatcher->dispatch(new StatusTransitionAppliedEvent($transition, $context, $result));
-
-		return $result;
+		return $this->applyResolved($definition, $subject, $transition, $context, $subject->getStatusValue());
 	}
 
 	/**
@@ -98,5 +91,38 @@ readonly class StatusTransitionService
 		foreach ($transition->guards as $guard) {
 			$guard->assertAllowed($subject, $transition, $context);
 		}
+	}
+
+	private function applyResolved(
+		WorkflowDefinitionInterface $definition,
+		WorkflowSubjectInterface $subject,
+		TransitionDefinition $transition,
+		TransitionContext $context,
+		string $fromStatus,
+	): TransitionResult
+	{
+		$this->assertAllowed($subject, $transition, $context, $fromStatus);
+
+		foreach ($transition->beforeActions as $beforeAction) {
+			$beforeAction->execute($subject, $transition, $context);
+		}
+
+		$subject->setStatusValue($transition->toStatus);
+
+		foreach ($transition->afterActions as $afterAction) {
+			$afterAction->execute($subject, $transition, $context);
+		}
+
+		$result = new TransitionResult(
+			entity: $subject,
+			transitionKey: $transition->key,
+			fromStatus: $fromStatus,
+			toStatus: $transition->toStatus,
+		);
+
+		$definition->getHistoryRecorder()->record($subject, $transition, $context, $result);
+		$this->domainEventDispatcher->dispatch(new StatusTransitionAppliedEvent($transition, $context, $result));
+
+		return $result;
 	}
 }

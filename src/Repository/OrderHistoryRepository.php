@@ -32,4 +32,35 @@ class OrderHistoryRepository extends ServiceEntityRepository
 			->getQuery()
 			->getResult();
 	}
+
+	public function findLatestStatusChangeToStatus(Order $order, string $status): ?OrderHistory
+	{
+		$historyEntries = $this->createQueryBuilder('orderHistory')
+			->andWhere('orderHistory.order = :order')
+			->andWhere('orderHistory.eventKey = :eventKey')
+			->setParameter('order', $order)
+			->setParameter('eventKey', 'order.status_changed')
+			->orderBy('orderHistory.occurredAt', 'DESC')
+			->addOrderBy('orderHistory.id', 'DESC')
+			->getQuery()
+			->getResult();
+
+		foreach ($historyEntries as $historyEntry) {
+			$statusChange = $historyEntry->getChanges()['status'] ?? null;
+
+			if (!is_array($statusChange)) {
+				continue;
+			}
+
+			if (
+				($statusChange['to'] ?? null) === $status
+				&& is_string($statusChange['from'] ?? null)
+				&& $statusChange['from'] !== $status
+			) {
+				return $historyEntry;
+			}
+		}
+
+		return null;
+	}
 }

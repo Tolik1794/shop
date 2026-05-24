@@ -202,6 +202,7 @@ class OrderController extends AbstractAdvancedController
 			...$this->getOrderDiscussionViewData($order),
 			'query_params' => $request->query->all(),
 			'can_ship' => $this->orderShipmentUseCase->hasShippableLines($order),
+			'can_rollback_status' => $this->orderManager->canRollbackStatus($order),
 		]);
 	}
 
@@ -310,6 +311,34 @@ class OrderController extends AbstractAdvancedController
 		try {
 			$this->orderManager->returnToDraft($order);
 			$this->addFlash('success', 'Order returned to draft.');
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->quickActionResponse($request, $store, $order);
+	}
+
+	#[Route('/{id}/rollback-status', name: 'rollback_status', methods: ['POST'])]
+	public function rollbackStatus(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Order $order,
+	): Response
+	{
+		$this->denyOrderOutsideStore($order, $store);
+
+		if (!$this->isCsrfTokenValid('rollback_status_order_' . $order->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Order action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		try {
+			$this->orderManager->rollbackStatus($order);
+			$this->addFlash('success', 'Order status rolled back.');
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 
@@ -588,6 +617,7 @@ class OrderController extends AbstractAdvancedController
 				'entity' => $order,
 				'query_params' => $request->query->all(),
 				'can_ship' => $this->orderShipmentUseCase->hasShippableLines($order),
+				'can_rollback_status' => $this->orderManager->canRollbackStatus($order),
 			]),
 			'row' => $this->renderView('admin/order/_index_row.html.twig', [
 				'entity' => $order,
