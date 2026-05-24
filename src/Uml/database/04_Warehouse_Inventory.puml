@@ -1,0 +1,321 @@
+@startuml
+
+title Shop database - Warehouse and inventory
+
+!include ./_common.puml
+
+enum ActiveStatusEnum {
+    active
+    inactive
+    deleted
+}
+
+enum InventoryDocumentType {
+    purchase_receipt
+    sale_shipment
+    customer_return
+    supplier_return
+    production
+    write_off
+    stock_adjustment
+    transfer
+    reversal
+}
+
+enum InventoryDocumentStatus {
+    draft
+    posted
+    canceled
+}
+
+enum InventoryReasonType {
+    write_off
+    stock_adjustment
+    return
+    production_loss
+    transfer
+    initial_stock
+    inventory_count
+    damage
+    other
+}
+
+enum InventoryDirection {
+    in
+    out
+}
+
+enum StockReservationStatus {
+    active
+    completed
+    canceled
+    expired
+}
+
+entity Warehouse {
+    * id: int
+    --
+    * name: string(255)
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+}
+
+entity WarehouseStock {
+    * id: int
+    --
+    * quantityOnHand: decimal(14, 4)
+    * reservedQuantity: decimal(14, 4)
+    * averageCost: decimal(14, 4)
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    * warehouse: Warehouse
+    * product: Product
+}
+
+entity WarehouseStockBatch {
+    * id: int
+    --
+    * initialQuantity: decimal(14, 4)
+    * remainingQuantity: decimal(14, 4)
+    * unitCost: decimal(14, 4)
+    salePrice: decimal(14, 4)?
+    * receivedAt: DateTimeImmutable
+    * createdAt: DateTimeImmutable
+    * warehouseStock: WarehouseStock
+    purchaseEntry: PurchaseEntry?
+    createdByMovement: StockMovement?
+}
+
+entity InventoryDocument {
+    * id: int
+    --
+    * number: string(255)
+    * type: InventoryDocumentType
+    * status: InventoryDocumentStatus
+    * documentDate: DateTimeImmutable
+    currency: Currency?
+    exchangeRateToBase: decimal(18, 8)?
+    totalAmount: decimal(14, 4)?
+    totalAmountBase: decimal(14, 4)?
+    postedAt: DateTimeImmutable?
+    canceledAt: DateTimeImmutable?
+    comment: text?
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+    postedBy: User?
+    canceledBy: User?
+    reversedDocument: InventoryDocument?
+    order: Order?
+    purchase: Purchase?
+    productionOrder: ProductionOrder?
+    reason: InventoryReason?
+}
+
+entity InventoryReason {
+    * id: int
+    --
+    * name: string(255)
+    * type: InventoryReasonType
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+}
+
+entity InventoryDocumentLine {
+    * id: int
+    --
+    * quantity: decimal(14, 4)
+    unitPrice: decimal(14, 4)?
+    unitPriceBase: decimal(14, 4)?
+    totalPrice: decimal(14, 4)?
+    totalPriceBase: decimal(14, 4)?
+    * direction: InventoryDirection
+    * inventoryDocument: InventoryDocument
+    * product: Product
+    * warehouse: Warehouse
+    warehouseStock: WarehouseStock?
+    orderEntry: OrderEntry?
+    purchaseEntry: PurchaseEntry?
+}
+
+entity StockMovement {
+    * id: int
+    --
+    * quantityChange: decimal(14, 4)
+    * unitCost: decimal(14, 4)
+    balanceAfter: decimal(14, 4)?
+    * createdAt: DateTimeImmutable
+    * inventoryDocumentLine: InventoryDocumentLine
+    * warehouseStock: WarehouseStock
+    warehouseStockBatch: WarehouseStockBatch?
+}
+
+entity StockReservation {
+    * id: int
+    --
+    * quantity: decimal(14, 4)
+    * status: StockReservationStatus
+    * reservedAt: DateTimeImmutable
+    expiresAt: DateTimeImmutable?
+    * warehouseStock: WarehouseStock
+    * orderEntry: OrderEntry
+}
+
+
+Store ||--o{ Warehouse : owns
+Store ||--o{ InventoryDocument : owns
+Store ||--o{ InventoryReason : defines inventory reasons
+Product ||--o{ WarehouseStock : stocked as
+Warehouse ||--o{ WarehouseStock : contains
+WarehouseStock ||--o{ WarehouseStockBatch : split by batches
+PurchaseEntry |o--o{ WarehouseStockBatch : may create batches
+StockMovement |o--o{ WarehouseStockBatch : may create batch
+Order ||--o{ InventoryDocument : generates stock docs
+Purchase ||--o{ InventoryDocument : generates stock docs
+ProductionOrder ||--o{ InventoryDocument : generates stock docs
+InventoryDocumentType ||--o{ InventoryDocument : classifies
+Currency |o--o{ InventoryDocument : document currency
+InventoryDocumentStatus ||--o{ InventoryDocument : controls
+InventoryReasonType ||--o{ InventoryReason : classifies
+InventoryReason |o--o{ InventoryDocument : explains
+InventoryDocument ||--o{ InventoryDocumentLine : has lines
+InventoryDocumentLine ||--o{ StockMovement : posts movements
+InventoryDirection ||--o{ InventoryDocumentLine : defines
+Product ||--o{ InventoryDocumentLine : moved as
+Warehouse ||--o{ InventoryDocumentLine : used in
+WarehouseStock ||--o{ InventoryDocumentLine : affected by
+WarehouseStock ||--o{ StockMovement : changes by
+WarehouseStockBatch |o--o{ StockMovement : batch detail
+OrderEntry |o--o{ InventoryDocumentLine : ships/returns
+PurchaseEntry |o--o{ InventoryDocumentLine : receives/returns
+OrderEntry ||--o{ StockReservation : reserves
+WarehouseStock ||--o{ StockReservation : reserved from
+StockReservationStatus ||--o{ StockReservation : controls
+
+note right of Warehouse
+  Unique:
+  (store_id, name)
+end note
+
+note right of WarehouseStock
+  Unique:
+  (product_id, warehouse_id)
+
+  quantityOnHand and averageCost should be updated only through posted StockMovement records.
+  reservedQuantity can be stored for speed or calculated from active StockReservation rows.
+  availableQuantity should be calculated as quantityOnHand - reservedQuantity.
+end note
+
+note right of WarehouseStockBatch
+  Batch belongs to WarehouseStock, so product and warehouse are derived from WarehouseStock.
+  purchaseEntry is optional because batches can be created by purchase, production, return, adjustment, or initial stock.
+  Prefer createdByMovement as the universal source of a created batch.
+  unitCost is stored in Store.baseCurrency. Original supplier currency is kept in Purchase/PurchaseEntry.
+end note
+
+note right of InventoryDocumentStatus
+  draft = editable document, no stock effect.
+  posted = immutable document; stock movements were created.
+  canceled = document was canceled through reversal logic or became inactive by business flow.
+
+  Avoid editing posted documents directly.
+end note
+
+note right of InventoryDocument
+  createdBy/updatedBy/postedBy/canceledBy are audit fields.
+  postedBy should be filled when status becomes posted; canceledBy should be filled when status becomes canceled.
+
+  Unique:
+  (store_id, number)
+
+  Check constraint:
+  only one of order_id, purchase_id, production_order_id can be not null.
+
+  currency/exchangeRateToBase are optional because purely technical documents
+  like stock_adjustment may not have external monetary currency.
+  If present, amount fields without Base suffix are in document currency; Base fields are in Store.baseCurrency.
+
+  reason is optional, but recommended for write_off, stock_adjustment,
+  production_loss, return and inventory_count scenarios.
+
+  Inventory count MVP approach:
+  do not create separate StockCount/StockCountLine tables yet.
+  Use InventoryDocument(type=stock_adjustment) with InventoryReason(type=inventory_count).
+  InventoryDocumentLine.quantity stores the adjustment difference, not the counted total.
+  Example: system has 10, counted 8 => OUT line quantity 2.
+  Direct editing of WarehouseStock quantities should be avoided.
+
+  This is the main inventory operation document.
+  It replaces polymorphic source_type/source_id for stock logic.
+
+  Posted documents should not be edited directly.
+  Cancellation should create reversal document/movements instead of deleting original movements.
+
+  Only reversal documents should have reversedDocument filled.
+  reversedDocument points to the original posted document being canceled/reversed.
+  Do not add separate reversalDocument column; reverse lookup can be done by query or ORM mappedBy.
+end note
+
+note right of InventoryReason
+  Dictionary of reasons for inventory documents.
+  Useful for analytics and consistent grouping of write-offs,
+  stock adjustments, production losses, returns and inventory counts.
+
+  Unique suggestion:
+  (store_id, type, name)
+
+  Examples:
+  Брак, пошкодження, обрізки, інвентаризація, пересорт,
+  стартові залишки, повернення клієнта.
+end note
+
+note right of InventoryDocumentLine
+  One posted line creates one or more StockMovement records.
+  Monetary fields without Base suffix follow InventoryDocument.currency.
+  Base fields are in Store.baseCurrency.
+
+  Partial operations are represented by multiple lines/documents over time:
+  - one OrderEntry can have several sale_shipment/customer_return lines
+  - one PurchaseEntry can have several purchase_receipt/supplier_return lines
+  OrderEntry/PurchaseEntry progress fields are cache, not the main source of truth.
+
+  For production documents use:
+  - OUT lines for consumed materials
+  - IN lines for produced goods
+
+  For transfer documents use paired lines:
+  - OUT from source warehouse
+  - IN into destination warehouse
+end note
+
+note right of StockMovement
+  quantityChange is signed:
+  positive = stock increase
+  negative = stock decrease
+
+  Use warehouseStockBatch for FIFO/batch-level costing when needed.
+  StockMovement.unitCost is always stored in Store.baseCurrency.
+  For average_cost method, StockMovement.unitCost stores the cost snapshot used for this movement.
+
+  In average_cost mode, OUT movement unitCost usually equals WarehouseStock.averageCost at posting time.
+  In fifo mode, one InventoryDocumentLine may create multiple StockMovement rows for different batches.
+end note
+
+note right of StockReservation
+  Used when an order reserves stock before shipment.
+  WarehouseStock.reservedQuantity can be calculated from active reservations.
+end note
+
+@enduml

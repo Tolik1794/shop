@@ -1,0 +1,241 @@
+@startuml
+
+title Shop database - Catalog and product pricing
+
+!include ./_common.puml
+
+enum ActiveStatusEnum {
+    active
+    inactive
+    deleted
+}
+
+enum ProductPriceTypeEnum {
+    regular
+    sale
+    wholesale
+    custom
+}
+
+enum ProductKindEnum {
+    material
+    finished_product
+    resale_product
+    semi_finished_product
+    service
+}
+
+entity Category {
+    * id: int
+    --
+    * name: string(255)
+    description: string(255)?
+    * level: int
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+    parent: Category?
+    firstParent: Category?
+}
+
+entity AdditionalName {
+    * id: int
+    --
+    * name: string(255)
+}
+
+entity CategoryAdditionalName {
+    * id: int
+    --
+    * store: Store
+    * category: Category
+    * additionalName: AdditionalName
+}
+
+entity Unit {
+    * id: int
+    --
+    * code: string(50)
+    * name: string(255)
+    * precision: int
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+}
+
+entity Product {
+    * id: int
+    --
+    * name: string(255)
+    * code: string(255)
+    * canBeSold: bool
+    * canBePurchased: bool
+    * canBeManufactured: bool
+    * unit: Unit
+    baseSalePrice: decimal(14, 4)?
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
+    * category: Category
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+    * productKind: ProductKindEnum
+}
+
+entity ProductPrice {
+    * id: int
+    --
+    * type: ProductPriceTypeEnum
+    * price: decimal(14, 4)
+    * priceBase: decimal(14, 4)
+    * validFrom: DateTimeImmutable
+    validTo: DateTimeImmutable?
+    comment: text?
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
+    * product: Product
+    * currency: Currency
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+}
+
+entity ProductParameterName {
+    * id: int
+    --
+    * name: string(255)
+    * description: string(255)
+}
+
+entity ProductParameter {
+    * id: int
+    --
+    * value: string(255)
+    * productParameterName: ProductParameterName
+    * product: Product
+}
+
+entity CategoryProductParameterName {
+    * id: int
+    --
+    * isRequired: bool
+    * isFilter: bool
+    * productParameterName: ProductParameterName
+    * category: Category
+}
+
+
+Store ||--o{ Category : owns
+Store ||--o{ CategoryAdditionalName : scopes
+Store ||--o{ Product : owns
+Store ||--o{ ProductPrice : defines prices
+Store ||--o{ Unit : defines
+Category |o--o{ Category : parent
+Category |o--o{ Category : firstParent
+Category ||--o{ Product : classifies
+Category ||--o{ CategoryAdditionalName : has aliases
+Category ||--o{ CategoryProductParameterName : defines
+AdditionalName ||--o{ CategoryAdditionalName : names
+ProductKindEnum ||--o{ Product : classifies
+Unit ||--o{ Product : measures
+Product ||--o{ ProductPrice : has prices
+ProductPriceTypeEnum ||--o{ ProductPrice : classifies
+Currency ||--o{ ProductPrice : price currency
+Product ||--o{ ProductParameter : has
+ProductParameterName ||--o{ ProductParameter : names
+ProductParameterName ||--o{ CategoryProductParameterName : allowed for category
+
+note right of Category
+  Unique:
+  (store_id, parent_id, name) when parent_id is not null
+  (store_id, name) when parent_id is null
+end note
+
+note right of CategoryAdditionalName
+  Unique:
+  (store_id, additional_name_id, category_id)
+end note
+
+note right of CategoryProductParameterName
+  Unique:
+  (category_id, product_parameter_name_id)
+end note
+
+note right of Product
+  Unique:
+  (store_id, code)
+
+  unit is a reference to Unit to avoid inconsistent text values like:
+  шт, шт., штук, pcs.
+
+  baseSalePrice is recommended to be stored in Store.baseCurrency.
+  It is a denormalized quick access value for the current regular sale price.
+  ProductPrice stores price history and special price types.
+end note
+
+note right of Product
+  Product is used as a universal stock/catalog item:
+  - material: purchased and consumed in production
+  - finished_product: manufactured and sold
+  - resale_product: purchased and sold without manufacturing
+  - semi_finished_product: produced and later consumed/finished
+  - service: can be sold, but usually should not create WarehouseStock movements
+
+  Recommended flag rules:
+  material: canBePurchased=true, canBeSold=false, canBeManufactured=false
+  finished_product: canBeSold=true, canBeManufactured=true
+  resale_product: canBePurchased=true, canBeSold=true, canBeManufactured=false
+  semi_finished_product: canBeManufactured=true and canBePurchased/canBeSold depends on business case
+  service: canBeSold=true, but should normally not be stocked
+
+  Avoid splitting Product/Material/Item at this stage.
+  Use productKind + flags to control behavior in forms and business rules.
+end note
+
+note right of ProductPrice
+  Product price history and future price support.
+
+  price is in ProductPrice.currency.
+  priceBase is in Store.baseCurrency using the exchange rate at creation/update time.
+
+  Suggested rules:
+  - regular = default catalog price
+  - sale = promotional price
+  - wholesale = wholesale price
+  - custom = manual/special price list
+
+  Only one active price interval should overlap for the same:
+  (store_id, product_id, type, currency_id).
+
+  OrderEntry.unitPrice remains the final price snapshot used in a specific order.
+end note
+
+note right of Unit
+  Unique:
+  (store_id, code)
+
+  precision defines how many decimal places are allowed for this unit.
+  Examples:
+  шт -> 0
+  кг -> 3
+  м -> 3
+  м2 -> 3
+end note
+
+note right of ProductParameter
+  Unique:
+  (product_id, product_parameter_name_id)
+end note
+
+@enduml

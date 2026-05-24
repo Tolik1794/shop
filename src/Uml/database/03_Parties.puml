@@ -1,0 +1,69 @@
+@startuml
+
+title Shop database - Customers and suppliers
+
+!include ./_common.puml
+
+enum ActiveStatusEnum {
+    active
+    inactive
+    deleted
+}
+
+entity Customer {
+    * id: int
+    --
+    * name: string(255)
+    lastName: string(255)?
+    phone: string(255)?
+    email: string(255)?
+    comment: text?
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+}
+
+entity Supplier {
+    * id: int
+    --
+    * name: string(255)
+    phone: string(255)?
+    email: string(255)?
+    comment: text?
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+}
+
+
+Store ||--o{ Customer : has customers
+Store ||--o{ Supplier : has suppliers
+Customer |o--o{ Order : places
+Supplier |o--o{ Purchase : supplies
+
+note right of Customer
+  Unique suggestion:
+  (store_id, phone) where phone is not null
+  (store_id, email) where email is not null
+
+  Order keeps customer snapshots so old orders do not change
+  after editing Customer data.
+end note
+
+note right of Supplier
+  Unique suggestion:
+  (store_id, name)
+
+  Purchase keeps supplier snapshots so old purchase documents do not change
+  after editing Supplier data.
+end note
+
+@enduml

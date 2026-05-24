@@ -1,0 +1,128 @@
+@startuml
+
+title Shop database - Purchases
+
+!include ./_common.puml
+
+enum PaymentStatusEnum {
+    unpaid
+    partially_paid
+    paid
+    overpaid
+    refunded
+}
+
+enum PurchaseStatus {
+    draft
+    ordered
+    partially_received
+    received
+    completed
+    canceled
+    partially_returned
+    returned
+}
+
+entity Purchase {
+    * id: int
+    --
+    * number: string(255)
+    * status: PurchaseStatus
+    * currency: Currency
+    * exchangeRateToBase: decimal(18, 8)
+    supplierNameSnapshot: string(255)?
+    supplierPhoneSnapshot: string(255)?
+    supplierEmailSnapshot: string(255)?
+    invoiceNumber: string(255)?
+    documentDate: DateTimeImmutable?
+    comment: text?
+    * totalAmount: decimal(14, 4)
+    * totalAmountBase: decimal(14, 4)
+    deliveryCost: decimal(14, 4)?
+    deliveryCostBase: decimal(14, 4)?
+    canceledAt: DateTimeImmutable?
+    * paidAmountBase: decimal(14, 4)
+    * paymentStatus: PaymentStatusEnum
+    paidAt: DateTimeImmutable?
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+    canceledBy: User?
+    supplier: Supplier?
+}
+
+entity PurchaseEntry {
+    * id: int
+    --
+    * quantity: decimal(14, 4)
+    receivedQuantity: decimal(14, 4)?
+    returnedQuantity: decimal(14, 4)?
+    * unitCost: decimal(14, 4)
+    * unitCostBase: decimal(14, 4)
+    deliveryCost: decimal(14, 4)?
+    deliveryCostBase: decimal(14, 4)?
+    * totalCost: decimal(14, 4)
+    * totalCostBase: decimal(14, 4)
+    salePrice: decimal(14, 4)?
+    salePriceBase: decimal(14, 4)?
+    * productNameSnapshot: string(255)
+    * productCodeSnapshot: string(255)
+    * unitCodeSnapshot: string(50)
+    * unitNameSnapshot: string(255)
+    * purchase: Purchase
+    * product: Product
+    * warehouse: Warehouse
+}
+
+
+Store ||--o{ Purchase : creates
+Currency ||--o{ Purchase : purchase currency
+Supplier |o--o{ Purchase : supplies
+PurchaseStatus ||--o{ Purchase : controls
+PaymentStatusEnum ||--o{ Purchase : payment state
+Purchase ||--o{ PurchaseEntry : has
+Purchase |o--o{ Payment : paid by
+Purchase ||--o{ InventoryDocument : generates stock docs
+Product ||--o{ PurchaseEntry : purchased as
+Warehouse ||--o{ PurchaseEntry : received into
+PurchaseEntry |o--o{ WarehouseStockBatch : may create batches
+PurchaseEntry |o--o{ InventoryDocumentLine : receives/returns
+
+note right of Purchase
+  Supplier is optional to allow quick/manual purchases.
+  createdBy/updatedBy/canceledBy are audit fields for admin accountability.
+  canceledAt should be filled when status becomes canceled.
+  supplierNameSnapshot/supplierPhoneSnapshot/supplierEmailSnapshot store supplier data at purchase time.
+
+  currency stores the original purchase currency.
+  exchangeRateToBase is a snapshot: 1 purchase currency = X Store.baseCurrency.
+  totalAmount/deliveryCost are in original currency; *Base fields are in Store.baseCurrency.
+end note
+
+note right of PurchaseStatus
+  Recommended purchase flow:
+  draft -> ordered -> partially_received -> received -> completed.
+
+  partially_returned/returned are used when goods are returned to supplier.
+  canceled is for purchases stopped before they are completed.
+end note
+
+note right of PurchaseEntry
+  Purchase line.
+  Stores snapshot of product name, code, unit code/name, quantity, unit cost, delivery cost and optional planned sale price.
+  Monetary fields without Base suffix are in Purchase.currency. Base fields are in Store.baseCurrency.
+
+  receivedQuantity and returnedQuantity are denormalized progress/cache fields
+  for fast UI and filtering. Source of truth is InventoryDocumentLine + posted StockMovement.
+  If cache becomes inconsistent, recalculate it from posted inventory documents.
+
+  Partial receipts are allowed:
+  one PurchaseEntry can be linked to multiple InventoryDocumentLine rows over time.
+  Open quantity = quantity - receivedQuantity + returnedQuantity, depending on final business rules.
+
+  InventoryDocumentLine and WarehouseStockBatch are created when purchase is posted/received.
+end note
+
+@enduml

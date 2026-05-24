@@ -1,0 +1,139 @@
+@startuml
+
+title Shop database - Core, stores, users and currencies
+
+!include ./_common.puml
+
+enum RoleEnum {
+    ROLE_SUPER_ADMIN
+    ROLE_ADMIN
+    ROLE_STORE_ADMIN
+    ROLE_STORE_MANAGER
+    ROLE_USER
+}
+
+enum ActiveStatusEnum {
+    active
+    inactive
+    deleted
+}
+
+enum CostingMethodEnum {
+    average_cost
+    fifo
+}
+
+entity Currency {
+    * code: string(3)
+    --
+    * name: string(255)
+    * symbol: string(10)
+    * decimalPlaces: int
+    * status: ActiveStatusEnum
+}
+
+entity Store {
+    * id: int
+    --
+    * name: string(255)
+    * slug: string(255) <<unique>>
+    * phone: string(255)
+    * email: string(255)
+    description: string(255)?
+    avatar: string(255)?
+    * status: ActiveStatusEnum
+    * costingMethod: CostingMethodEnum
+    * allowBackorders: bool
+    * baseCurrency: Currency
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+}
+
+entity User {
+    * id: int
+    --
+    nickname: string(255)? <<unique>>
+    * email: string(180) <<unique>>
+    * password: string(255)
+    avatar: string(255)?
+    firstName: string(255)?
+    lastName: string(255)?
+    dateOfBirth: date?
+    * isVerified: bool
+    * roles: json
+    parent: User?
+}
+
+entity UserStore {
+    * user_id: int
+    * store_id: int
+}
+
+entity ExchangeRate {
+    * id: int
+    --
+    * rate: decimal(18, 8)
+    * validFrom: DateTimeImmutable
+    validTo: DateTimeImmutable?
+    source: string(255)?
+    comment: text?
+    * createdAt: DateTimeImmutable
+    * fromCurrency: Currency
+    * toCurrency: Currency
+    store: Store?
+}
+
+
+User |o--o{ User : parent
+User ||--o{ UserStore : manages
+Store ||--o{ UserStore : managed by
+CostingMethodEnum ||--o{ Store : costing method
+Currency ||--o{ Store : base currency
+Currency ||--o{ ExchangeRate : from/to
+Store |o--o{ ExchangeRate : custom rates
+
+note right of Store
+  Unique:
+  slug
+
+  baseCurrency is the main reporting/accounting currency of the store.
+  All *Base monetary fields are stored in this currency.
+
+  costingMethod defines how cost of goods is calculated.
+  Recommended default for MVP: average_cost.
+  FIFO can be enabled later using WarehouseStockBatch
+  and batch-level StockMovement records.
+
+  allowBackorders=true means OrderEntry can be created
+  even when there is no available stock yet.
+  Reservation and shipment still cannot exceed available physical stock.
+end note
+
+note right of Currency
+  code uses ISO 4217-like values: UAH, USD, EUR.
+  Currency is a dictionary, not a per-store entity.
+end note
+
+note right of ExchangeRate
+  rate means: 1 fromCurrency = rate toCurrency.
+  Recommended use: document currency -> Store.baseCurrency.
+
+  Store can override rates manually for accounting needs.
+  If store is null, the rate can be treated as a global/reference rate.
+
+  Keep the rate snapshot on documents too, because historical
+  documents must not change when ExchangeRate is edited later.
+end note
+
+note right of User
+  Unique:
+  nickname
+  email
+end note
+
+note right of UserStore
+  Primary key:
+  (user_id, store_id)
+end note
+
+@enduml

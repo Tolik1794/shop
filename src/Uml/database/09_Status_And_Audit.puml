@@ -1,0 +1,47 @@
+@startuml
+
+title Shop database - Generic status history and audit policy
+
+!include ./_common.puml
+
+enum StatusHistoryEntityType {
+    purchase
+    inventory_document
+    production_order
+}
+
+entity StatusHistory {
+    * id: int
+    --
+    * entityType: StatusHistoryEntityType
+    * entityId: int
+    oldStatus: string(100)?
+    * newStatus: string(100)
+    comment: text?
+    * changedAt: DateTimeImmutable
+    changedBy: User?
+    * store: Store
+}
+
+
+Store ||--o{ StatusHistory : has status logs
+User |o--o{ StatusHistory : changes status
+StatusHistoryEntityType ||--o{ StatusHistory : classifies
+
+note right of StatusHistory
+  Universal status history table for business documents that only need
+  generic status audit:
+  Purchase, InventoryDocument, ProductionOrder.
+
+  Uses entityType + entityId intentionally for MVP flexibility.
+  Important limitation: database cannot enforce foreign key to different tables.
+  Application code must validate that entityId exists for the selected entityType.
+
+  Suggested rule:
+  create a StatusHistory row every time document status changes.
+
+  Order uses dedicated OrderHistory instead, because its timeline must
+  capture all user/system/integration actions, not only status changes.
+end note
+
+@enduml

@@ -1,0 +1,205 @@
+@startuml
+
+title Shop database - Sales orders
+
+!include ./_common.puml
+
+enum PaymentStatusEnum {
+    unpaid
+    partially_paid
+    paid
+    overpaid
+    refunded
+}
+
+enum OrderHistorySource {
+    manual
+    system
+    integration
+}
+
+enum OrderStatus {
+    draft
+    confirmed
+    awaiting_stock
+    ready_to_ship
+    partially_shipped
+    shipped
+    delivered
+    completed
+    canceled
+    partially_returned
+    returned
+}
+
+entity Order {
+    * id: int
+    --
+    * number: string(255)
+    * status: OrderStatus
+    * currency: Currency
+    * exchangeRateToBase: decimal(18, 8)
+    customerNameSnapshot: string(255)?
+    customerPhoneSnapshot: string(255)?
+    customerEmailSnapshot: string(255)?
+    deliveryAddress: text?
+    * totalAmount: decimal(14, 4)
+    * totalAmountBase: decimal(14, 4)
+    discountAmount: decimal(14, 4)?
+    discountAmountBase: decimal(14, 4)?
+    * paidAmountBase: decimal(14, 4)
+    * paymentStatus: PaymentStatusEnum
+    paidAt: DateTimeImmutable?
+    canceledAt: DateTimeImmutable?
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+    canceledBy: User?
+    customer: Customer?
+}
+
+entity OrderEntry {
+    * id: int
+    --
+    * quantity: decimal(14, 4)
+    shippedQuantity: decimal(14, 4)?
+    returnedQuantity: decimal(14, 4)?
+    canceledQuantity: decimal(14, 4)?
+    * unitPrice: decimal(14, 4)
+    * unitPriceBase: decimal(14, 4)
+    discountAmount: decimal(14, 4)?
+    discountAmountBase: decimal(14, 4)?
+    * totalPrice: decimal(14, 4)
+    * totalPriceBase: decimal(14, 4)
+    * productNameSnapshot: string(255)
+    * productCodeSnapshot: string(255)
+    * unitCodeSnapshot: string(50)
+    * unitNameSnapshot: string(255)
+    * order: Order
+    * product: Product
+    warehouse: Warehouse?
+}
+
+entity OrderComment {
+    * id: int
+    --
+    * body: text
+    * createdAt: DateTimeImmutable
+    updatedAt: DateTimeImmutable?
+    deletedAt: DateTimeImmutable?
+    * order: Order
+    * author: User
+}
+
+entity OrderHistory {
+    * id: int
+    --
+    * eventKey: string(100)
+    * source: OrderHistorySource
+    * title: string(255)
+    description: text?
+    changes: json?
+    payload: json?
+    relatedEntityType: string(100)?
+    relatedEntityId: int?
+    * occurredAt: DateTimeImmutable
+    actorNameSnapshot: string(255)?
+    * order: Order
+    actor: User?
+}
+
+
+Store ||--o{ Order : receives
+Currency ||--o{ Order : order currency
+Customer |o--o{ Order : places
+OrderStatus ||--o{ Order : controls
+PaymentStatusEnum ||--o{ Order : payment state
+Order ||--o{ OrderEntry : has
+Order |o--o{ Payment : paid by
+Order ||--o{ InventoryDocument : generates stock docs
+Product ||--o{ OrderEntry : ordered as
+Warehouse |o--o{ OrderEntry : ships from
+Order ||--o{ OrderComment : has comments
+Order ||--o{ OrderHistory : has timeline
+User ||--o{ OrderComment : authors
+User |o--o{ OrderHistory : performs
+OrderHistorySource ||--o{ OrderHistory : classifies source
+OrderEntry |o--o{ InventoryDocumentLine : ships/returns
+OrderEntry ||--o{ StockReservation : reserves
+
+note right of Order
+  Customer is optional to allow quick one-time orders.
+  createdBy/updatedBy/canceledBy are audit fields for admin accountability.
+  canceledAt should be filled when status becomes canceled.
+  customerNameSnapshot/customerPhoneSnapshot/customerEmailSnapshot store contact data at order time.
+  Free-form communication is stored in OrderComment rows, not on Order itself.
+  Full order timeline is stored in OrderHistory rows.
+
+  currency stores the original sale currency.
+  exchangeRateToBase is a snapshot: 1 order currency = X Store.baseCurrency.
+  totalAmount is in original currency; totalAmountBase is in Store.baseCurrency.
+end note
+
+note right of OrderComment
+  Human discussion attached to an order.
+  One order can have many comments from different users.
+
+  Comments are separate from operational history:
+  - OrderComment stores the message body.
+  - OrderHistory records that a comment was added/edited/deleted.
+
+  deletedAt is optional soft delete so the UI can hide a comment
+  without destroying the audit trail.
+end note
+
+note right of OrderHistory
+  Dedicated append-only timeline for Order.
+  This is richer than StatusHistory and is the source of truth
+  for the future human-readable order activity feed.
+
+  eventKey is a stable machine key, for example:
+  order.created, order.status_changed, order.comment_added,
+  order.entry_updated, order.delivery_declaration_generated.
+
+  source separates manual, system and integration events.
+  actor can be null for automatic events; actorNameSnapshot preserves
+  the display name that should be shown later in the timeline.
+
+  title/description store ready-to-display human-readable snapshots.
+  changes stores structured before/after values for changed fields.
+  payload stores extra structured data for future features:
+  delivery service, declaration number, shipping payer,
+  integration response, automation context and similar details.
+
+  relatedEntityType/relatedEntityId can link future order-side records
+  without changing the base timeline model each time.
+end note
+
+note right of OrderStatus
+  Recommended order flow:
+  draft -> confirmed -> awaiting_stock -> ready_to_ship -> partially_shipped -> shipped -> delivered -> completed.
+
+  canceled is for orders stopped before completion.
+  partially_returned/returned are post-shipment states.
+  Backorders usually use awaiting_stock until enough stock is produced, purchased or reserved.
+end note
+
+note right of OrderEntry
+  Sales order line.
+  Stores snapshot of product name, code, unit code/name, quantity and sale price at the moment of order.
+  Monetary fields without Base suffix are in Order.currency. Base fields are in Store.baseCurrency.
+
+  shippedQuantity, returnedQuantity and canceledQuantity are denormalized progress/cache fields
+  for fast UI and filtering. Source of truth is InventoryDocumentLine + posted StockMovement.
+  If cache becomes inconsistent, recalculate it from posted inventory documents.
+
+  Partial shipments are allowed:
+  one OrderEntry can be linked to multiple InventoryDocumentLine rows over time.
+  Backordered quantity = quantity - shippedQuantity - canceledQuantity, with reservations handled separately.
+
+  InventoryDocumentLine is created from this line when stock is shipped or returned.
+end note
+
+@enduml

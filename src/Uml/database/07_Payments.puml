@@ -1,0 +1,93 @@
+@startuml
+
+title Shop database - Payments
+
+!include ./_common.puml
+
+enum PaymentDirectionEnum {
+    incoming
+    outgoing
+}
+
+enum PaymentTypeEnum {
+    cash
+    card
+    bank_transfer
+    online
+    refund
+    other
+}
+
+enum PaymentStatusEnum {
+    unpaid
+    partially_paid
+    paid
+    overpaid
+    refunded
+}
+
+entity Payment {
+    * id: int
+    --
+    * direction: PaymentDirectionEnum
+    * type: PaymentTypeEnum
+    * amount: decimal(14, 4)
+    * amountBase: decimal(14, 4)
+    * paidAt: DateTimeImmutable
+    comment: text?
+    externalReference: string(255)?
+    * currency: Currency
+    * exchangeRateToBase: decimal(18, 8)
+    * store: Store
+    order: Order?
+    purchase: Purchase?
+    reversesPayment: Payment?
+    createdBy: User?
+    updatedBy: User?
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+}
+
+
+
+Store ||--o{ Payment : has payments
+Currency ||--o{ Payment : payment currency
+Order |o--o{ Payment : paid by
+Purchase |o--o{ Payment : paid by
+Payment |o--o| Payment : reversal of
+User |o--o{ Payment : records/updates payments
+PaymentDirectionEnum ||--o{ Payment : defines direction
+PaymentTypeEnum ||--o{ Payment : classifies
+
+note right of Payment
+  Universal payment table for customer payments and supplier payments.
+
+  Direction:
+  - incoming: money received, usually for Order.
+  - outgoing: money paid, usually for Purchase.
+
+  Rules:
+  - exactly one of order or purchase should be filled.
+  - Order payments are usually incoming.
+  - Purchase payments are usually outgoing.
+  - refunds can use type=refund with the opposite direction.
+  - reversal corrections are linked to the original payment and keep its snapshot.
+  - every reversal stores an explicit business reason in comment.
+  - amount is in payment currency.
+  - amountBase is stored in Store.baseCurrency using exchangeRateToBase snapshot.
+
+  Do not rely only on Order.paidAt for payment state.
+  Payment records are the source of truth for paid/remaining amounts.
+end note
+
+note right of Payment
+  Payment records are the source of truth for financial payments.
+
+  Order.paidAmountBase / Purchase.paidAmountBase and paymentStatus are denormalized cache fields
+  for fast lists, filters, and dashboards.
+
+  They should be recalculated from Payment rows after creating payments or explicit linked reversals.
+  paidAt can store the date when the document became fully paid.
+end note
+
+@enduml

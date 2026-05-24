@@ -1,0 +1,131 @@
+@startuml
+
+title Shop database - Production
+
+!include ./_common.puml
+
+enum ActiveStatusEnum {
+    active
+    inactive
+    deleted
+}
+
+enum ProductionOrderStatus {
+    draft
+    planned
+    materials_reserved
+    in_progress
+    completed
+    canceled
+}
+
+entity ProductionRecipe {
+    * id: int
+    --
+    * name: string(255)
+    * isDefault: bool
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    * store: Store
+    * product: Product
+}
+
+entity ProductionRecipeItem {
+    * id: int
+    --
+    * quantity: decimal(14, 4)
+    wastePercent: decimal(5, 2)?
+    * recipe: ProductionRecipe
+    * material: Product
+}
+
+entity ProductionOrder {
+    * id: int
+    --
+    * status: ProductionOrderStatus
+    * plannedQuantity: decimal(14, 4)
+    completedQuantity: decimal(14, 4)?
+    plannedStartAt: DateTimeImmutable?
+    plannedEndAt: DateTimeImmutable?
+    startedAt: DateTimeImmutable?
+    completedAt: DateTimeImmutable?
+    canceledAt: DateTimeImmutable?
+    comment: text?
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+    startedBy: User?
+    completedBy: User?
+    canceledBy: User?
+    * product: Product
+    warehouse: Warehouse?
+    recipe: ProductionRecipe?
+}
+
+entity ProductionOrderMaterial {
+    * id: int
+    --
+    * plannedQuantity: decimal(14, 4)
+    wastePercent: decimal(5, 2)?
+    comment: text?
+    * productionOrder: ProductionOrder
+    * material: Product
+    recipeItem: ProductionRecipeItem?
+}
+
+
+Store ||--o{ ProductionRecipe : owns
+Store ||--o{ ProductionOrder : owns
+Product ||--o{ ProductionRecipe : manufactured by
+Product ||--o{ ProductionRecipeItem : used as material
+Product ||--o{ ProductionOrderMaterial : planned material
+Product ||--o{ ProductionOrder : produced as
+Warehouse ||--o{ ProductionOrder : receives production
+ProductionRecipe ||--o{ ProductionRecipeItem : contains materials
+ProductionRecipeItem |o--o{ ProductionOrderMaterial : copied into plan
+ProductionRecipe |o--o{ ProductionOrder : used by
+ProductionOrder ||--o{ ProductionOrderMaterial : plans materials
+ProductionOrder ||--o{ InventoryDocument : generates stock docs
+ProductionOrderStatus ||--o{ ProductionOrder : controls
+
+note right of ProductionOrderStatus
+  Recommended production flow:
+  draft -> planned -> materials_reserved -> in_progress -> completed.
+
+  materials_reserved means required stock was reserved but production has not started yet.
+  Actual material consumption happens through InventoryDocument(type=production) OUT lines.
+end note
+
+note right of ProductionRecipe
+  Describes bill of materials for manufactured products.
+end note
+
+note right of ProductionRecipeItem
+  material is also Product, but with canBePurchased=true
+  and usually canBeSold=false.
+end note
+
+note right of ProductionOrderMaterial
+  Planned material list for a specific ProductionOrder.
+  Usually copied from ProductionRecipeItem at the moment production is created.
+
+  This preserves the plan even if the recipe changes later.
+  Actual consumption is recorded by InventoryDocumentLine(direction=out).
+  Plan/fact comparison:
+  ProductionOrderMaterial.plannedQuantity vs actual OUT InventoryDocumentLine quantity.
+end note
+
+note right of ProductionOrder
+  ProductionOrder plans manufacturing.
+  createdBy/updatedBy/startedBy/completedBy/canceledBy are audit fields for production accountability.
+  canceledAt should be filled when status becomes canceled.
+  recipe is optional, because production can be based on a recipe or created manually.
+
+  ProductionOrderMaterial stores the planned material snapshot for this exact order.
+  InventoryDocument(type=production) posts actual stock movements.
+end note
+
+@enduml
