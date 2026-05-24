@@ -15,7 +15,7 @@
                                      aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                     <div class="simplebar-content" style="padding: 0px;">
                                         {% block sidebar_brand %}
-                                            <a class="sidebar-brand" href="{{ path('admin_store_index') }}">
+                                            <a class="sidebar-brand" href="{{ path('admin_store_index', {'_locale': app.request.locale}) }}">
                                                 <span class="align-middle">MyStores</span>
                                             </a>
                                         {% endblock %}
@@ -52,6 +52,19 @@
 
                         <div class="navbar-collapse collapse">
                             <ul class="navbar-nav navbar-align">
+                                <li class="nav-item dropdown me-2">
+                                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                                        {{ app.request.locale|upper }}
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-end">
+                                        {% set current_route = app.request.attributes.get('_route') %}
+                                        {% set current_params = app.request.attributes.get('_route_params')|default({})|merge(app.request.query.all) %}
+                                        {% if current_route %}
+                                            <a class="dropdown-item {{ app.request.locale == 'en' ? 'active' : '' }}" href="{{ path(current_route, current_params|merge({'_locale': 'en'})) }}">{{ 'admin.locale.en'|trans }}</a>
+                                            <a class="dropdown-item {{ app.request.locale == 'uk' ? 'active' : '' }}" href="{{ path(current_route, current_params|merge({'_locale': 'uk'})) }}">{{ 'admin.locale.uk'|trans }}</a>
+                                        {% endif %}
+                                    </div>
+                                </li>
                                 <li class="nav-item dropdown">
                                     <a class="nav-icon dropdown-toggle d-inline-block d-sm-none" href="#"
                                        data-bs-toggle="dropdown">

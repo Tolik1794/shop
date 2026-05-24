@@ -1,5 +1,17 @@
 var cache = {};
 
+function adminTrans(key, fallback, parameters) {
+    var value = window.adminTranslations && window.adminTranslations[key] ? window.adminTranslations[key] : fallback;
+
+    if (parameters) {
+        Object.keys(parameters).forEach(function (name) {
+            value = value.replace('%' + name + '%', parameters[name]);
+        });
+    }
+
+    return value;
+}
+
 $('.js-select').each(function () {
     var $select = $(this),
         is_required = $select.attr('required'),
@@ -13,20 +25,20 @@ $('.js-select').each(function () {
         minimumInputLength: is_autocomplete ? 1 : null,
         width: '100%',
         class: 'form-control',
-        //закрывать селект при выборе только для обычного
+        // Close the select after choosing a value only for single selects.
         closeOnSelect: !is_multiple,
         minimumResultsForSearch: is_ajax ? 1 : Infinity,
-        //выводить крестик для очистки всего для необязательного поля и мультиплселекта
+        // Show the clear control for optional and multi-select fields.
         allowClear: !is_required || is_multiple,
         placeholder: '',
         language: {
             inputTooShort: function (args) {
                 var remainingChars = args.minimum - args.input.length;
 
-                return 'Введите ' + remainingChars + ' или больше символов.';
+                return adminTrans('select2.input_too_short', 'Enter %count% or more characters.', {count: remainingChars});
             },
             noResults: function () {
-                return "Совпадений не найдено";
+                return adminTrans('select2.no_results', 'No matches found.');
             }
         },
         ajax: is_ajax ? {
@@ -71,18 +83,18 @@ $('.js-select').each(function () {
         } : null
     })
     .on('select2:clear', function (e) {
-        //метка что удаляем всё
+        // Mark full clear.
         $(this).data('is_clear', true);
 
-        //не закрывать окно при удалении всех
+        // Keep the dropdown open while clearing all values.
         if ($(this).data('is_open')) {
             e.preventDefault();
         }
     }).on('select2:unselect', function () {
-        //метка удаления одного варианта
+        // Mark single value removal.
         $(this).data('is_unselect', true);
     }).on('select2:closing', function (e) {
-        //не закрывать после удаление
+        // Keep the dropdown open after removal.
         if ($(this).data('is_unselect') || $(this).data('is_clear')) {
             $(this).removeData('is_clear');
             $(this).removeData('is_unselect');
@@ -90,15 +102,15 @@ $('.js-select').each(function () {
             e.preventDefault();
         }
     }).on('select2:opening', function (e) {
-        // после удаления
+        // After removal.
         if ($(this).data('is_unselect')) {
             $(this).removeData('is_unselect');
 
-            //если есть другие варианта выбранные
+            // If other selected values remain.
             if ($(this).val().length) {
-                //не делать запрос ajax
+                // Do not send an AJAX request.
                 $(this).data('need-send-ajax', false);
-                //не открывать
+                // Do not open the dropdown.
                 e.preventDefault();
             }
         }
@@ -110,4 +122,3 @@ $('.js-select').each(function () {
         }
     });
 });
-

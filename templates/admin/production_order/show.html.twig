@@ -14,10 +14,10 @@
 	<div class="card-body">
 		<table class="table table-sm mt-2 mb-4">
 			<tbody>
-			<tr><th>Status</th><td>{{ entity.status.value }}</td></tr>
-			<tr><th>Product</th><td>{{ entity.product.name }}</td></tr>
+			<tr><th>{{ 'Status'|trans }}</th><td>{{ entity.status.value }}</td></tr>
+			<tr><th>{{ 'Product'|trans }}</th><td>{{ entity.product.name }}</td></tr>
 			<tr><th>Recipe</th><td>{{ entity.recipe ? entity.recipe.name : '' }}</td></tr>
-			<tr><th>Warehouse</th><td>{{ entity.warehouse ? entity.warehouse.name : '' }}</td></tr>
+			<tr><th>{{ 'Warehouse'|trans }}</th><td>{{ entity.warehouse ? entity.warehouse.name : '' }}</td></tr>
 			<tr><th>Planned quantity</th><td>{{ entity.plannedQuantity|quantity(entity.product) }}</td></tr>
 			<tr><th>Completed quantity</th><td>{{ entity.completedQuantity|quantity(entity.product) }}</td></tr>
 			<tr><th>Planned start</th><td>{{ entity.plannedStartAt ? entity.plannedStartAt|date('Y-m-d H:i') : '' }}</td></tr>
@@ -36,7 +36,7 @@
 					<thead>
 					<tr>
 						<th>Material</th>
-						<th>Code</th>
+						<th>{{ 'Code'|trans }}</th>
 						<th>Planned qty</th>
 						<th>Waste %</th>
 						<th>Comment</th>

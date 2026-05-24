@@ -1,6 +1,6 @@
 <div class="card order-entries-card">
     <div class="card-header">
-        <h5 class="card-title mb-0">Позиції замовлення</h5>
+        <h5 class="card-title mb-0">{{ 'admin.order.sections.entries'|trans }}</h5>
     </div>
     <div class="card-body">
         {{ include('admin/order/_product_search.html.twig') }}
@@ -17,7 +17,7 @@
             {% endfor %}
         </div>
         <div class="text-muted {{ form.orderEntries|length > 0 ? 'd-none' : '' }}" data-order-form-target="emptyState">
-            Позиції ще не додані.
+            {{ 'admin.order.empty.entries'|trans }}
         </div>
     </div>
 </div>

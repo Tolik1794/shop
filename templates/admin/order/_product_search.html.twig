@@ -1,9 +1,9 @@
 <div class="mb-3 order-product-search">
-    <label class="form-label">Пошук товару</label>
+    <label class="form-label">{{ 'admin.order.product.search'|trans }}</label>
     <input
             type="search"
             class="form-control"
-            placeholder="Назва або артикул товару"
+            placeholder="{{ 'admin.order.product.placeholder'|trans }}"
             autocomplete="off"
             data-product-search-target="query"
             data-product-search-url="{{ path('app_api_admin_order_search_products_for_order_entry', {store_id: app.request.attributes.get('store_id')}) }}"

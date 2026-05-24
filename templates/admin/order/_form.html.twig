@@ -4,13 +4,13 @@
     <div class="container-fluid p-0">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <div>
-                <h1 class="h3 mb-1">{{ entity.id ? 'Редагування замовлення' : 'Нове замовлення' }}</h1>
+                <h1 class="h3 mb-1">{{ entity.id ? 'admin.order.title.edit'|trans : 'admin.order.title.new'|trans }}</h1>
                 <div class="text-muted">{{ entity.number }}</div>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                <button form="{{ order_form_id }}" type="submit" class="btn btn-primary">Зберегти</button>
-                <button form="{{ order_form_id }}" name="save" value="stay" type="submit" class="btn btn-outline-primary">Зберегти як чернетку</button>
-                <a href="{{ path('app_admin_order_index', app.request.query.all|merge({store_id: app.request.attributes.get('store_id'), id: entity.id, page: order_index_page})) }}" class="btn btn-light">Скасувати</a>
+                <button form="{{ order_form_id }}" type="submit" class="btn btn-primary">{{ 'admin.common.save'|trans }}</button>
+                <button form="{{ order_form_id }}" name="save" value="stay" type="submit" class="btn btn-outline-primary">{{ 'admin.common.save_as_draft'|trans }}</button>
+                <a href="{{ path('app_admin_order_index', app.request.query.all|merge({store_id: app.request.attributes.get('store_id'), id: entity.id, page: order_index_page})) }}" class="btn btn-light">{{ 'admin.common.cancel'|trans }}</a>
             </div>
         </div>
 

@@ -7,11 +7,11 @@
 {% set unitPrecision = product ? product.unit.precision|default(4) : 4 %}
 {% set currencyCode = currency ? currency.code|default('') : (entryData and entryData.order and entryData.order.currency ? entryData.order.currency.code|default('') : '') %}
 {% set sourceLabels = {
-    stock: 'Склад',
-    production: 'Під виробництво',
-    preorder: 'Під замовлення',
-    service: 'Послуга',
-    material: 'Матеріал'
+    stock: 'admin.order.source.stock'|trans,
+    production: 'admin.order.source.production'|trans,
+    preorder: 'admin.order.source.preorder'|trans,
+    service: 'admin.order.source.service'|trans,
+    material: 'admin.order.source.material'|trans
 } %}
 {% set sourceType = product ? (warehouse ? 'stock' : 'production') : '' %}
 {% set sourceLabel = sourceLabels[sourceType]|default(sourceType) %}
@@ -46,15 +46,15 @@
             type="button"
             class="btn btn-sm btn-outline-danger order-entry-remove"
             data-action="order-entry#remove"
-            title="Видалити позицію"
-            aria-label="Видалити позицію"
+            title="{{ 'admin.common.delete'|trans }}"
+            aria-label="{{ 'admin.common.delete'|trans }}"
     >
         <i class="fa-solid fa-trash"></i>
     </button>
 
     <div class="row g-3 align-items-start">
         <div class="col-12 col-xl-6">
-            <label class="form-label">Товар</label>
+            <label class="form-label">{{ 'admin.menu.products'|trans }}</label>
             {{ form_widget(entry.product, {
                 attr: {
                     class: 'd-none order-entry-product',
@@ -70,7 +70,7 @@
             </div>
         </div>
         <div class="col-12 col-md-6 col-xl-3">
-            <label class="form-label">Джерело</label>
+            <label class="form-label">{{ 'admin.common.source'|trans }}</label>
             {{ form_widget(entry.warehouse, {
                 attr: {
                     class: 'd-none',
@@ -78,25 +78,25 @@
                 }
             }) }}
             <div class="form-control-plaintext py-1" data-order-entry-target="sourceLabel">
-                {{ sourceDetail ?: 'Не визначено' }}
+                {{ sourceDetail ?: 'admin.order.source.undefined'|trans }}
             </div>
             <div class="text-muted small" data-order-entry-target="sourceMeta">
                 {{ sourceLabel }}
             </div>
         </div>
         <div class="col-12 col-md-6 col-xl-3">
-            <label class="form-label">Наявність</label>
+            <label class="form-label">{{ 'admin.order.fields.availability'|trans }}</label>
             <div class="form-control-plaintext py-1">
                 <span data-order-entry-target="available">{{ available|number_format(unitPrecision, '.', '') }}</span>
                 <span class="text-muted ms-1" data-order-entry-target="unitLabel">{{ unitCode }}</span>
             </div>
-            <div class="text-warning small d-none" data-order-entry-target="availabilityWarning">Недостатньо на складі</div>
+            <div class="text-warning small d-none" data-order-entry-target="availabilityWarning">{{ 'admin.order.validation.insufficient_stock'|trans }}</div>
         </div>
     </div>
 
     <div class="row g-3 align-items-start mt-0">
         <div class="col-6 col-md-3">
-            <label class="form-label">К-сть</label>
+            <label class="form-label">{{ 'admin.common.quantity'|trans }}</label>
             {{ form_widget(entry.quantity, {
                 attr: {
                     class: 'form-control form-control-sm order-entry-number',
@@ -107,7 +107,7 @@
             {{ form_help(entry.quantity) }}
         </div>
         <div class="col-6 col-md-3">
-            <label class="form-label">Ціна</label>
+            <label class="form-label">{{ 'admin.common.price'|trans }}</label>
             {{ form_widget(entry.unitPrice, {
                 attr: {
                     class: 'form-control form-control-sm order-entry-number',
@@ -118,7 +118,7 @@
             {{ form_help(entry.unitPrice) }}
         </div>
         <div class="col-6 col-md-3">
-            <label class="form-label">Знижка</label>
+            <label class="form-label">{{ 'admin.order.fields.discount'|trans }}</label>
             {{ form_widget(entry.discountAmount, {
                 attr: {
                     class: 'form-control form-control-sm order-entry-number',
@@ -129,7 +129,7 @@
             {{ form_help(entry.discountAmount) }}
         </div>
         <div class="col-6 col-md-2">
-            <label class="form-label">Сума</label>
+            <label class="form-label">{{ 'admin.common.total'|trans }}</label>
             <div class="form-control-plaintext fw-bold py-1">
                 <span data-order-entry-target="lineTotal">{{ entryData ? entryData.totalPrice|money : '0.00' }}</span>
                 <span class="text-muted ms-1" data-order-currency-label>{{ currencyCode }}</span>

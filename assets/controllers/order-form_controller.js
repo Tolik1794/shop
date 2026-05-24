@@ -1,11 +1,21 @@
 import {Controller} from '@hotwired/stimulus'
 
-const SOURCE_LABELS = {
-    stock: 'Склад',
-    production: 'Під виробництво',
-    preorder: 'Під замовлення',
-    service: 'Послуга',
-    material: 'Матеріал',
+const SOURCE_LABEL_KEYS = {
+    stock: ['order.source.stock', 'Stock'],
+    production: ['order.source.production', 'For production'],
+    preorder: ['order.source.preorder', 'Preorder'],
+    service: ['order.source.service', 'Service'],
+    material: ['order.source.material', 'Material'],
+}
+
+function trans(key, fallback, parameters = {}) {
+    let value = window.adminTranslations && window.adminTranslations[key] ? window.adminTranslations[key] : fallback
+
+    Object.entries(parameters).forEach(([name, replacement]) => {
+        value = value.replace(`%${name}%`, replacement)
+    })
+
+    return value
 }
 
 export default class extends Controller {
@@ -201,7 +211,7 @@ export default class extends Controller {
             return
         }
 
-        this.customerResultsTarget.innerHTML = '<div class="order-search-loading"><span class="order-search-spinner"></span><span>Пошук...</span></div>'
+        this.customerResultsTarget.innerHTML = `<div class="order-search-loading"><span class="order-search-spinner"></span><span>${this.escapeHtml(trans('common.searching', 'Searching...'))}</span></div>`
         this.customerResultsTarget.classList.remove('d-none')
     }
 
@@ -361,7 +371,8 @@ export default class extends Controller {
 
     setSource(row, product) {
         const sourceType = product.sourceType || row.dataset.sourceType || (product.warehouseId ? 'stock' : 'production')
-        const sourceLabel = SOURCE_LABELS[sourceType] || sourceType || 'Джерело'
+        const sourceLabelKey = SOURCE_LABEL_KEYS[sourceType]
+        const sourceLabel = sourceLabelKey ? trans(sourceLabelKey[0], sourceLabelKey[1]) : sourceType || trans('common.source', 'Source')
         const sourceDetail = product.sourceDetail || product.warehouseName || sourceLabel
         const sourceLabelTarget = row.querySelector('[data-order-entry-target~="sourceLabel"]')
         const sourceMetaTarget = row.querySelector('[data-order-entry-target~="sourceMeta"]')
@@ -369,7 +380,7 @@ export default class extends Controller {
         row.dataset.sourceType = sourceType
 
         if (sourceLabelTarget) {
-            sourceLabelTarget.textContent = sourceDetail || 'Не визначено'
+            sourceLabelTarget.textContent = sourceDetail || trans('order.source.undefined', 'Not defined')
         }
 
         if (sourceMetaTarget) {

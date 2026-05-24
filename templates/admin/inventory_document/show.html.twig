@@ -5,14 +5,14 @@
 	<div class="card-body">
 		<table class="table table-sm mt-2 mb-4">
 			<tbody>
-			<tr><th>Date</th><td>{{ entity.documentDate|date('Y-m-d') }}</td></tr>
-			<tr><th>Type</th><td>{{ entity.type.value }}</td></tr>
-			<tr><th>Status</th><td>{{ entity.status.value }}</td></tr>
-			<tr><th>Currency</th><td>{{ entity.currency ? entity.currency.code : '—' }}</td></tr>
+			<tr><th>{{ 'Date'|trans }}</th><td>{{ entity.documentDate|date('Y-m-d') }}</td></tr>
+			<tr><th>{{ 'Type'|trans }}</th><td>{{ entity.type.value }}</td></tr>
+			<tr><th>{{ 'Status'|trans }}</th><td>{{ entity.status.value }}</td></tr>
+			<tr><th>{{ 'Currency'|trans }}</th><td>{{ entity.currency ? entity.currency.code : '—' }}</td></tr>
 			<tr><th>Exchange rate</th><td>{{ entity.exchangeRateToBase ?: '—' }}</td></tr>
 			<tr><th>Total</th><td>{{ entity.totalAmount is not null ? entity.totalAmount|money : '—' }}</td></tr>
 			<tr><th>Total base</th><td>{{ entity.totalAmountBase is not null ? entity.totalAmountBase|money : '—' }}</td></tr>
-			<tr><th>Reason</th><td>{{ entity.reason ? entity.reason.name ~ ' (' ~ entity.reason.type.value ~ ')' : '—' }}</td></tr>
+			<tr><th>{{ 'Reason'|trans }}</th><td>{{ entity.reason ? entity.reason.name ~ ' (' ~ entity.reason.type.value ~ ')' : '—' }}</td></tr>
 			<tr>
 				<th>Linked document</th>
 				<td>
@@ -52,8 +52,8 @@
 		<table class="table table-sm mb-4">
 			<thead>
 			<tr>
-				<th>Product</th>
-				<th>Warehouse</th>
+				<th>{{ 'Product'|trans }}</th>
+				<th>{{ 'Warehouse'|trans }}</th>
 				<th>Direction</th>
 				<th>Quantity</th>
 				<th>Unit price</th>

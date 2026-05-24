@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="{{ app.request.locale }}">
     <head>
         <meta charset="UTF-8">
-        <title>{% block title %}Welcome!{% endblock %}</title>
+        <title>{% block title %}{{ 'admin.app.title'|trans }}{% endblock %}</title>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text></svg>">
         {# Run `composer require symfony/webpack-encore-bundle` to start using Symfony UX #}
         {% block stylesheets %}
@@ -10,6 +10,25 @@
         {% endblock %}
 
         {% block javascripts %}
+            <script>
+                window.adminTranslations = {{ {
+                    'common.loading': 'admin.common.loading'|trans,
+                    'common.searching': 'admin.common.searching'|trans,
+                    'common.no_results': 'admin.common.no_results'|trans,
+                    'common.load_error': 'admin.common.load_error'|trans,
+                    'select2.input_too_short': 'admin.select2.input_too_short'|trans,
+                    'select2.no_results': 'admin.select2.no_results'|trans,
+                    'order.source.stock': 'admin.order.source.stock'|trans,
+                    'order.source.production': 'admin.order.source.production'|trans,
+                    'order.source.preorder': 'admin.order.source.preorder'|trans,
+                    'order.source.service': 'admin.order.source.service'|trans,
+                    'order.source.material': 'admin.order.source.material'|trans,
+                    'order.source.unavailable': 'admin.order.source.unavailable'|trans,
+                    'order.source.undefined': 'admin.order.source.undefined'|trans,
+                    'order.product.available': 'admin.order.product.available'|trans,
+                    'order.product.price': 'admin.order.product.price'|trans
+                }|json_encode|raw }};
+            </script>
             {{ encore_entry_script_tags('admin-app') }}
         {% endblock %}
     </head>

@@ -2,14 +2,18 @@
 #    path: /
 #    controller: App\Controller\DefaultController::index
 app_logout:
-  path: /logout
+  path:
+    en: /logout
+    uk: /uk/logout
   methods: GET
 _liip_imagine:
   resource: "@LiipImagineBundle/Resources/config/routing.yaml"
 
 homepage:
-  path: /
-  controller: Symfony\Bundle\FrameworkBundle\Controller\RedirectController::urlRedirectAction
+  path:
+    en: /
+    uk: /uk
+  controller: Symfony\Bundle\FrameworkBundle\Controller\RedirectController::redirectAction
   defaults:
-    path: /admin/store
+    route: admin_store_index
     permanent: true

@@ -1,5 +1,15 @@
 import {Controller} from '@hotwired/stimulus'
 
+function trans(key, fallback, parameters = {}) {
+    let value = window.adminTranslations && window.adminTranslations[key] ? window.adminTranslations[key] : fallback
+
+    Object.entries(parameters).forEach(([name, replacement]) => {
+        value = value.replace(`%${name}%`, replacement)
+    })
+
+    return value
+}
+
 export default class extends Controller {
     static targets = ['query', 'results', 'error']
 
@@ -106,7 +116,7 @@ export default class extends Controller {
             })
             .catch((error) => {
                 if (requestId === this.requestId && error.name !== 'AbortError') {
-                    this.showError('Не вдалося завантажити товари.')
+                    this.showError(trans('common.load_error', 'Could not load data.'))
                 }
             })
             .finally(() => {
@@ -144,7 +154,7 @@ export default class extends Controller {
 
     renderProducts(products, append) {
         if (!append && products.length === 0) {
-            this.resultsTarget.innerHTML = '<div class="order-product-results-empty">Нічого не знайдено.</div>'
+            this.resultsTarget.innerHTML = `<div class="order-product-results-empty">${this.escapeHtml(trans('common.no_results', 'No results found.'))}</div>`
             this.resultsTarget.classList.remove('d-none')
             return
         }
@@ -193,8 +203,8 @@ export default class extends Controller {
         return this.renderOptionButton({
             product: product,
             sourceType: 'stock',
-            label: `Склад: ${option.warehouseName || ''}`,
-            meta: `Доступно: ${option.available || '0.0000'} · Ціна: ${option.price || product.price || '0.00'}`,
+            label: `${trans('order.source.stock', 'Stock')}: ${option.warehouseName || ''}`,
+            meta: `${trans('order.product.available', 'Available')}: ${option.available || '0.0000'} · ${trans('order.product.price', 'Price')}: ${option.price || product.price || '0.00'}`,
             available: option.available,
             price: option.price || product.price,
             warehouseId: option.warehouseId || '',
@@ -204,30 +214,34 @@ export default class extends Controller {
     }
 
     renderProductionOption(product, option) {
+        const productionLabel = trans('order.source.production', 'For production')
+
         return this.renderOptionButton({
             product: product,
             sourceType: 'production',
-            label: option.label || 'Під виробництво',
-            meta: `Ціна: ${option.price || product.price || '0.00'}`,
+            label: option.label || productionLabel,
+            meta: `${trans('order.product.price', 'Price')}: ${option.price || product.price || '0.00'}`,
             available: '0.0000',
             price: option.price || product.price,
             warehouseId: '',
             warehouseName: '',
-            sourceDetail: option.label || 'Під виробництво',
+            sourceDetail: option.label || productionLabel,
         })
     }
 
     renderUnavailableOption(product) {
+        const unavailableLabel = trans('order.source.unavailable', 'No warehouse stock')
+
         return this.renderOptionButton({
             product: product,
             sourceType: 'stock',
-            label: 'Без складського залишку',
-            meta: `Ціна: ${product.price || '0.00'}`,
+            label: unavailableLabel,
+            meta: `${trans('order.product.price', 'Price')}: ${product.price || '0.00'}`,
             available: '0.0000',
             price: product.price,
             warehouseId: '',
             warehouseName: '',
-            sourceDetail: 'Без складського залишку',
+            sourceDetail: unavailableLabel,
         })
     }
 
@@ -269,7 +283,7 @@ export default class extends Controller {
     }
 
     loadingHtml() {
-        return '<div class="order-product-results-loading order-search-loading"><span class="order-search-spinner"></span><span>Завантаження...</span></div>'
+        return `<div class="order-product-results-loading order-search-loading"><span class="order-search-spinner"></span><span>${this.escapeHtml(trans('common.loading', 'Loading...'))}</span></div>`
     }
 
     showError(message) {

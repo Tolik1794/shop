@@ -42,7 +42,7 @@ class OrderBuilderControllerTest extends WebTestCase
 		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
 
 		self::assertResponseIsSuccessful();
-		self::assertSelectorTextContains('body', 'Нове замовлення');
+		self::assertSelectorTextContains('body', 'New order');
 		self::assertSelectorExists('[data-controller~="order-form"]');
 		self::assertSelectorExists('[data-controller~="draft-order-comments"]');
 		self::assertSelectorExists('[data-order-form-target="prototype"]');
@@ -55,7 +55,7 @@ class OrderBuilderControllerTest extends WebTestCase
 		$customer = $this->createCustomer($store);
 
 		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
-		$this->client->submitForm('Зберегти', [
+		$this->client->submitForm('Save', [
 			'order[customer]' => $customer->getId(),
 			'order[customerPhone]' => $customer->getPhone(),
 			'order[customerName]' => $customer->getName(),
@@ -113,7 +113,7 @@ class OrderBuilderControllerTest extends WebTestCase
 		$phone = '050 123-45-67';
 
 		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
-		$this->client->submitForm('Зберегти', [
+		$this->client->submitForm('Save', [
 			'order[customerPhone]' => $phone,
 			'order[customerName]' => 'Inline',
 			'order[customerLastName]' => 'Customer',
@@ -616,7 +616,7 @@ class OrderBuilderControllerTest extends WebTestCase
 		$customer = $this->createCustomer($store);
 
 		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
-		$this->client->submitForm('Зберегти', [
+		$this->client->submitForm('Save', [
 			'order[customer]' => $customer->getId(),
 			'order[customerPhone]' => $customer->getPhone(),
 			'order[customerName]' => $customer->getName(),
@@ -653,7 +653,7 @@ class OrderBuilderControllerTest extends WebTestCase
 		$customer = $this->createCustomer($store);
 
 		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
-		$this->client->submitForm('Зберегти', [
+		$this->client->submitForm('Save', [
 			'order[customer]' => $customer->getId(),
 			'order[customerPhone]' => $customer->getPhone(),
 			'order[customerName]' => $customer->getName(),
@@ -683,7 +683,7 @@ class OrderBuilderControllerTest extends WebTestCase
 		$customer = $this->createCustomer($store);
 
 		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
-		$this->client->submitForm('Зберегти', [
+		$this->client->submitForm('Save', [
 			'order[customer]' => $customer->getId(),
 			'order[customerPhone]' => $customer->getPhone(),
 			'order[customerName]' => $customer->getName(),
@@ -724,7 +724,7 @@ class OrderBuilderControllerTest extends WebTestCase
 		$customer = $this->createCustomer($store);
 
 		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
-		$this->client->submitForm('Зберегти', [
+		$this->client->submitForm('Save', [
 			'order[customer]' => $customer->getId(),
 			'order[customerPhone]' => $customer->getPhone(),
 			'order[customerName]' => $customer->getName(),

@@ -50,7 +50,7 @@ class ListContextRedirectControllerTest extends WebTestCase
 		$crawler = $this->client->request('GET', $editHref);
 		self::assertResponseIsSuccessful();
 
-		$this->client->submit($crawler->selectButton('Сохранить')->form([
+		$this->client->submit($crawler->selectButton('Save')->form([
 			'customer[name]' => 'Filtered updated',
 			'customer[lastName]' => $customer->getLastName(),
 			'customer[phone]' => $customer->getPhone(),
@@ -88,7 +88,7 @@ class ListContextRedirectControllerTest extends WebTestCase
 
 		self::assertResponseIsSuccessful();
 
-		$this->client->submit($crawler->selectButton('Сохранить')->form());
+		$this->client->submit($crawler->selectButton('Save')->form());
 
 		self::assertResponseRedirects($returnUrl);
 	}

@@ -11,10 +11,10 @@
 	<div class="card-body">
 		<table class="table table-sm mt-2 mb-4">
 			<tbody>
-			<tr><th>Product</th><td>{{ entity.product.name }}</td></tr>
+			<tr><th>{{ 'Product'|trans }}</th><td>{{ entity.product.name }}</td></tr>
 			<tr><th>Product code</th><td>{{ entity.product.code }}</td></tr>
 			<tr><th>Default</th><td>{{ entity.default ? 'Yes' : 'No' }}</td></tr>
-			<tr><th>Status</th><td>{{ entity.status.value }}</td></tr>
+			<tr><th>{{ 'Status'|trans }}</th><td>{{ entity.status.value }}</td></tr>
 			<tr><th>Updated</th><td>{{ entity.updatedAt|date('Y-m-d H:i') }}</td></tr>
 			</tbody>
 		</table>
@@ -26,7 +26,7 @@
 					<thead>
 					<tr>
 						<th>Material</th>
-						<th>Code</th>
+						<th>{{ 'Code'|trans }}</th>
 						<th>Quantity</th>
 						<th>Waste %</th>
 					</tr>

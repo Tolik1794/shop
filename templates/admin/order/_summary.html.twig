@@ -1,24 +1,24 @@
 <div class="card order-summary" data-order-form-target="summary">
     <div class="card-header">
-        <h5 class="card-title mb-0">Підсумки</h5>
-        <span class="text-muted small d-none" data-order-form-target="summaryStatus">Перерахунок...</span>
+        <h5 class="card-title mb-0">{{ 'admin.order.sections.summary'|trans }}</h5>
+        <span class="text-muted small d-none" data-order-form-target="summaryStatus">{{ 'admin.order.summary.recalculating'|trans }}</span>
     </div>
     <div class="card-body">
         <div class="order-summary-grid">
             <div class="order-summary-item">
-                <span>Кількість позицій</span>
+                <span>{{ 'admin.order.summary.entry_count'|trans }}</span>
                 <strong data-order-form-target="summaryCount">0</strong>
             </div>
             <div class="order-summary-item">
-                <span>Сума товарів</span>
+                <span>{{ 'admin.order.summary.subtotal'|trans }}</span>
                 <strong data-order-form-target="summarySubtotal">0.00</strong>
             </div>
             <div class="order-summary-item">
-                <span>Знижка</span>
+                <span>{{ 'admin.order.summary.discount'|trans }}</span>
                 <strong data-order-form-target="summaryDiscount">0.00</strong>
             </div>
             <div class="order-summary-item order-summary-total">
-                <span>Загальна сума</span>
+                <span>{{ 'admin.order.summary.total'|trans }}</span>
                 <strong data-order-form-target="summaryTotal">0.00</strong>
             </div>
         </div>

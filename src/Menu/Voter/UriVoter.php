@@ -7,7 +7,7 @@ use Knp\Menu\Matcher\Voter\VoterInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
- * Избиратель пункта меню для текущего запроса.
+ * Selects the current menu item for the active request.
  */
 class UriVoter implements VoterInterface
 {

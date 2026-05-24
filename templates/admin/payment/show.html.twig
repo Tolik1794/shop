@@ -5,10 +5,10 @@
 	<div class="card-body">
 		<table class="table table-sm mt-2 mb-0">
 			<tbody>
-			<tr><th>Date</th><td>{{ entity.paidAt|date('Y-m-d H:i') }}</td></tr>
+			<tr><th>{{ 'Date'|trans }}</th><td>{{ entity.paidAt|date('Y-m-d H:i') }}</td></tr>
 			<tr><th>Direction</th><td>{{ entity.direction.value }}</td></tr>
-			<tr><th>Type</th><td>{{ entity.type.value }}</td></tr>
-			<tr><th>Document</th><td>{{ entity.order ? entity.order.number : entity.purchase.number }}</td></tr>
+			<tr><th>{{ 'Type'|trans }}</th><td>{{ entity.type.value }}</td></tr>
+			<tr><th>{{ 'Document'|trans }}</th><td>{{ entity.order ? entity.order.number : entity.purchase.number }}</td></tr>
 			<tr><th>Amount</th><td>{{ entity.amount|money }} {{ entity.currency.code }}</td></tr>
 			<tr><th>Amount base</th><td>{{ entity.amountBase|money }}</td></tr>
 			<tr><th>Exchange rate</th><td>{{ entity.exchangeRateToBase }}</td></tr>

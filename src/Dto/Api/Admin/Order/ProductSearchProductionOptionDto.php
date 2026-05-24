@@ -8,7 +8,7 @@ class ProductSearchProductionOptionDto implements JsonSerializable
 {
 	public function __construct(
 		private readonly ?string $price,
-		private readonly string $label = 'Під виробництво',
+		private readonly string $label = 'For production',
 	)
 	{
 	}

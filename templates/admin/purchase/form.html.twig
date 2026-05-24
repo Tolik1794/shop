@@ -1,18 +1,18 @@
 {% extends 'admin/_store_components/layout.html.twig' %}
 
-{% block title %}Purchase{% endblock %}
+{% block title %}{{ 'admin.menu.purchases'|trans }}{% endblock %}
 
 {% block navbar_breadcrumb %}
 	{{ include('admin/_components/_breadcrumb.html.twig', {
 		breadcrumb_class: 'mb-0',
 		items: [
 			{
-				label: 'Purchases',
+				label: 'admin.menu.purchases'|trans,
 				url: entity.id
 					? path('app_admin_purchase_index', {store_id: app.request.attributes.get('store_id'), id: entity.id, page: purchase_index_page})
 					: path('app_admin_purchase_index', {store_id: app.request.attributes.get('store_id')})
 			},
-			{label: entity.id ? entity.number : 'New'}
+			{label: entity.id ? entity.number : 'admin.common.new'|trans}
 		]
 	}) }}
 {% endblock %}
@@ -22,13 +22,13 @@
 		<div class="container-fluid p-0">
 			<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
 				<div>
-					<h1 class="h3 mb-1">{{ entity.id ? 'Редагування закупівлі' : 'Нова закупівля' }}</h1>
+					<h1 class="h3 mb-1">{{ entity.id ? 'admin.purchase.title.edit'|trans : 'admin.purchase.title.new'|trans }}</h1>
 					<div class="text-muted">{{ entity.number }}</div>
 				</div>
 				<div class="d-flex flex-wrap gap-2">
-					<button form="purchase-form" type="submit" class="btn btn-primary">Зберегти</button>
-					<button form="purchase-form" name="save" value="stay" type="submit" class="btn btn-outline-primary">Зберегти як чернетку</button>
-					<a href="{{ path('app_admin_purchase_index', app.request.query.all|merge({store_id: app.request.attributes.get('store_id'), id: entity.id, page: purchase_index_page})) }}" class="btn btn-light">Скасувати</a>
+					<button form="purchase-form" type="submit" class="btn btn-primary">{{ 'admin.common.save'|trans }}</button>
+					<button form="purchase-form" name="save" value="stay" type="submit" class="btn btn-outline-primary">{{ 'admin.common.save_as_draft'|trans }}</button>
+					<a href="{{ path('app_admin_purchase_index', app.request.query.all|merge({store_id: app.request.attributes.get('store_id'), id: entity.id, page: purchase_index_page})) }}" class="btn btn-light">{{ 'admin.common.cancel'|trans }}</a>
 				</div>
 			</div>
 
@@ -43,7 +43,7 @@
 					<div class="col-12 col-xl-4">
 						<div class="card">
 							<div class="card-header">
-								<h5 class="card-title mb-0">Загальні налаштування</h5>
+								<h5 class="card-title mb-0">{{ 'admin.purchase.sections.general'|trans }}</h5>
 							</div>
 							<div class="card-body">
 								{{ form_row(form.supplier) }}
@@ -59,9 +59,9 @@
 					<div class="col-12 col-xl-8">
 						<div class="card">
 							<div class="card-header d-flex justify-content-between align-items-center">
-								<h5 class="card-title mb-0">Позиції закупівлі</h5>
+								<h5 class="card-title mb-0">{{ 'admin.purchase.sections.entries'|trans }}</h5>
 								<button type="button" class="btn btn-light btn-sm" data-action="purchase-form#addEntry">
-									<i class="fa-solid fa-plus me-1"></i>Додати позицію
+									<i class="fa-solid fa-plus me-1"></i>{{ 'admin.purchase.actions.add_entry'|trans }}
 								</button>
 							</div>
 							<div class="card-body">
@@ -78,7 +78,7 @@
 								</div>
 
 								<div class="text-muted {{ form.purchaseEntries|length > 0 ? 'd-none' : '' }}" data-purchase-form-target="emptyState">
-									Позиції ще не додані.
+									{{ 'admin.order.empty.entries'|trans }}
 								</div>
 
 								<template data-purchase-form-target="prototype">
@@ -90,7 +90,7 @@
 						{% if entity.id %}
 							<div class="card mt-3">
 								<div class="card-header">
-									<h5 class="card-title mb-0">Підсумки</h5>
+									<h5 class="card-title mb-0">{{ 'admin.purchase.sections.summary'|trans }}</h5>
 								</div>
 								<div class="card-body">
 									<div>Total: <strong>{{ entity.totalAmount|money }} {{ entity.currency.code }}</strong></div>

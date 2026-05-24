@@ -13,11 +13,11 @@
         <table class="table table-sm mt-2 mb-4">
             <tbody>
             <tr>
-                <th>Product</th>
+                <th>{{ 'Product'|trans }}</th>
                 <td>{{ entity.product.name }}</td>
             </tr>
             <tr>
-                <th>Type</th>
+                <th>{{ 'Type'|trans }}</th>
                 <td>{{ entity.type.value }}</td>
             </tr>
             <tr>
@@ -25,7 +25,7 @@
                 <td>{{ entity.price|money }}</td>
             </tr>
             <tr>
-                <th>Currency</th>
+                <th>{{ 'Currency'|trans }}</th>
                 <td>{{ entity.currency.code }}</td>
             </tr>
             <tr>

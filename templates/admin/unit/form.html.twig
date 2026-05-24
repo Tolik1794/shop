@@ -20,9 +20,9 @@
 
                         <div class="row">
                             <div class="form-control-lg">
-                                <button type="submit" class="btn btn-primary btn mb-1 me-2">Сохранить</button>
-                                <button name="save" value="stay" type="submit" class="btn btn-primary mb-1 me-2">Сохранить и продолжить</button>
-                                <a href="{{ path('app_admin_unit_index', app.request.query.all|merge(app.request.attributes.get('_route_params'))) }}" class="btn btn-text mb-1">Отмена</a>
+                                <button type="submit" class="btn btn-primary btn mb-1 me-2">{{ 'admin.common.save'|trans }}</button>
+                                <button name="save" value="stay" type="submit" class="btn btn-primary mb-1 me-2">{{ 'admin.common.save_and_continue'|trans }}</button>
+                                <a href="{{ path('app_admin_unit_index', app.request.query.all|merge(app.request.attributes.get('_route_params'))) }}" class="btn btn-text mb-1">{{ 'admin.common.cancel'|trans }}</a>
                             </div>
                         </div>
 

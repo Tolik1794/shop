@@ -1,6 +1,9 @@
 controllers:
     resource: ../../src/Controller/
     type: attribute
+    prefix:
+        en: ''
+        uk: '/uk'
 
 kernel:
     resource: ../../src/Kernel.php

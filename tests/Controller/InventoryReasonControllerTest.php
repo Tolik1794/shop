@@ -111,7 +111,7 @@ class InventoryReasonControllerTest extends WebTestCase
 		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/inventory-reason/new', $store->getId()));
 		self::assertResponseIsSuccessful();
 
-		$form = $crawler->selectButton('Сохранить')->form();
+		$form = $crawler->selectButton('Save')->form();
 		$form['inventory_reason[name]'] = 'Duplicate reason';
 		$form['inventory_reason[type]'] = InventoryReasonType::WRITE_OFF->value;
 		$form['inventory_reason[status]'] = ActiveStatusEnum::ACTIVE->value;
