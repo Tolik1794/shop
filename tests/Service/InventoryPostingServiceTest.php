@@ -16,6 +16,8 @@ use App\Entity\PurchaseStatus;
 use App\Entity\Store;
 use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
+use App\Entity\WarehouseStockBatch;
+use App\Enum\CostingMethodEnum;
 use App\Enum\InventoryDirection;
 use App\Enum\InventoryDocumentStatus;
 use App\Enum\InventoryDocumentType;
@@ -23,11 +25,13 @@ use App\Enum\InventoryReasonType;
 use App\Enum\ProductKindEnum;
 use App\Exception\StockOperationException;
 use App\Manager\UserManager;
+use App\Repository\WarehouseStockBatchRepository;
 use App\Repository\WarehouseStockRepository;
 use App\Service\BusinessDocumentStatusSynchronizer;
 use App\Service\DocumentProgressRecalculator;
 use App\Service\InventoryPostingService;
 use App\Service\StockReservationService;
+use App\Service\WarehouseStockBatchPostingService;
 use App\Service\WarehouseStockService;
 use App\Workflow\History\GenericStatusHistoryRecorder;
 use App\Workflow\History\OrderHistoryRecorder;
@@ -39,6 +43,7 @@ class InventoryPostingServiceTest extends TestCase
 {
 	private EntityManagerInterface&MockObject $entityManager;
 	private WarehouseStockService&MockObject $warehouseStockService;
+	private WarehouseStockBatchRepository&MockObject $warehouseStockBatchRepository;
 	private WarehouseStockRepository&MockObject $warehouseStockRepository;
 	private UserManager&MockObject $userManager;
 	private StockReservationService&MockObject $stockReservationService;
@@ -50,6 +55,7 @@ class InventoryPostingServiceTest extends TestCase
 	{
 		$this->entityManager = $this->createMock(EntityManagerInterface::class);
 		$this->warehouseStockService = $this->createMock(WarehouseStockService::class);
+		$this->warehouseStockBatchRepository = $this->createMock(WarehouseStockBatchRepository::class);
 		$this->warehouseStockRepository = $this->createMock(WarehouseStockRepository::class);
 		$this->userManager = $this->createMock(UserManager::class);
 		$this->stockReservationService = $this->createMock(StockReservationService::class);
@@ -60,10 +66,25 @@ class InventoryPostingServiceTest extends TestCase
 		$this->entityManager->method('flush');
 		$this->entityManager->method('wrapInTransaction')
 			->willReturnCallback(static fn (callable $callback): mixed => $callback());
+		$this->warehouseStockBatchRepository->method('findOpenByWarehouseStock')
+			->willReturnCallback(static fn (WarehouseStock $warehouseStock): array => $warehouseStock->getWarehouseStockBatches()
+				->filter(static fn (WarehouseStockBatch $batch): bool => (float) $batch->getRemainingQuantity() > 0)
+				->toArray());
+		$this->warehouseStockBatchRepository->method('sumOpenRemainingByWarehouseStock')
+			->willReturnCallback(static function (WarehouseStock $warehouseStock): string {
+				$total = 0.0;
+
+				foreach ($warehouseStock->getWarehouseStockBatches() as $batch) {
+					$total += max(0.0, (float) $batch->getRemainingQuantity());
+				}
+
+				return number_format($total, 4, '.', '');
+			});
 
 		$this->inventoryPostingService = new InventoryPostingService(
 			$this->entityManager,
 			$this->warehouseStockService,
+			new WarehouseStockBatchPostingService($this->entityManager, $this->warehouseStockBatchRepository),
 			$this->userManager,
 			new DocumentProgressRecalculator(new BusinessDocumentStatusSynchronizer($this->warehouseStockRepository, $this->statusHistoryRecorder, $this->orderHistoryRecorder)),
 			$this->stockReservationService,
@@ -97,6 +118,79 @@ class InventoryPostingServiceTest extends TestCase
 		self::assertSame('3.0000', $movement->getQuantityChange());
 		self::assertSame('4.0000', $movement->getUnitCost());
 		self::assertSame('8.0000', $movement->getBalanceAfter());
+		self::assertInstanceOf(WarehouseStockBatch::class, $movement->getWarehouseStockBatch());
+		self::assertSame('3.0000', $movement->getWarehouseStockBatch()->getInitialQuantity());
+		self::assertSame('3.0000', $movement->getWarehouseStockBatch()->getRemainingQuantity());
+		self::assertSame('4.0000', $movement->getWarehouseStockBatch()->getUnitCost());
+	}
+
+	public function testFifoOutLineConsumesOldestBatchesAndSplitsMovements(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$store->setCostingMethod(CostingMethodEnum::FIFO);
+		$warehouseStock = $this->warehouseStock($warehouse, $product, '5.0000', '9.0000');
+		$firstBatch = $this->batch($warehouseStock, '2.0000', '3.0000', '2026-01-01 00:00:00');
+		$secondBatch = $this->batch($warehouseStock, '3.0000', '7.0000', '2026-01-02 00:00:00');
+		$document = $this->document($store)
+			->addLine($this->line($product, $warehouse, InventoryDirection::OUT, '4.0000'));
+
+		$this->warehouseStockService->method('findOrCreate')->willReturn($warehouseStock);
+
+		$this->inventoryPostingService->post($document);
+		$movements = $document->getLines()->first()->getStockMovements()->toArray();
+
+		self::assertSame('1.0000', $warehouseStock->getQuantityOnHand());
+		self::assertSame('0.0000', $firstBatch->getRemainingQuantity());
+		self::assertSame('1.0000', $secondBatch->getRemainingQuantity());
+		self::assertCount(2, $movements);
+		self::assertSame('-2.0000', $movements[0]->getQuantityChange());
+		self::assertSame('3.0000', $movements[0]->getUnitCost());
+		self::assertSame($firstBatch, $movements[0]->getWarehouseStockBatch());
+		self::assertSame('-2.0000', $movements[1]->getQuantityChange());
+		self::assertSame('7.0000', $movements[1]->getUnitCost());
+		self::assertSame($secondBatch, $movements[1]->getWarehouseStockBatch());
+	}
+
+	public function testAverageCostOutLineConsumesBatchesButKeepsAverageCostMovementCost(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$warehouseStock = $this->warehouseStock($warehouse, $product, '5.0000', '9.0000');
+		$firstBatch = $this->batch($warehouseStock, '2.0000', '3.0000', '2026-01-01 00:00:00');
+		$secondBatch = $this->batch($warehouseStock, '3.0000', '7.0000', '2026-01-02 00:00:00');
+		$document = $this->document($store)
+			->addLine($this->line($product, $warehouse, InventoryDirection::OUT, '4.0000'));
+
+		$this->warehouseStockService->method('findOrCreate')->willReturn($warehouseStock);
+
+		$this->inventoryPostingService->post($document);
+		$movements = $document->getLines()->first()->getStockMovements()->toArray();
+
+		self::assertSame('0.0000', $firstBatch->getRemainingQuantity());
+		self::assertSame('1.0000', $secondBatch->getRemainingQuantity());
+		self::assertCount(2, $movements);
+		self::assertSame('9.0000', $movements[0]->getUnitCost());
+		self::assertSame('9.0000', $movements[1]->getUnitCost());
+	}
+
+	public function testOutLineCreatesSyntheticOpeningBatchForLegacyStock(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$warehouseStock = $this->warehouseStock($warehouse, $product, '5.0000', '6.0000');
+		$document = $this->document($store)
+			->addLine($this->line($product, $warehouse, InventoryDirection::OUT, '2.0000'));
+
+		$this->warehouseStockService->method('findOrCreate')->willReturn($warehouseStock);
+
+		$this->inventoryPostingService->post($document);
+		$movement = $document->getLines()->first()->getStockMovements()->first();
+		$batch = $movement->getWarehouseStockBatch();
+
+		self::assertInstanceOf(WarehouseStockBatch::class, $batch);
+		self::assertSame('5.0000', $batch->getInitialQuantity());
+		self::assertSame('3.0000', $batch->getRemainingQuantity());
+		self::assertSame('6.0000', $batch->getUnitCost());
+		self::assertSame($batch, $movement->getWarehouseStockBatch());
+		self::assertSame('3.0000', $warehouseStock->getQuantityOnHand());
 	}
 
 	public function testPostBlocksNegativeStock(): void
@@ -136,6 +230,7 @@ class InventoryPostingServiceTest extends TestCase
 		self::assertSame($document, $reversal->getReversedDocument());
 		self::assertSame(InventoryDirection::OUT, $reversalLine->getDirection());
 		self::assertSame('0.0000', $warehouseStock->getQuantityOnHand());
+		self::assertInstanceOf(WarehouseStockBatch::class, $reversalLine->getStockMovements()->first()->getWarehouseStockBatch());
 	}
 
 	public function testServiceProductLineDoesNotCreateStockMovement(): void
@@ -464,11 +559,17 @@ class InventoryPostingServiceTest extends TestCase
 		$this->warehouseStockService->method('findOrCreate')->willReturn($warehouseStock);
 
 		$this->inventoryPostingService->post($document);
-		$this->inventoryPostingService->cancel($document);
+		$originalBatch = $document->getLines()->first()->getStockMovements()->first()->getWarehouseStockBatch();
+		$reversal = $this->inventoryPostingService->cancel($document);
+		$reversalLine = $reversal instanceof InventoryDocument ? $reversal->getLines()->first() : null;
 
 		self::assertSame('0.0000', $purchaseEntry->getReceivedQuantity());
 		self::assertSame(PurchaseStatus::ORDERED, $purchase->getStatus());
 		self::assertSame('0.0000', $warehouseStock->getQuantityOnHand());
+		self::assertInstanceOf(WarehouseStockBatch::class, $originalBatch);
+		self::assertSame('0.0000', $originalBatch->getRemainingQuantity());
+		self::assertInstanceOf(InventoryDocumentLine::class, $reversalLine);
+		self::assertSame($originalBatch, $reversalLine->getStockMovements()->first()->getWarehouseStockBatch());
 	}
 
 	public function testProductionDocumentUpdatesCompletedQuantity(): void
@@ -538,6 +639,20 @@ class InventoryPostingServiceTest extends TestCase
 			->setProduct($product)
 			->setQuantityOnHand($quantityOnHand)
 			->setAverageCost($averageCost);
+	}
+
+	private function batch(WarehouseStock $warehouseStock, string $quantity, string $unitCost, string $receivedAt): WarehouseStockBatch
+	{
+		$batch = (new WarehouseStockBatch())
+			->setWarehouseStock($warehouseStock)
+			->setInitialQuantity($quantity)
+			->setRemainingQuantity($quantity)
+			->setUnitCost($unitCost)
+			->setReceivedAt(new \DateTimeImmutable($receivedAt));
+
+		$warehouseStock->addWarehouseStockBatch($batch);
+
+		return $batch;
 	}
 
 	private function document(Store $store): InventoryDocument

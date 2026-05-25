@@ -179,4 +179,14 @@ class WarehouseStockBatch
         return $this->stockMovements;
     }
 
+	public function addStockMovement(StockMovement $stockMovement): static
+	{
+		if (!$this->stockMovements->contains($stockMovement)) {
+			$this->stockMovements->add($stockMovement);
+			$stockMovement->setWarehouseStockBatch($this);
+		}
+
+		return $this;
+	}
+
 }

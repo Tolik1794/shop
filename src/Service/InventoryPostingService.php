@@ -13,6 +13,7 @@ use App\Entity\StockMovement;
 use App\Entity\Store;
 use App\Entity\User\User;
 use App\Entity\WarehouseStock;
+use App\Enum\CostingMethodEnum;
 use App\Enum\ActiveStatusEnum;
 use App\Enum\InventoryDirection;
 use App\Enum\InventoryDocumentStatus;
@@ -32,6 +33,7 @@ class InventoryPostingService
 	public function __construct(
 		private readonly EntityManagerInterface $entityManager,
 		private readonly WarehouseStockService $warehouseStockService,
+		private readonly WarehouseStockBatchPostingService $warehouseStockBatchPostingService,
 		private readonly UserManager $userManager,
 		private readonly DocumentProgressRecalculator $documentProgressRecalculator,
 		private readonly StockReservationService $stockReservationService,
@@ -110,7 +112,7 @@ class InventoryPostingService
 		$context = $this->transitionContext($actor, $postedAt);
 		$this->ensurePersistedIdentity($document);
 
-		foreach ($document->getLines() as $line) {
+		foreach ($this->linesForPosting($document) as $line) {
 			$this->postLine($line);
 		}
 
@@ -175,16 +177,17 @@ class InventoryPostingService
 
 		$warehouseStock = $this->warehouseStockService->findOrCreate($warehouse, $product);
 		$quantity = $this->numberValue($line->getQuantity());
-		$unitCost = $this->lineUnitCost($line, $warehouseStock);
+		$unitCost = $this->postingUnitCost($line, $warehouseStock);
 		$oldQuantity = $this->numberValue($warehouseStock->getQuantityOnHand());
 		$oldAverageCost = $this->numberValue($warehouseStock->getAverageCost());
 
 		if ($line->getDirection() === InventoryDirection::IN) {
+			$incomingLayers = $this->incomingLayers($line, $unitCost);
+			$unitCost = $this->weightedUnitCost($incomingLayers) ?? $unitCost;
 			$newQuantity = $oldQuantity + $quantity;
 			$newAverageCost = $newQuantity > 0
 				? (($oldQuantity * $oldAverageCost) + ($quantity * $unitCost)) / $newQuantity
 				: $unitCost;
-			$quantityChange = $quantity;
 
 			$warehouseStock
 				->setQuantityOnHand($this->formatQuantity($newQuantity))
@@ -194,24 +197,29 @@ class InventoryPostingService
 			if ($newQuantity < -0.00005) {
 				throw new StockOperationException('Quantity on hand cannot be negative.');
 			}
-
-			$quantityChange = -$quantity;
 			$warehouseStock->setQuantityOnHand($this->formatQuantity(max(0, $newQuantity)));
 		}
 
 		$warehouseStock->setUpdatedAt(new DateTimeImmutable());
 		$line->setWarehouseStock($warehouseStock);
 
-		$movement = (new StockMovement())
-			->setInventoryDocumentLine($line)
-			->setWarehouseStock($warehouseStock)
-			->setQuantityChange($this->formatQuantity($quantityChange))
-			->setUnitCost($this->formatMoney($unitCost))
-			->setBalanceAfter($warehouseStock->getQuantityOnHand());
+		if ($document->getType() === InventoryDocumentType::REVERSAL && ($originalLine = $this->originalLineForReversal($line)) instanceof InventoryDocumentLine) {
+			$movements = $this->warehouseStockBatchPostingService->createReversalMovements($line, $warehouseStock, $originalLine, $oldQuantity);
+			if ($movements !== null) {
+				$this->entityManager->persist($warehouseStock);
+				$this->completeReservationsForShipment($line);
 
-		$line->addStockMovement($movement);
+				return;
+			}
+		}
+
+		if ($line->getDirection() === InventoryDirection::IN) {
+			$this->warehouseStockBatchPostingService->createIncomingMovements($line, $warehouseStock, $incomingLayers ?? $this->incomingLayers($line, $unitCost), $oldQuantity);
+		} else {
+			$this->warehouseStockBatchPostingService->createOutgoingMovements($line, $warehouseStock, $quantity, $unitCost, $oldQuantity);
+		}
+
 		$this->entityManager->persist($warehouseStock);
-		$this->entityManager->persist($movement);
 		$this->completeReservationsForShipment($line);
 	}
 
@@ -229,6 +237,165 @@ class InventoryPostingService
 		}
 
 		$this->stockReservationService->completeForOrderEntry($orderEntry, (string) $line->getQuantity(), false);
+	}
+
+	/**
+	 * @return list<InventoryDocumentLine>
+	 */
+	private function linesForPosting(InventoryDocument $document): array
+	{
+		$lines = $document->getLines()->toArray();
+
+		if ($document->getType() !== InventoryDocumentType::TRANSFER) {
+			return array_values($lines);
+		}
+
+		usort($lines, static fn (InventoryDocumentLine $left, InventoryDocumentLine $right): int => $left->getDirection() === $right->getDirection()
+			? 0
+			: ($left->getDirection() === InventoryDirection::OUT ? -1 : 1));
+
+		return array_values($lines);
+	}
+
+	private function postingUnitCost(InventoryDocumentLine $line, WarehouseStock $warehouseStock): float
+	{
+		$document = $line->getInventoryDocument();
+
+		if ($line->getDirection() === InventoryDirection::IN) {
+			if (
+				$document?->getType() === InventoryDocumentType::REVERSAL
+				&& ($originalLine = $this->originalLineForReversal($line)) instanceof InventoryDocumentLine
+				&& ($unitCost = $this->weightedMovementUnitCost($originalLine)) !== null
+			) {
+				return $unitCost;
+			}
+
+			if (
+				$document?->getType() === InventoryDocumentType::TRANSFER
+				&& $document->getStore()?->getCostingMethod() === CostingMethodEnum::FIFO
+				&& ($sourceLine = $this->transferSourceLine($document)) instanceof InventoryDocumentLine
+				&& ($unitCost = $this->weightedMovementUnitCost($sourceLine)) !== null
+			) {
+				return $unitCost;
+			}
+		}
+
+		return $this->lineUnitCost($line, $warehouseStock);
+	}
+
+	/**
+	 * @return list<array{quantity: float, unitCost: float, purchaseEntry?: PurchaseEntry|null, salePrice?: string|null}>
+	 */
+	private function incomingLayers(InventoryDocumentLine $line, float $unitCost): array
+	{
+		$document = $line->getInventoryDocument();
+
+		if (
+			$document?->getType() === InventoryDocumentType::TRANSFER
+			&& $document->getStore()?->getCostingMethod() === CostingMethodEnum::FIFO
+			&& ($sourceLine = $this->transferSourceLine($document)) instanceof InventoryDocumentLine
+		) {
+			$layers = $this->movementLayers($sourceLine);
+
+			if ($layers !== []) {
+				return $layers;
+			}
+		}
+
+		$purchaseEntry = $line->getPurchaseEntry();
+
+		return [[
+			'quantity' => $this->numberValue($line->getQuantity()),
+			'unitCost' => $unitCost,
+			'purchaseEntry' => $purchaseEntry,
+			'salePrice' => $purchaseEntry instanceof PurchaseEntry ? ($purchaseEntry->getSalePriceBase() ?? $purchaseEntry->getSalePrice()) : null,
+		]];
+	}
+
+	/**
+	 * @return list<array{quantity: float, unitCost: float, purchaseEntry?: PurchaseEntry|null, salePrice?: string|null}>
+	 */
+	private function movementLayers(InventoryDocumentLine $line): array
+	{
+		$layers = [];
+
+		foreach ($line->getStockMovements() as $movement) {
+			if (!$movement instanceof StockMovement) {
+				continue;
+			}
+
+			$quantity = abs($this->numberValue($movement->getQuantityChange()));
+
+			if ($quantity <= 0.00005) {
+				continue;
+			}
+
+			$layers[] = [
+				'quantity' => $quantity,
+				'unitCost' => $this->numberValue($movement->getUnitCost()),
+				'purchaseEntry' => null,
+				'salePrice' => null,
+			];
+		}
+
+		return $layers;
+	}
+
+	/**
+	 * @param list<array{quantity: float, unitCost: float}> $layers
+	 */
+	private function weightedUnitCost(array $layers): ?float
+	{
+		$quantity = 0.0;
+		$total = 0.0;
+
+		foreach ($layers as $layer) {
+			$quantity += $layer['quantity'];
+			$total += $layer['quantity'] * $layer['unitCost'];
+		}
+
+		if ($quantity <= 0.00005) {
+			return null;
+		}
+
+		return $total / $quantity;
+	}
+
+	private function weightedMovementUnitCost(InventoryDocumentLine $line): ?float
+	{
+		return $this->weightedUnitCost($this->movementLayers($line));
+	}
+
+	private function transferSourceLine(InventoryDocument $document): ?InventoryDocumentLine
+	{
+		foreach ($document->getLines() as $line) {
+			if ($line->getDirection() === InventoryDirection::OUT) {
+				return $line;
+			}
+		}
+
+		return null;
+	}
+
+	private function originalLineForReversal(InventoryDocumentLine $line): ?InventoryDocumentLine
+	{
+		$document = $line->getInventoryDocument();
+		$reversedDocument = $document?->getReversedDocument();
+
+		if (!$document instanceof InventoryDocument || !$reversedDocument instanceof InventoryDocument) {
+			return null;
+		}
+
+		$reversalLines = array_values($document->getLines()->toArray());
+		$originalLines = array_values($reversedDocument->getLines()->toArray());
+
+		foreach ($reversalLines as $index => $reversalLine) {
+			if ($reversalLine === $line) {
+				return $originalLines[$index] ?? null;
+			}
+		}
+
+		return null;
 	}
 
 	private function assertDocumentCanBePosted(InventoryDocument $document): void

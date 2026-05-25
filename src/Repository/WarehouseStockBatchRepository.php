@@ -33,6 +33,34 @@ class WarehouseStockBatchRepository extends ServiceEntityRepository
 			->getResult();
 	}
 
+	/**
+	 * @return WarehouseStockBatch[]
+	 */
+	public function findOpenByWarehouseStock(WarehouseStock $warehouseStock): array
+	{
+		return $this->createQueryBuilder('warehouseStockBatch')
+			->andWhere('warehouseStockBatch.warehouseStock = :warehouseStock')
+			->andWhere('warehouseStockBatch.remainingQuantity > 0')
+			->setParameter('warehouseStock', $warehouseStock)
+			->orderBy('warehouseStockBatch.receivedAt', 'ASC')
+			->addOrderBy('warehouseStockBatch.id', 'ASC')
+			->getQuery()
+			->getResult();
+	}
+
+	public function sumOpenRemainingByWarehouseStock(WarehouseStock $warehouseStock): string
+	{
+		$value = $this->createQueryBuilder('warehouseStockBatch')
+			->select('COALESCE(SUM(warehouseStockBatch.remainingQuantity), 0)')
+			->andWhere('warehouseStockBatch.warehouseStock = :warehouseStock')
+			->andWhere('warehouseStockBatch.remainingQuantity > 0')
+			->setParameter('warehouseStock', $warehouseStock)
+			->getQuery()
+			->getSingleScalarResult();
+
+		return number_format((float) $value, 4, '.', '');
+	}
+
     //    /**
     //     * @return WarehouseStockBatch[] Returns an array of WarehouseStockBatch objects
     //     */
