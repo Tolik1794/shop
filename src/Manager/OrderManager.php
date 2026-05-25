@@ -4,6 +4,7 @@ namespace App\Manager;
 
 use App\Entity\Order;
 use App\Entity\OrderEntry;
+use App\Entity\OrderHistory;
 use App\Entity\OrderStatus;
 use App\Entity\Product;
 use App\Entity\StockReservation;
@@ -162,17 +163,30 @@ class OrderManager extends AbstractManager
 		return $this->resolveRollbackTargetStatus($order) instanceof OrderStatus;
 	}
 
+	public function getRollbackTargetStatus(Order $order): ?OrderStatus
+	{
+		return $this->resolveRollbackTargetStatus($order);
+	}
+
 	public function rollbackStatus(Order $order): void
 	{
-		$targetStatus = $this->rollbackTargetStatus($order);
+		$targetHistoryEntry = $this->rollbackTargetHistoryEntry($order);
+		$targetStatus = $this->rollbackTargetStatus($targetHistoryEntry);
 
-		$this->entityManager->wrapInTransaction(function () use ($order, $targetStatus): void {
+		if (!$targetStatus instanceof OrderStatus) {
+			throw new RuntimeException('Order has no previous status to rollback to.');
+		}
+
+		$this->entityManager->wrapInTransaction(function () use ($order, $targetStatus, $targetHistoryEntry): void {
 			$fromStatus = $order->getStatus();
 			if (!$fromStatus instanceof OrderStatus) {
 				throw new RuntimeException('Order status is not set.');
 			}
 
-			$context = $this->transitionContext(['transition' => 'rollback_status']);
+			$context = $this->transitionContext([
+				'transition' => 'rollback_status',
+				'rolled_back_history_id' => $targetHistoryEntry->getId(),
+			]);
 			$this->statusTransitionService->applyTransition(
 				$order,
 				new TransitionDefinition(
@@ -198,7 +212,6 @@ class OrderManager extends AbstractManager
 
 			if ($this->shouldRefreshReservationsAfterRollback($targetStatus)) {
 				$this->reserveStockForOrder($order);
-				$this->businessDocumentStatusSynchronizer->syncOrder($order, $this->transitionContext());
 				$this->entityManager->flush();
 			}
 		});
@@ -285,28 +298,43 @@ class OrderManager extends AbstractManager
 			: TransitionContext::system($payload);
 	}
 
-	private function rollbackTargetStatus(Order $order): OrderStatus
+	private function rollbackTargetHistoryEntry(Order $order): OrderHistory
 	{
-		$targetStatus = $this->resolveRollbackTargetStatus($order);
+		$historyEntry = $this->resolveRollbackTargetHistoryEntry($order);
 
-		if (!$targetStatus instanceof OrderStatus) {
+		if (!$historyEntry instanceof OrderHistory) {
 			throw new RuntimeException('Order has no previous status to rollback to.');
 		}
 
-		return $targetStatus;
+		return $historyEntry;
 	}
 
 	private function resolveRollbackTargetStatus(Order $order): ?OrderStatus
+	{
+		$historyEntry = $this->resolveRollbackTargetHistoryEntry($order);
+
+		if (!$historyEntry instanceof OrderHistory) {
+			return null;
+		}
+
+		return $this->rollbackTargetStatus($historyEntry);
+	}
+
+	private function resolveRollbackTargetHistoryEntry(Order $order): ?OrderHistory
 	{
 		$currentStatus = $order->getStatus();
 		if (!$currentStatus instanceof OrderStatus) {
 			return null;
 		}
 
-		$historyEntry = $this->orderHistoryRepository->findLatestStatusChangeToStatus($order, $currentStatus->value);
-		$targetStatus = $historyEntry?->getChanges()['status']['from'] ?? null;
+		return $this->orderHistoryRepository->findLatestRollbackableStatusChangeToStatus($order, $currentStatus->value);
+	}
 
-		if (!is_string($targetStatus) || $targetStatus === $currentStatus->value) {
+	private function rollbackTargetStatus(OrderHistory $historyEntry): ?OrderStatus
+	{
+		$targetStatus = $historyEntry->getChanges()['status']['from'] ?? null;
+
+		if (!is_string($targetStatus)) {
 			return null;
 		}
 

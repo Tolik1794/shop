@@ -203,6 +203,7 @@ class OrderController extends AbstractAdvancedController
 			'query_params' => $request->query->all(),
 			'can_ship' => $this->orderShipmentUseCase->hasShippableLines($order),
 			'can_rollback_status' => $this->orderManager->canRollbackStatus($order),
+			'rollback_target_status' => $this->orderManager->getRollbackTargetStatus($order)?->value,
 		]);
 	}
 
@@ -618,6 +619,7 @@ class OrderController extends AbstractAdvancedController
 				'query_params' => $request->query->all(),
 				'can_ship' => $this->orderShipmentUseCase->hasShippableLines($order),
 				'can_rollback_status' => $this->orderManager->canRollbackStatus($order),
+				'rollback_target_status' => $this->orderManager->getRollbackTargetStatus($order)?->value,
 			]),
 			'row' => $this->renderView('admin/order/_index_row.html.twig', [
 				'entity' => $order,

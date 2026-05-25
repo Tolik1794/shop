@@ -5,8 +5,10 @@ namespace App\Tests\Manager;
 use App\Entity\Category;
 use App\Entity\Currency;
 use App\Entity\ExchangeRate;
+use App\Entity\Order;
 use App\Entity\OrderEntry;
 use App\Entity\OrderHistory;
+use App\Entity\OrderHistorySource;
 use App\Entity\OrderStatus;
 use App\Entity\Product;
 use App\Entity\StockReservation;
@@ -15,6 +17,7 @@ use App\Entity\Store;
 use App\Entity\Unit;
 use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
+use App\Entity\WarehouseStockBatch;
 use App\Enum\PaymentStatusEnum;
 use App\Enum\ProductKindEnum;
 use App\Manager\OrderManager;
@@ -144,6 +147,30 @@ class OrderManagerTest extends KernelTestCase
 		self::assertSame('2.0000', $reservation->getQuantity());
 		self::assertSame('2.0000', $warehouseStock->getReservedQuantity());
 		self::assertSame(OrderStatus::READY_TO_SHIP, $order->getStatus());
+	}
+
+	public function testSaveOrderWithNewBatchBackedEntryDoesNotQueryReservationsBeforeEntryHasId(): void
+	{
+		$currency = $this->persistCurrency('G' . substr(uniqid(), -2), 'New batch order currency');
+		$store = $this->persistStore('order-new-batch-entry-' . uniqid(), $currency);
+		$product = $this->persistProduct($store);
+		$warehouse = $this->persistWarehouse($store);
+		$warehouseStock = $this->persistWarehouseStock($warehouse, $product, '3.0000');
+		$batch = $this->persistWarehouseStockBatch($warehouseStock, '3.0000', '14.0000');
+		$order = $this->orderManager->createDraft($store);
+
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setWarehouseStockBatch($batch)
+			->setQuantity('2.0000')
+			->setUnitPrice('0.0000');
+		$order->addOrderEntry($orderEntry);
+
+		$this->orderManager->saveOrder($order);
+
+		self::assertNotNull($orderEntry->getId());
+		self::assertSame('14.0000', $orderEntry->getUnitPrice());
 	}
 
 	public function testConfirmWithPartialBackorderMovesOrderToAwaitingStock(): void
@@ -380,6 +407,34 @@ class OrderManagerTest extends KernelTestCase
 		self::assertCount(1, $activeReservations);
 	}
 
+	public function testRollbackStatusFromShippedKeepsRollbackTargetInsteadOfSyncingForward(): void
+	{
+		$currency = $this->persistCurrency('H' . substr(uniqid(), -2), 'Shipped rollback currency');
+		$store = $this->persistStore('order-shipped-rollback-' . uniqid(), $currency);
+		$product = $this->persistProduct($store);
+		$warehouse = $this->persistWarehouse($store);
+		$warehouseStock = $this->persistWarehouseStock($warehouse, $product, '5.0000');
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('2.0000')
+			->setUnitPrice('10.0000')
+			->setShippedQuantity('2.0000');
+		$order->addOrderEntry($orderEntry);
+		$this->orderManager->saveOrder($order);
+		$this->recordStatusChange($order, OrderStatus::DRAFT, OrderStatus::READY_TO_SHIP);
+		$this->recordStatusChange($order, OrderStatus::READY_TO_SHIP, OrderStatus::SHIPPED);
+
+		$this->orderManager->rollbackStatus($order);
+		$this->entityManager->refresh($warehouseStock);
+
+		self::assertSame(OrderStatus::READY_TO_SHIP, $order->getStatus());
+		self::assertSame('2.0000', $warehouseStock->getReservedQuantity());
+	}
+
 	public function testRollbackStatusRestoresCompletedOrderToDelivered(): void
 	{
 		$currency = $this->persistCurrency('M' . substr(uniqid(), -2), 'Completed rollback currency');
@@ -391,6 +446,12 @@ class OrderManagerTest extends KernelTestCase
 			->setPaymentStatus(PaymentStatusEnum::PAID);
 		$this->entityManager->flush();
 		$this->orderManager->complete($order);
+		$completedHistory = $this->entityManager->getRepository(OrderHistory::class)->findOneBy([
+			'order' => $order,
+			'eventKey' => 'order.status_changed',
+		], ['id' => 'DESC']);
+
+		self::assertInstanceOf(OrderHistory::class, $completedHistory);
 
 		$this->orderManager->rollbackStatus($order);
 
@@ -404,7 +465,45 @@ class OrderManagerTest extends KernelTestCase
 		self::assertSame([
 			'status' => ['from' => OrderStatus::COMPLETED->value, 'to' => OrderStatus::DELIVERED->value],
 		], $history->getChanges());
-		self::assertSame(['transition' => 'rollback_status'], $history->getPayload());
+		self::assertSame([
+			'transition' => 'rollback_status',
+			'rolled_back_history_id' => $completedHistory->getId(),
+		], $history->getPayload());
+	}
+
+	public function testRollbackStatusWalksBackThroughUnrolledStatusHistory(): void
+	{
+		$currency = $this->persistCurrency('U' . substr(uniqid(), -2), 'Sequential rollback currency');
+		$store = $this->persistStore('order-sequential-rollback-' . uniqid(), $currency);
+		$order = $this->orderManager->createDraft($store);
+		$this->orderManager->saveOrder($order);
+		$this->recordStatusChange($order, OrderStatus::DRAFT, OrderStatus::SHIPPED);
+		$order->setPaymentStatus(PaymentStatusEnum::PAID);
+		$this->orderManager->markDelivered($order);
+		$this->orderManager->complete($order);
+
+		self::assertSame(OrderStatus::COMPLETED, $order->getStatus());
+		self::assertTrue($this->orderManager->canRollbackStatus($order));
+
+		$this->orderManager->rollbackStatus($order);
+
+		self::assertSame(OrderStatus::DELIVERED, $order->getStatus());
+		self::assertTrue($this->orderManager->canRollbackStatus($order));
+
+		$this->orderManager->rollbackStatus($order);
+
+		self::assertSame(OrderStatus::SHIPPED, $order->getStatus());
+		self::assertTrue($this->orderManager->canRollbackStatus($order));
+
+		$this->orderManager->rollbackStatus($order);
+
+		self::assertSame(OrderStatus::DRAFT, $order->getStatus());
+		self::assertFalse($this->orderManager->canRollbackStatus($order));
+
+		$this->expectException(RuntimeException::class);
+		$this->expectExceptionMessage('Order has no previous status to rollback to.');
+
+		$this->orderManager->rollbackStatus($order);
 	}
 
 	public function testRollbackStatusRequiresPreviousStatusHistory(): void
@@ -460,6 +559,22 @@ class OrderManagerTest extends KernelTestCase
 		self::assertSame([
 			'unitPrice' => ['from' => '99', 'to' => '100'],
 		], $entryUpdatedHistory->getChanges());
+	}
+
+	private function recordStatusChange(Order $order, OrderStatus $fromStatus, OrderStatus $toStatus): void
+	{
+		$order->setStatus($toStatus);
+
+		$history = (new OrderHistory())
+			->setOrder($order)
+			->setEventKey('order.status_changed')
+			->setSource(OrderHistorySource::SYSTEM)
+			->setTitle('Order status changed')
+			->setDescription(sprintf('Status changed from %s to %s.', $fromStatus->value, $toStatus->value))
+			->setChanges(['status' => ['from' => $fromStatus->value, 'to' => $toStatus->value]]);
+
+		$this->entityManager->persist($history);
+		$this->entityManager->flush();
 	}
 
 	private function persistCurrency(string $code, string $name): Currency
@@ -551,6 +666,22 @@ class OrderManagerTest extends KernelTestCase
 		$this->entityManager->flush();
 
 		return $warehouseStock;
+	}
+
+	private function persistWarehouseStockBatch(WarehouseStock $warehouseStock, string $quantity, string $salePrice): WarehouseStockBatch
+	{
+		$batch = (new WarehouseStockBatch())
+			->setInitialQuantity($quantity)
+			->setRemainingQuantity($quantity)
+			->setUnitCost('10.0000')
+			->setSalePrice($salePrice)
+			->setReceivedAt(new DateTimeImmutable('2026-01-01 00:00:00'));
+		$warehouseStock->addWarehouseStockBatch($batch);
+
+		$this->entityManager->persist($batch);
+		$this->entityManager->flush();
+
+		return $batch;
 	}
 
 	private function persistExchangeRate(Currency $fromCurrency, Currency $toCurrency, Store $store, string $rate): ExchangeRate

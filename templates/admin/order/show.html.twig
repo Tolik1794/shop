@@ -137,7 +137,10 @@
             </form>
         {% endif %}
 
-        {% if entity.status.value in ['confirmed', 'awaiting_stock', 'ready_to_ship'] %}
+        {% set rollback_target_status = rollback_target_status|default(null) %}
+        {% set return_to_draft_duplicates_rollback = can_rollback_status|default(false) and rollback_target_status == 'draft' %}
+
+        {% if entity.status.value in ['confirmed', 'awaiting_stock', 'ready_to_ship'] and not return_to_draft_duplicates_rollback %}
             <form method="post" action="{{ path('app_admin_order_return_to_draft', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="{{ 'admin.order.confirm.return_to_draft'|trans }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('return_to_draft_order_' ~ entity.id) }}">
                 <button class="btn btn-light btn-sm" type="submit">{{ 'admin.order.actions.return_to_draft'|trans }}</button>

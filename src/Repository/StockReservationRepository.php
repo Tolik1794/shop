@@ -38,6 +38,10 @@ class StockReservationRepository extends ServiceEntityRepository
 
 	public function getActiveQuantityForOrderEntry(OrderEntry $orderEntry): string
 	{
+		if ($orderEntry->getId() === null) {
+			return '0.0000';
+		}
+
 		$quantity = $this->createQueryBuilder('stockReservation')
 			->select('COALESCE(SUM(stockReservation.quantity), 0)')
 			->andWhere('stockReservation.orderEntry = :orderEntry')
