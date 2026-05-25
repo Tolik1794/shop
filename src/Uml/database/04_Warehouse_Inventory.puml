@@ -170,6 +170,7 @@ entity StockReservation {
     * reservedAt: DateTimeImmutable
     expiresAt: DateTimeImmutable?
     * warehouseStock: WarehouseStock
+    warehouseStockBatch: WarehouseStockBatch?
     * orderEntry: OrderEntry
 }
 
@@ -202,6 +203,7 @@ OrderEntry |o--o{ InventoryDocumentLine : ships/returns
 PurchaseEntry |o--o{ InventoryDocumentLine : receives/returns
 OrderEntry ||--o{ StockReservation : reserves
 WarehouseStock ||--o{ StockReservation : reserved from
+WarehouseStockBatch |o--o{ StockReservation : reserves batch
 StockReservationStatus ||--o{ StockReservation : controls
 
 note right of Warehouse
@@ -223,6 +225,8 @@ note right of WarehouseStockBatch
   purchaseEntry is optional because batches can be created by purchase, production, return, adjustment, or initial stock.
   Prefer createdByMovement as the universal source of a created batch.
   unitCost is stored in Store.baseCurrency. Original supplier currency is kept in Purchase/PurchaseEntry.
+  salePrice is an optional Store.baseCurrency sale-price snapshot from purchase.
+  Stock-backed orders can use salePrice as the actual OrderEntry.unitPrice source.
 end note
 
 note right of InventoryDocumentStatus
@@ -316,6 +320,8 @@ end note
 note right of StockReservation
   Used when an order reserves stock before shipment.
   WarehouseStock.reservedQuantity can be calculated from active reservations.
+  warehouseStockBatch is optional; when filled, it reserves a concrete FIFO batch
+  and must match the reservation WarehouseStock.
 end note
 
 @enduml

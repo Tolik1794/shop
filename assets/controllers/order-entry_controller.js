@@ -7,6 +7,7 @@ export default class extends Controller {
         'productLabel',
         'productMeta',
         'warehouse',
+        'warehouseStockBatch',
         'sourceLabel',
         'sourceMeta',
         'available',

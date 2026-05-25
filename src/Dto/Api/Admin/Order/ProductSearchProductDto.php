@@ -2,8 +2,11 @@
 
 namespace App\Dto\Api\Admin\Order;
 
+use App\Entity\Currency;
 use App\Entity\Product;
 use App\Entity\Store;
+use App\Entity\Warehouse;
+use App\Service\Order\OrderBatchPricingService;
 use JsonSerializable;
 
 class ProductSearchProductDto implements JsonSerializable
@@ -29,7 +32,14 @@ class ProductSearchProductDto implements JsonSerializable
 	/**
 	 * @param string[] $excludedOptionKeys
 	 */
-	public static function fromProduct(Product $product, Store $store, ?string $price, array $excludedOptionKeys = []): ?self
+	public static function fromProduct(
+		Product $product,
+		Store $store,
+		?string $price,
+		array $excludedOptionKeys = [],
+		?OrderBatchPricingService $orderBatchPricingService = null,
+		?Currency $currency = null,
+	): ?self
 	{
 		$availableQuantity = 0.0;
 		$stockOptions = [];
@@ -45,11 +55,47 @@ class ProductSearchProductDto implements JsonSerializable
 				continue;
 			}
 
+			$warehouse = $warehouseStock->getWarehouse();
+			$batchLayers = [];
+			if ($orderBatchPricingService instanceof OrderBatchPricingService && $warehouse instanceof Warehouse && $currency instanceof Currency) {
+				$batchLayers = array_map(
+					static fn($layer): ProductSearchBatchLayerDto => ProductSearchBatchLayerDto::fromLayer($layer),
+					$orderBatchPricingService->findLayers($product, $warehouse, $store, $currency),
+				);
+			}
+
+			if ($batchLayers !== []) {
+				foreach ($batchLayers as $batchLayer) {
+					if (in_array(self::stockOptionKey($product, $warehouse?->getId(), $batchLayer->getBatchId()), $excludedOptionKeys, true)) {
+						continue;
+					}
+
+					$available = (float) $batchLayer->getAvailable();
+					$availableQuantity += $available;
+					$stockOptions[] = new ProductSearchStockOptionDto(
+						warehouseId: $warehouse?->getId(),
+						warehouseName: $warehouse?->getName(),
+						available: self::formatQuantity($available),
+						price: $batchLayer->getPrice() ?? $price,
+						batchId: $batchLayer->getBatchId(),
+						batchReceivedAt: $batchLayer->getReceivedAt(),
+						priceSource: $batchLayer->getPriceSource(),
+						batchLayers: [$batchLayer],
+					);
+				}
+
+				continue;
+			}
+
+			if (in_array(self::stockOptionKey($product, $warehouse?->getId()), $excludedOptionKeys, true)) {
+				continue;
+			}
+
 			$available = max(0, (float) $warehouseStock->getQuantityOnHand() - (float) $warehouseStock->getReservedQuantity());
 			$availableQuantity += $available;
 			$stockOptions[] = new ProductSearchStockOptionDto(
-				warehouseId: $warehouseStock->getWarehouse()?->getId(),
-				warehouseName: $warehouseStock->getWarehouse()?->getName(),
+				warehouseId: $warehouse?->getId(),
+				warehouseName: $warehouse?->getName(),
 				available: self::formatQuantity($available),
 				price: $price,
 			);
@@ -104,9 +150,11 @@ class ProductSearchProductDto implements JsonSerializable
 		return number_format($value, 4, '.', '');
 	}
 
-	private static function stockOptionKey(Product $product, ?int $warehouseId): string
+	private static function stockOptionKey(Product $product, ?int $warehouseId, ?int $batchId = null): string
 	{
-		return sprintf('stock:%d:%s', $product->getId(), $warehouseId ?? '');
+		$key = sprintf('stock:%d:%s', $product->getId(), $warehouseId ?? '');
+
+		return $batchId !== null ? sprintf('%s:%d', $key, $batchId) : $key;
 	}
 
 	private static function productionOptionKey(Product $product): string

@@ -80,6 +80,7 @@ entity OrderEntry {
     * order: Order
     * product: Product
     warehouse: Warehouse?
+    warehouseStockBatch: WarehouseStockBatch?
 }
 
 entity OrderComment {
@@ -121,6 +122,7 @@ Order |o--o{ Payment : paid by
 Order ||--o{ InventoryDocument : generates stock docs
 Product ||--o{ OrderEntry : ordered as
 Warehouse |o--o{ OrderEntry : ships from
+WarehouseStockBatch |o--o{ OrderEntry : priced/reserved from
 Order ||--o{ OrderComment : has comments
 Order ||--o{ OrderHistory : has timeline
 User ||--o{ OrderComment : authors
@@ -190,6 +192,9 @@ note right of OrderEntry
   Sales order line.
   Stores snapshot of product name, code, unit code/name, quantity and sale price at the moment of order.
   Monetary fields without Base suffix are in Order.currency. Base fields are in Store.baseCurrency.
+  warehouseStockBatch is optional and identifies the FIFO batch used for stock-backed pricing/reservation.
+  Search should expose different batches as separate stock options, ordered oldest first.
+  Each stock-backed OrderEntry should keep one selected batch and one sale price snapshot.
 
   shippedQuantity, returnedQuantity and canceledQuantity are denormalized progress/cache fields
   for fast UI and filtering. Source of truth is InventoryDocumentLine + posted StockMovement.

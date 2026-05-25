@@ -10,6 +10,7 @@ use App\Repository\CurrencyRepository;
 use App\Repository\CustomerRepository;
 use App\Repository\ProductRepository;
 use App\Service\OrderCalculator;
+use App\Service\Order\OrderBatchPricingService;
 use App\Service\Pricing\CatalogPriceResolver;
 use RuntimeException;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
@@ -28,6 +29,7 @@ class OrderController extends AbstractController
 		private readonly CustomerRepository $customerRepository,
 		private readonly OrderCalculator $orderCalculator,
 		private readonly CatalogPriceResolver $catalogPriceResolver,
+		private readonly OrderBatchPricingService $orderBatchPricingService,
 	)
 	{
 	}
@@ -113,6 +115,8 @@ class OrderController extends AbstractController
 					$store,
 					$this->catalogPriceResolver->tryResolve($product, $store, $currency)?->getAmount(),
 					$excludedOptionKeys,
+					$this->orderBatchPricingService,
+					$currency,
 				);
 
 				if ($productDto instanceof ProductSearchProductDto) {

@@ -69,6 +69,9 @@ class OrderEntry
 	#[ORM\ManyToOne]
 	private ?Warehouse $warehouse = null;
 
+	#[ORM\ManyToOne]
+	private ?WarehouseStockBatch $warehouseStockBatch = null;
+
 	/**
 	 * @var Collection<int, InventoryDocumentLine>
 	 */
@@ -141,6 +144,8 @@ class OrderEntry
 	public function setProduct(?Product $product): self { $this->product = $product; return $this; }
 	public function getWarehouse(): ?Warehouse { return $this->warehouse; }
 	public function setWarehouse(?Warehouse $warehouse): self { $this->warehouse = $warehouse; return $this; }
+	public function getWarehouseStockBatch(): ?WarehouseStockBatch { return $this->warehouseStockBatch; }
+	public function setWarehouseStockBatch(?WarehouseStockBatch $warehouseStockBatch): self { $this->warehouseStockBatch = $warehouseStockBatch; return $this; }
 
 	/**
 	 * @return Collection<int, InventoryDocumentLine>

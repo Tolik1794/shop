@@ -1,6 +1,7 @@
 {% set entryData = entry.vars.data|default(null) %}
 {% set product = entryData ? entryData.product|default(null) : null %}
 {% set warehouse = entryData ? entryData.warehouse|default(null) : null %}
+{% set warehouseStockBatch = entryData ? entryData.warehouseStockBatch|default(null) : null %}
 {% set productName = product ? product.name : (entryData ? entryData.productNameSnapshot|default('') : '') %}
 {% set productCode = product ? product.code : (entryData ? entryData.productCodeSnapshot|default('') : '') %}
 {% set unitCode = product ? product.unit.code|default('') : (entryData ? entryData.unitCodeSnapshot|default('') : '') %}
@@ -38,6 +39,7 @@
         data-order-entry-target="row"
         data-index="{{ entry.vars.name }}"
         data-product-id="{{ product ? product.id : '' }}"
+        data-batch-id="{{ warehouseStockBatch ? warehouseStockBatch.id : '' }}"
         data-source-type="{{ sourceType }}"
         data-available="{{ available|number_format(4, '.', '') }}"
         data-unit-precision="{{ unitPrecision }}"
@@ -77,6 +79,7 @@
                     'data-order-entry-target': 'warehouse'
                 }
             }) }}
+            {{ form_widget(entry.warehouseStockBatchId) }}
             <div class="form-control-plaintext py-1" data-order-entry-target="sourceLabel">
                 {{ sourceDetail ?: 'admin.order.source.undefined'|trans }}
             </div>

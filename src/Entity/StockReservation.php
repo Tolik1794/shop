@@ -11,6 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'stock_reservation')]
 #[ORM\Index(name: 'idx_stock_reservation_order_entry', columns: ['order_entry_id'])]
 #[ORM\Index(name: 'idx_stock_reservation_stock_status', columns: ['warehouse_stock_id', 'status'])]
+#[ORM\Index(name: 'idx_stock_reservation_batch_status', columns: ['warehouse_stock_batch_id', 'status'])]
 class StockReservation
 {
 	#[ORM\Id]
@@ -37,6 +38,9 @@ class StockReservation
 	#[ORM\ManyToOne(inversedBy: 'stockReservations')]
 	#[ORM\JoinColumn(nullable: false)]
 	private ?WarehouseStock $warehouseStock = null;
+
+	#[ORM\ManyToOne]
+	private ?WarehouseStockBatch $warehouseStockBatch = null;
 
 	public function __construct()
 	{
@@ -118,6 +122,18 @@ class StockReservation
 	public function setWarehouseStock(?WarehouseStock $warehouseStock): self
 	{
 		$this->warehouseStock = $warehouseStock;
+
+		return $this;
+	}
+
+	public function getWarehouseStockBatch(): ?WarehouseStockBatch
+	{
+		return $this->warehouseStockBatch;
+	}
+
+	public function setWarehouseStockBatch(?WarehouseStockBatch $warehouseStockBatch): self
+	{
+		$this->warehouseStockBatch = $warehouseStockBatch;
 
 		return $this;
 	}

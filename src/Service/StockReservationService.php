@@ -7,6 +7,7 @@ use App\Entity\Product;
 use App\Entity\StockReservation;
 use App\Entity\StockReservationStatus;
 use App\Entity\WarehouseStock;
+use App\Entity\WarehouseStockBatch;
 use App\Exception\StockOperationException;
 use App\Repository\StockReservationRepository;
 use DateTimeImmutable;
@@ -25,14 +26,20 @@ class StockReservationService
 	{
 		$this->assertPositiveQuantity($quantity);
 		$this->assertReservationMatchesOrderEntry($orderEntry, $warehouseStock);
+		$batch = $this->validatedBatch($orderEntry, $warehouseStock);
 
 		if ((float) $quantity > (float) $this->getAvailableQuantity($warehouseStock)) {
 			throw new StockOperationException('Reserved quantity cannot be greater than available quantity.');
 		}
 
+		if ($batch instanceof WarehouseStockBatch && (float) $quantity > (float) $this->getAvailableBatchQuantity($batch)) {
+			throw new StockOperationException('Reserved batch quantity cannot be greater than available batch quantity.');
+		}
+
 		$reservation = (new StockReservation())
 			->setOrderEntry($orderEntry)
 			->setWarehouseStock($warehouseStock)
+			->setWarehouseStockBatch($batch)
 			->setQuantity($this->normalize($quantity))
 			->setExpiresAt($expiresAt);
 
@@ -161,6 +168,7 @@ class StockReservationService
 		$completedReservation = (new StockReservation())
 			->setOrderEntry($orderEntry)
 			->setWarehouseStock($warehouseStock)
+			->setWarehouseStockBatch($reservation->getWarehouseStockBatch())
 			->setQuantity($quantityToComplete)
 			->setStatus(StockReservationStatus::COMPLETED)
 			->setReservedAt($reservation->getReservedAt())
@@ -186,6 +194,21 @@ class StockReservationService
 		}
 	}
 
+	private function validatedBatch(OrderEntry $orderEntry, WarehouseStock $warehouseStock): ?WarehouseStockBatch
+	{
+		$batch = $orderEntry->getWarehouseStockBatch();
+
+		if (!$batch instanceof WarehouseStockBatch) {
+			return null;
+		}
+
+		if ($batch->getWarehouseStock() !== $warehouseStock) {
+			throw new StockOperationException('Reservation batch must match warehouse stock.');
+		}
+
+		return $batch;
+	}
+
 	private function assertPositiveQuantity(string $quantity): void
 	{
 		if ((float) $quantity <= 0) {
@@ -196,6 +219,14 @@ class StockReservationService
 	private function getAvailableQuantity(WarehouseStock $warehouseStock): string
 	{
 		return $this->normalize(max(0, (float) $this->subtract($warehouseStock->getQuantityOnHand(), $warehouseStock->getReservedQuantity())));
+	}
+
+	private function getAvailableBatchQuantity(WarehouseStockBatch $batch): string
+	{
+		return $this->normalize(max(
+			0,
+			(float) $this->subtract($batch->getRemainingQuantity(), $this->stockReservationRepository->getActiveQuantityForBatch($batch))
+		));
 	}
 
 	private function add(?string $left, ?string $right): string

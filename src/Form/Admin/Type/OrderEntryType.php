@@ -7,12 +7,15 @@ use App\Entity\OrderEntry;
 use App\Entity\Product;
 use App\Entity\Store;
 use App\Entity\Warehouse;
+use App\Entity\WarehouseStockBatch;
 use App\Repository\ProductRepository;
+use App\Repository\WarehouseStockBatchRepository;
 use App\Repository\WarehouseRepository;
 use App\Service\Quantity\QuantityFormatter;
 use App\Validator\Constraints\OrderEntryForStore;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\FormEvent;
@@ -29,6 +32,7 @@ class OrderEntryType extends AbstractType
 {
 	public function __construct(
 		private readonly ProductRepository $productRepository,
+		private readonly WarehouseStockBatchRepository $warehouseStockBatchRepository,
 		private readonly QuantityFormatter $quantityFormatter,
 	)
 	{
@@ -94,6 +98,7 @@ class OrderEntryType extends AbstractType
 			$orderEntry = $event->getData();
 			$product = $orderEntry?->getProduct();
 
+			$this->addWarehouseStockBatchField($event->getForm(), $orderEntry);
 			$this->addProductField($event->getForm(), $product);
 			$this->addQuantityField($event->getForm(), $product, $orderEntry);
 		});
@@ -137,7 +142,23 @@ class OrderEntryType extends AbstractType
 			}
 
 			$orderEntry->setQuantity($this->quantityFormatter->formatForStorage($form->get('quantity')->getData()));
+
+			$batchId = $form->has('warehouseStockBatchId') ? $form->get('warehouseStockBatchId')->getData() : null;
+			$batch = $batchId ? $this->warehouseStockBatchRepository->find($batchId) : null;
+			$orderEntry->setWarehouseStockBatch($batch instanceof WarehouseStockBatch ? $batch : null);
 		});
+	}
+
+	private function addWarehouseStockBatchField(FormBuilderInterface|FormInterface $form, ?OrderEntry $orderEntry = null): void
+	{
+		$form->add('warehouseStockBatchId', HiddenType::class, [
+			'mapped' => false,
+			'required' => false,
+			'data' => $orderEntry?->getWarehouseStockBatch()?->getId(),
+			'attr' => [
+				'data-order-entry-target' => 'warehouseStockBatch',
+			],
+		]);
 	}
 
 	private function addQuantityField(FormBuilderInterface|FormInterface $form, ?Product $product = null, ?OrderEntry $orderEntry = null): void

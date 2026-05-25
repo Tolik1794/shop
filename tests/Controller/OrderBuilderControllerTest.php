@@ -15,6 +15,7 @@ use App\Entity\User\RoleEnum;
 use App\Entity\User\User;
 use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
+use App\Entity\WarehouseStockBatch;
 use App\Enum\ProductKindEnum;
 use DateTime;
 use DateTimeImmutable;
@@ -443,6 +444,49 @@ class OrderBuilderControllerTest extends WebTestCase
 		$data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
 
 		self::assertSame([], $data['products']);
+	}
+
+	public function testProductSearchShowsWarehouseBatchesAsSeparateOldestFirstOptions(): void
+	{
+		$this->client->loginUser($this->createUser('order-builder-batch-options-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-builder-batch-options-store-' . uniqid());
+		$product = $this->createProduct($store, 'Batch option product');
+		$warehouse = $this->createWarehouse($store);
+		$warehouseStock = $this->createWarehouseStock($warehouse, $product, '5.0000');
+		$olderBatch = $this->createWarehouseStockBatch($warehouseStock, '2.0000', '11.0000', '2026-01-01 00:00:00');
+		$newerBatch = $this->createWarehouseStockBatch($warehouseStock, '3.0000', '12.0000', '2026-01-02 00:00:00');
+
+		$this->client->request('GET', sprintf(
+			'/api/admin/store/%d/order/product-search?q=Batch%%20option',
+			$store->getId(),
+		));
+
+		self::assertResponseIsSuccessful();
+		$data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+		self::assertCount(1, $data['products']);
+		self::assertCount(2, $data['products'][0]['stockOptions']);
+		self::assertSame($olderBatch->getId(), $data['products'][0]['stockOptions'][0]['batchId']);
+		self::assertSame('2.0000', $data['products'][0]['stockOptions'][0]['available']);
+		self::assertSame('11.0000', $data['products'][0]['stockOptions'][0]['price']);
+		self::assertSame($newerBatch->getId(), $data['products'][0]['stockOptions'][1]['batchId']);
+		self::assertSame('3.0000', $data['products'][0]['stockOptions'][1]['available']);
+		self::assertSame('12.0000', $data['products'][0]['stockOptions'][1]['price']);
+
+		$this->client->request('GET', sprintf(
+			'/api/admin/store/%d/order/product-search?q=Batch%%20option&excludedOptions[]=stock:%d:%d:%d',
+			$store->getId(),
+			$product->getId(),
+			$warehouse->getId(),
+			$olderBatch->getId(),
+		));
+
+		self::assertResponseIsSuccessful();
+		$data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+		self::assertCount(1, $data['products']);
+		self::assertCount(1, $data['products'][0]['stockOptions']);
+		self::assertSame($newerBatch->getId(), $data['products'][0]['stockOptions'][0]['batchId']);
 	}
 
 	public function testProductSearchExcludesAlreadySelectedProductionOption(): void
@@ -924,5 +968,22 @@ class OrderBuilderControllerTest extends WebTestCase
 		$this->entityManager->flush();
 
 		return $warehouseStock;
+	}
+
+	private function createWarehouseStockBatch(WarehouseStock $warehouseStock, string $quantity, string $salePrice, string $receivedAt): WarehouseStockBatch
+	{
+		$batch = (new WarehouseStockBatch())
+			->setWarehouseStock($warehouseStock)
+			->setInitialQuantity($quantity)
+			->setRemainingQuantity($quantity)
+			->setUnitCost('1.0000')
+			->setSalePrice($salePrice)
+			->setReceivedAt(new DateTimeImmutable($receivedAt));
+		$warehouseStock->addWarehouseStockBatch($batch);
+
+		$this->entityManager->persist($batch);
+		$this->entityManager->flush();
+
+		return $batch;
 	}
 }

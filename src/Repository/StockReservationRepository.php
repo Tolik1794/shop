@@ -5,6 +5,7 @@ namespace App\Repository;
 use App\Entity\OrderEntry;
 use App\Entity\StockReservation;
 use App\Entity\StockReservationStatus;
+use App\Entity\WarehouseStockBatch;
 use DateTimeImmutable;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -42,6 +43,20 @@ class StockReservationRepository extends ServiceEntityRepository
 			->andWhere('stockReservation.orderEntry = :orderEntry')
 			->andWhere('stockReservation.status = :status')
 			->setParameter('orderEntry', $orderEntry)
+			->setParameter('status', StockReservationStatus::ACTIVE)
+			->getQuery()
+			->getSingleScalarResult();
+
+		return number_format((float) $quantity, 4, '.', '');
+	}
+
+	public function getActiveQuantityForBatch(WarehouseStockBatch $batch): string
+	{
+		$quantity = $this->createQueryBuilder('stockReservation')
+			->select('COALESCE(SUM(stockReservation.quantity), 0)')
+			->andWhere('stockReservation.warehouseStockBatch = :batch')
+			->andWhere('stockReservation.status = :status')
+			->setParameter('batch', $batch)
 			->setParameter('status', StockReservationStatus::ACTIVE)
 			->getQuery()
 			->getSingleScalarResult();

@@ -247,6 +247,7 @@ export default class extends Controller {
         const quantityInput = row.querySelector('[data-order-entry-target~="quantity"]')
         const unitPriceInput = row.querySelector('[data-order-entry-target~="unitPrice"]')
         const warehouseSelect = row.querySelector('[data-order-entry-target~="warehouse"]')
+        const layers = Array.isArray(product.batchLayers) ? product.batchLayers : []
 
         this.entriesTarget.appendChild(row)
         this.initializeRow(row)
@@ -266,9 +267,11 @@ export default class extends Controller {
         }
 
         row.dataset.productId = product.id || ''
+        row.dataset.batchLayers = JSON.stringify(layers)
         row.dataset.sourceType = product.sourceType || (product.warehouseId ? 'stock' : 'production')
         row.dataset.available = product.available || '0.0000'
         row.dataset.unitPrecision = product.unitPrecision ?? '4'
+        this.setWarehouseStockBatch(row, product.batchId || '')
         this.setSource(row, product)
         this.setUnit(row, product.unit || '')
         const available = row.querySelector('[data-order-entry-target~="available"]')
@@ -351,6 +354,8 @@ export default class extends Controller {
         option.dataset.unitPrecision = product.unitPrecision ?? '4'
         option.dataset.price = product.price || ''
         option.dataset.available = product.available || '0.0000'
+        option.dataset.batchId = product.batchId || ''
+        option.dataset.batchLayers = JSON.stringify(product.batchLayers || [])
 
         if (window.$ && window.$(select).data('select2')) {
             window.$(select).trigger('change')
@@ -366,6 +371,15 @@ export default class extends Controller {
             window.$(select).trigger('change')
         } else {
             select.dispatchEvent(new Event('change', {bubbles: true}))
+        }
+    }
+
+    setWarehouseStockBatch(row, batchId) {
+        const input = row.querySelector('[data-order-entry-target~="warehouseStockBatch"]')
+
+        row.dataset.batchId = batchId ? String(batchId) : ''
+        if (input) {
+            input.value = batchId ? String(batchId) : ''
         }
     }
 
@@ -412,15 +426,20 @@ export default class extends Controller {
         row.dataset.unitPrecision = product.unitPrecision ?? '4'
         this.applyQuantityPrecision(quantityInput, product.unitPrecision)
 
-        if (product.available !== undefined) {
-            row.dataset.available = product.available || '0.0000'
-            if (availableTarget) {
-                availableTarget.textContent = this.formatQuantity(this.numberValue(row.dataset.available), product.unitPrecision)
-            }
-        }
+		if (product.available !== undefined) {
+			row.dataset.available = product.available || '0.0000'
+			if (availableTarget) {
+				availableTarget.textContent = this.formatQuantity(this.numberValue(row.dataset.available), product.unitPrecision)
+			}
+		}
 
-        if (product.price && unitPriceInput && !this.numberValue(unitPriceInput.value)) {
-            unitPriceInput.value = this.format(this.numberValue(product.price))
+		if (product.batchId !== undefined) {
+			this.setWarehouseStockBatch(row, product.batchId || '')
+		}
+		row.dataset.batchLayers = JSON.stringify(product.batchLayers || [])
+
+		if (product.price && unitPriceInput && !this.numberValue(unitPriceInput.value)) {
+			unitPriceInput.value = this.format(this.numberValue(product.price))
         }
 
         if (productLabel) {
@@ -459,6 +478,8 @@ export default class extends Controller {
             unitPrecision: option.dataset.unitPrecision,
             price: option.dataset.price,
             available: option.dataset.available,
+            batchId: option.dataset.batchId,
+            batchLayers: this.parseJson(option.dataset.batchLayers, []),
         }
     }
 
@@ -700,6 +721,26 @@ export default class extends Controller {
         const input = row.querySelector(`[data-order-entry-target~="${targetName}"]`)
 
         return input ? input.value : ''
+    }
+
+    setRowValue(row, targetName, value) {
+        const input = row.querySelector(`[data-order-entry-target~="${targetName}"]`)
+
+        if (input) {
+            input.value = value
+        }
+    }
+
+    parseJson(value, fallback) {
+        if (!value) {
+            return fallback
+        }
+
+        try {
+            return JSON.parse(value)
+        } catch (error) {
+            return fallback
+        }
     }
 
     numberValue(value) {

@@ -109,6 +109,8 @@ InventoryDocumentLine ||--o{ StockMovement
 WarehouseStock ||--o{ StockMovement
 OrderEntry ||--o{ StockReservation
 WarehouseStock ||--o{ StockReservation
+WarehouseStockBatch |o--o{ OrderEntry
+WarehouseStockBatch |o--o{ StockReservation
 
 ProductionRecipe ||--o{ ProductionRecipeItem
 ProductionRecipe |o--o{ ProductionOrder

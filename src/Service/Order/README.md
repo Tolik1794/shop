@@ -16,11 +16,15 @@ Snapshot і ціноутворення мають різні причини дл
 
 - `OrderEntrySnapshotter` — копіює поточні назву, артикул і одиницю товару в snapshot-поля `OrderEntry`.
 - `OrderEntryPricingService` — початково заповнює `unitPrice`, якщо в позиції ще немає введеної ціни.
+- `OrderBatchPricingService` — читає FIFO-партії залишку для пошуку, застосовує продажну ціну вибраної партії і перевіряє, що позиція замовлення відповідає цій партії.
 
 ## Важливі правила
 
 - `OrderEntrySnapshotter` не визначає ціну і не виконує розрахунки.
 - `OrderEntryPricingService` не перераховує вже введену ціну позиції. Якщо `unitPrice > 0`, значення зберігається як ручне або вже зафіксоване.
+- Партії показуються в пошуку як окремі stock-варіанти, найстаріша партія йде першою.
+- `OrderBatchPricingService` працює тільки для позицій із конкретним складом і вибраною партією. Production/service/backorder fallback лишаються на каталожній ціні.
+- Якщо `OrderEntry.warehouseStockBatch` заповнений, бронювання і відвантаження мають використовувати цю ж партію.
 - Саме визначення каталожної ціни делегується в `src/Service/Pricing/CatalogPriceResolver.php`.
 
 ## Потік використання
@@ -28,9 +32,11 @@ Snapshot і ціноутворення мають різні причини дл
 Під час збереження замовлення `OrderManager`:
 
 1. готує заголовок замовлення;
-2. передає позицію в `OrderEntrySnapshotter`;
-3. передає позицію в `OrderEntryPricingService`;
-4. виконує підсумковий перерахунок через `OrderCalculator`.
+2. перевіряє batch-привʼязку stock-позицій через `OrderBatchPricingService`;
+3. передає позицію в `OrderEntrySnapshotter`;
+4. застосовує batch-ціну через `OrderBatchPricingService`;
+5. передає позицію в `OrderEntryPricingService` для каталожного fallback;
+6. виконує підсумковий перерахунок через `OrderCalculator`.
 
 ## Пов’язані місця
 

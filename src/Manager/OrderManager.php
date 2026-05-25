@@ -18,6 +18,7 @@ use App\Service\BusinessDocumentStatusSynchronizer;
 use App\Service\ExchangeRateResolver;
 use App\Service\Order\OrderEntryPricingService;
 use App\Service\Order\OrderEntrySnapshotter;
+use App\Service\Order\OrderBatchPricingService;
 use App\Service\OrderCalculator;
 use App\Service\StockReservationService;
 use App\Workflow\History\OrderHistoryChangeSetBuilder;
@@ -35,6 +36,7 @@ class OrderManager extends AbstractManager
 		private readonly ExchangeRateResolver $exchangeRateResolver,
 		private readonly OrderEntrySnapshotter $orderEntrySnapshotter,
 		private readonly OrderEntryPricingService $orderEntryPricingService,
+		private readonly OrderBatchPricingService $orderBatchPricingService,
 		private readonly OrderCalculator $orderCalculator,
 		private readonly StatusTransitionService $statusTransitionService,
 		private readonly OrderHistoryChangeSetBuilder $orderHistoryChangeSetBuilder,
@@ -62,6 +64,7 @@ class OrderManager extends AbstractManager
 		$isNew = $order->getId() === null;
 		$actor = $this->currentActor();
 		$this->prepareOrder($order);
+		$this->orderBatchPricingService->normalizeOrderEntries($order);
 		foreach ($removedEntries as $removedEntry) {
 			if ($removedEntry instanceof OrderEntry) {
 				$this->entityManager->remove($removedEntry);
@@ -259,6 +262,7 @@ class OrderManager extends AbstractManager
 		}
 
 		$this->orderEntrySnapshotter->snapshot($orderEntry);
+		$this->orderBatchPricingService->applyBatchPrice($orderEntry);
 		$this->orderEntryPricingService->initializeUnitPrice($orderEntry, $order);
 	}
 

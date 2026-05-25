@@ -85,6 +85,19 @@ class WarehouseStockBatchPostingService
 		$balance = $initialBalance;
 		$movements = [];
 		$useFifoCost = $line->getInventoryDocument()?->getStore()?->getCostingMethod() === CostingMethodEnum::FIFO;
+		$selectedBatch = $line->getOrderEntry()?->getWarehouseStockBatch();
+
+		if ($selectedBatch instanceof WarehouseStockBatch) {
+			return [$this->consumeBatch(
+				line: $line,
+				warehouseStock: $warehouseStock,
+				batch: $selectedBatch,
+				quantity: $quantity,
+				fallbackUnitCost: $fallbackUnitCost,
+				balance: $balance,
+				useFifoCost: $useFifoCost,
+			)];
+		}
 
 		foreach ($this->openBatches($warehouseStock) as $batch) {
 			if ($remaining <= 0.00005) {
@@ -122,6 +135,44 @@ class WarehouseStockBatchPostingService
 		}
 
 		return $movements;
+	}
+
+	private function consumeBatch(
+		InventoryDocumentLine $line,
+		WarehouseStock $warehouseStock,
+		WarehouseStockBatch $batch,
+		float $quantity,
+		float $fallbackUnitCost,
+		float $balance,
+		bool $useFifoCost,
+	): StockMovement {
+		if ($batch->getWarehouseStock() !== $warehouseStock) {
+			throw new StockOperationException('Selected stock batch does not match warehouse stock.');
+		}
+
+		$batchRemaining = $this->numberValue($batch->getRemainingQuantity());
+		if ($quantity > $batchRemaining + 0.00005) {
+			throw new StockOperationException('Selected stock batch does not have enough remaining quantity.');
+		}
+
+		$balance -= $quantity;
+		$batch->setRemainingQuantity($this->formatQuantity($batchRemaining - $quantity));
+
+		$movement = $this->movement(
+			$line,
+			$warehouseStock,
+			-$quantity,
+			$useFifoCost ? $this->numberValue($batch->getUnitCost()) : $fallbackUnitCost,
+			$balance,
+		);
+		$movement->setWarehouseStockBatch($batch);
+		$batch->addStockMovement($movement);
+		$line->addStockMovement($movement);
+
+		$this->entityManager->persist($batch);
+		$this->entityManager->persist($movement);
+
+		return $movement;
 	}
 
 	/**

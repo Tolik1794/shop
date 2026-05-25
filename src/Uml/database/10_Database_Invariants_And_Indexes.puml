@@ -7,7 +7,7 @@ title Shop database - Invariants, deletion policy and indexes
 note bottom
   Final cleanup decisions:
   - ExchangeRate is a financial/reference entity and should not depend on InventoryReason.
-  - Batch-level stock attribution should be handled through StockMovement.warehouseStockBatch, not directly from InventoryDocumentLine.
+  - Batch-level stock attribution should be handled through WarehouseStockBatch links on OrderEntry, StockReservation and StockMovement, not directly from InventoryDocumentLine.
   - canceledAt is stored on Order, Purchase and ProductionOrder together with canceledBy.
   - Payment has updatedBy because payment records can be corrected while still preserving audit information.
   - Keep technical stock tables controlled by posting/canceling documents, not by manual admin edits.
@@ -36,6 +36,7 @@ note bottom
   - remainingQuantity >= 0.
   - remainingQuantity <= initialQuantity.
   - unitCost >= 0.
+  - salePrice is optional and stored in Store.baseCurrency when copied from PurchaseEntry.
   - createdByMovement should normally reference an IN StockMovement.
 
   InventoryDocument:
@@ -71,6 +72,8 @@ note bottom
   StockReservation:
   - quantity > 0.
   - active reservations must not exceed available stock: quantityOnHand - reservedQuantity.
+  - warehouseStockBatch, when filled, must belong to the same WarehouseStock.
+  - active batch reservations must not exceed WarehouseStockBatch.remainingQuantity.
   - Backordered OrderEntry rows should remain unreserved until stock is available.
   - completed/canceled/expired reservations should not be counted in WarehouseStock.reservedQuantity.
 
@@ -78,6 +81,8 @@ note bottom
   - quantity > 0.
   - OrderEntry can exist without stock when Store.allowBackorders=true.
   - OrderEntry without stock must not automatically create StockReservation or StockMovement.
+  - OrderEntry.warehouseStockBatch, when filled, must match the entry product and warehouse through WarehouseStock.
+  - Product search should expose FIFO batches as separate stock options, ordered by receivedAt/id oldest first.
   - progress quantities must be >= 0.
   - shippedQuantity, returnedQuantity, canceledQuantity, receivedQuantity are denormalized cache fields.
   - Source of truth for progress is posted InventoryDocumentLine + StockMovement.
@@ -201,6 +206,7 @@ note bottom
   Order(canceled_at)
   OrderEntry(order_id)
   OrderEntry(product_id)
+  OrderEntry(warehouse_stock_batch_id)
   Purchase(store_id, number)
   Purchase(store_id, payment_status)
   Purchase(store_id, status)
@@ -223,6 +229,7 @@ note bottom
   ProductionOrderMaterial(material_id)
   StockReservation(order_entry_id)
   StockReservation(warehouse_stock_id, status)
+  StockReservation(warehouse_stock_batch_id, status)
 end note
 
 note bottom

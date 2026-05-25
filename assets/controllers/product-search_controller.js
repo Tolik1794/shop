@@ -142,6 +142,9 @@ export default class extends Controller {
             available: button.dataset.available,
             warehouseId: button.dataset.warehouseId,
             warehouseName: button.dataset.warehouseName,
+            batchId: button.dataset.batchId,
+            batchReceivedAt: button.dataset.batchReceivedAt,
+            batchLayers: this.parseJson(button.dataset.batchLayers, []),
             sourceType: button.dataset.sourceType,
             sourceDetail: button.dataset.sourceDetail,
         }
@@ -200,16 +203,23 @@ export default class extends Controller {
     }
 
     renderStockOption(product, option) {
+        const batchLayers = option.batchLayers || []
+        const batchLabel = option.batchId ? ` · Batch #${option.batchId}` : ''
+        const receivedMeta = option.batchReceivedAt ? ` · ${option.batchReceivedAt}` : ''
+
         return this.renderOptionButton({
             product: product,
             sourceType: 'stock',
-            label: `${trans('order.source.stock', 'Stock')}: ${option.warehouseName || ''}`,
-            meta: `${trans('order.product.available', 'Available')}: ${option.available || '0.0000'} · ${trans('order.product.price', 'Price')}: ${option.price || product.price || '0.00'}`,
+            label: `${trans('order.source.stock', 'Stock')}: ${option.warehouseName || ''}${batchLabel}`,
+            meta: `${trans('order.product.available', 'Available')}: ${option.available || '0.0000'} · ${trans('order.product.price', 'Price')}: ${option.price || product.price || '0.00'}${receivedMeta}`,
             available: option.available,
             price: option.price || product.price,
             warehouseId: option.warehouseId || '',
             warehouseName: option.warehouseName || '',
-            sourceDetail: option.warehouseName || '',
+            batchId: option.batchId || '',
+            batchReceivedAt: option.batchReceivedAt || '',
+            sourceDetail: option.batchId ? `${option.warehouseName || ''} · Batch #${option.batchId}` : option.warehouseName || '',
+            batchLayers: batchLayers,
         })
     }
 
@@ -225,7 +235,10 @@ export default class extends Controller {
             price: option.price || product.price,
             warehouseId: '',
             warehouseName: '',
+            batchId: '',
+            batchReceivedAt: '',
             sourceDetail: option.label || productionLabel,
+            batchLayers: [],
         })
     }
 
@@ -241,11 +254,16 @@ export default class extends Controller {
             price: product.price,
             warehouseId: '',
             warehouseName: '',
+            batchId: '',
+            batchReceivedAt: '',
             sourceDetail: unavailableLabel,
+            batchLayers: [],
         })
     }
 
-    renderOptionButton({product, sourceType, label, meta, available, price, warehouseId, warehouseName, sourceDetail}) {
+    renderOptionButton({product, sourceType, label, meta, available, price, warehouseId, warehouseName, batchId, batchReceivedAt, sourceDetail, batchLayers}) {
+        const batchLayersJson = JSON.stringify(batchLayers || [])
+
         return `
             <button
                     type="button"
@@ -260,6 +278,9 @@ export default class extends Controller {
                     data-available="${this.escapeHtml(available || '0.0000')}"
                     data-warehouse-id="${this.escapeHtml(warehouseId || '')}"
                     data-warehouse-name="${this.escapeHtml(warehouseName || '')}"
+                    data-batch-id="${this.escapeHtml(batchId || '')}"
+                    data-batch-received-at="${this.escapeHtml(batchReceivedAt || '')}"
+                    data-batch-layers="${this.escapeHtml(batchLayersJson)}"
                     data-source-type="${this.escapeHtml(sourceType)}"
                     data-source-detail="${this.escapeHtml(sourceDetail || label || '')}"
             >
@@ -324,9 +345,10 @@ export default class extends Controller {
             }
 
             const warehouseId = this.rowValue(row, 'warehouse')
+            const batchId = row.dataset.batchId || this.rowValue(row, 'warehouseStockBatch')
             const sourceType = row.dataset.sourceType || (warehouseId ? 'stock' : 'production')
             optionKeys.push(sourceType === 'stock'
-                ? `stock:${productId}:${warehouseId || ''}`
+                ? `stock:${productId}:${warehouseId || ''}${batchId ? `:${batchId}` : ''}`
                 : `production:${productId}`
             )
         })
@@ -338,6 +360,18 @@ export default class extends Controller {
         const input = row.querySelector(`[data-order-entry-target~="${targetName}"]`)
 
         return input ? input.value : ''
+    }
+
+    parseJson(value, fallback) {
+        if (!value) {
+            return fallback
+        }
+
+        try {
+            return JSON.parse(value)
+        } catch (error) {
+            return fallback
+        }
     }
 
     escapeHtml(value) {
