@@ -11,6 +11,7 @@ use App\Enum\PaymentDirectionEnum;
 use App\Enum\PaymentTypeEnum;
 use App\Repository\PaymentRepository;
 use App\Service\ExchangeRateResolver;
+use App\Service\Payment\PaymentHistoryRecorder;
 use App\Service\Payment\PaymentRecalculationService;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,6 +23,7 @@ class PaymentManager extends AbstractManager
 		private readonly EntityManagerInterface $entityManager,
 		private readonly ExchangeRateResolver $exchangeRateResolver,
 		private readonly PaymentRecalculationService $paymentRecalculationService,
+		private readonly PaymentHistoryRecorder $paymentHistoryRecorder,
 		private readonly UserManager $userManager,
 	)
 	{
@@ -85,6 +87,7 @@ class PaymentManager extends AbstractManager
 			$this->paymentRecalculationService->recalculate($document);
 			$this->entityManager->persist($document);
 		}
+		$this->paymentHistoryRecorder->recordPaymentCreated($payment, $actor);
 
 		$this->entityManager->flush();
 	}
@@ -134,6 +137,7 @@ class PaymentManager extends AbstractManager
 			$this->paymentRecalculationService->recalculate($document);
 			$this->entityManager->persist($document);
 		}
+		$this->paymentHistoryRecorder->recordPaymentReversed($payment, $reversal, $actor);
 
 		$this->entityManager->flush();
 

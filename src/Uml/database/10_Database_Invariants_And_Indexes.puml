@@ -124,6 +124,16 @@ note bottom
   - overpaid: paidAmountBase > totalAmountBase.
   - refunded: use when effective paid amount returns to 0 after refund, if business rules require a separate visible state.
 
+  PaymentHistory:
+  - append-only: do not update/delete existing history rows.
+  - exactly one of order_id or purchase_id should be filled.
+  - documentType/documentId must match the filled order_id or purchase_id.
+  - payment_id is required and should point to the payment row that caused the event.
+  - eventKey should stay stable once used by the application.
+  - payment.recorded is created when a new Payment is saved.
+  - payment.reversed is created when a linked refund/reversal Payment is created.
+  - Payment remains the financial source of truth; PaymentHistory is the audit/feed layer.
+
   ProductPrice / ExchangeRate:
   - ProductPrice valid intervals should not overlap for the same store + product + type + currency.
   - ExchangeRate valid intervals should not overlap for the same store/global + fromCurrency + toCurrency.
@@ -221,6 +231,12 @@ note bottom
   Payment(store_id, direction, paid_at)
   Payment(created_by_id)
   Payment(updated_by_id)
+  PaymentHistory(store_id, document_type, document_id, occurred_at)
+  PaymentHistory(store_id, occurred_at)
+  PaymentHistory(payment_id)
+  PaymentHistory(order_id)
+  PaymentHistory(purchase_id)
+  PaymentHistory(actor_id)
   ProductionOrder(store_id, status)
   ProductionOrder(created_by_id)
   ProductionOrder(canceled_by_id)
@@ -238,6 +254,7 @@ Deletion / archiving rule:
 Do not physically delete documents, payments, stock movements or posted history.
 Use status transitions, reversal documents and refund payments instead.
 OrderHistory is append-only and must not be rewritten.
+PaymentHistory is append-only and must not be rewritten.
 OrderComment can be hidden by soft delete when needed.
 
 For reference data, prefer status=inactive for hiding from new operations.
@@ -250,7 +267,7 @@ createdBy/updatedBy are stored on admin-managed reference data
 Technical stock tables like WarehouseStock, WarehouseStockBatch and StockMovement
 should be created/updated by posting inventory documents, not manually.
 Their responsible user is traced through InventoryDocument, Payment,
-OrderHistory or StatusHistory depending on the business object.
+PaymentHistory, OrderHistory or StatusHistory depending on the business object.
 end note
 
 @enduml

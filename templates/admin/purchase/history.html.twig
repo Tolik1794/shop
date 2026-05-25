@@ -3,6 +3,8 @@
 		<h5 class="card-title mb-0">{{ entity.number }} · History</h5>
 	</div>
 	<div class="card-body">
-		{{ include('admin/_components/status_history/_timeline.html.twig') }}
+		<div class="order-discussion-scroll-frame">
+			{{ include('admin/_components/document_history/_timeline.html.twig') }}
+		</div>
 	</div>
 </div>

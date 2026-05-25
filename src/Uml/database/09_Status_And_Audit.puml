@@ -42,6 +42,8 @@ note right of StatusHistory
 
   Order uses dedicated OrderHistory instead, because its timeline must
   capture all user/system/integration actions, not only status changes.
+  Payment operations use PaymentHistory and are merged into Order/Purchase
+  admin histories without overloading this status-only table.
 end note
 
 @enduml

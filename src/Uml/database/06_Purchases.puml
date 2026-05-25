@@ -84,6 +84,7 @@ PurchaseStatus ||--o{ Purchase : controls
 PaymentStatusEnum ||--o{ Purchase : payment state
 Purchase ||--o{ PurchaseEntry : has
 Purchase |o--o{ Payment : paid by
+Purchase |o--o{ PaymentHistory : shows payment events
 Purchase ||--o{ InventoryDocument : generates stock docs
 Product ||--o{ PurchaseEntry : purchased as
 Warehouse ||--o{ PurchaseEntry : received into
@@ -99,6 +100,13 @@ note right of Purchase
   currency stores the original purchase currency.
   exchangeRateToBase is a snapshot: 1 purchase currency = X Store.baseCurrency.
   totalAmount/deliveryCost are in original currency; *Base fields are in Store.baseCurrency.
+  The visible admin history merges status history with linked PaymentHistory events.
+end note
+
+note right of PaymentHistory
+  PaymentHistory rows are append-only financial timeline events.
+  They are displayed together with purchase status history in the purchase admin history,
+  but Payment remains the financial source of truth.
 end note
 
 note right of PurchaseStatus

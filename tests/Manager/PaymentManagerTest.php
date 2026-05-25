@@ -5,6 +5,7 @@ namespace App\Tests\Manager;
 use App\Entity\Currency;
 use App\Entity\ExchangeRate;
 use App\Entity\Order;
+use App\Entity\PaymentHistory;
 use App\Entity\Payment;
 use App\Entity\Purchase;
 use App\Entity\Store;
@@ -12,6 +13,7 @@ use App\Enum\PaymentDirectionEnum;
 use App\Enum\PaymentStatusEnum;
 use App\Enum\PaymentTypeEnum;
 use App\Manager\PaymentManager;
+use App\Service\History\DocumentTimelineBuilder;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
@@ -21,18 +23,20 @@ class PaymentManagerTest extends KernelTestCase
 {
 	private EntityManagerInterface $entityManager;
 	private PaymentManager $paymentManager;
+	private DocumentTimelineBuilder $documentTimelineBuilder;
 
 	protected function setUp(): void
 	{
 		self::bootKernel();
 		$this->entityManager = static::getContainer()->get(EntityManagerInterface::class);
 		$this->paymentManager = static::getContainer()->get(PaymentManager::class);
+		$this->documentTimelineBuilder = static::getContainer()->get(DocumentTimelineBuilder::class);
 	}
 
 	protected function tearDown(): void
 	{
 		parent::tearDown();
-		unset($this->entityManager, $this->paymentManager);
+		unset($this->entityManager, $this->paymentManager, $this->documentTimelineBuilder);
 	}
 
 	public function testSavePaymentStoresExchangeRateSnapshotAndRecalculatesOrder(): void
@@ -57,6 +61,51 @@ class PaymentManagerTest extends KernelTestCase
 		self::assertSame('100.0000', $order->getPaidAmountBase());
 		self::assertSame(PaymentStatusEnum::PAID, $order->getPaymentStatus());
 		self::assertSame('2026-05-18 10:00:00', $order->getPaidAt()?->format('Y-m-d H:i:s'));
+
+		$history = $this->entityManager->getRepository(PaymentHistory::class)->findOneBy([
+			'payment' => $payment,
+			'order' => $order,
+			'eventKey' => 'payment.recorded',
+		]);
+		self::assertInstanceOf(PaymentHistory::class, $history);
+		self::assertSame('order', $history->getDocumentType());
+		self::assertSame($order->getId(), $history->getDocumentId());
+		self::assertSame('50.0000', $history->getAmount());
+		self::assertSame($paymentCurrency->getCode(), $history->getCurrencyCode());
+		self::assertContains('payment.recorded', array_map(
+			static fn ($entry): string => $entry->getEventKey(),
+			$this->documentTimelineBuilder->forOrder($order),
+		));
+	}
+
+	public function testSavePaymentRecordsPurchasePaymentHistory(): void
+	{
+		$currency = $this->persistCurrency('H' . substr(uniqid(), -2), 'Purchase history currency');
+		$store = $this->persistStore('payment-purchase-history-' . uniqid(), $currency);
+		$purchase = $this->persistPurchase($store, $currency, '80.0000');
+
+		$payment = $this->paymentManager->createForStore($store)
+			->setCurrency($currency)
+			->setPurchase($purchase)
+			->setDirection(PaymentDirectionEnum::OUTGOING)
+			->setAmount('40.0000')
+			->setPaidAt(new DateTimeImmutable('2026-05-18 11:00:00'));
+
+		$this->paymentManager->savePayment($payment);
+
+		$history = $this->entityManager->getRepository(PaymentHistory::class)->findOneBy([
+			'payment' => $payment,
+			'purchase' => $purchase,
+			'eventKey' => 'payment.recorded',
+		]);
+		self::assertInstanceOf(PaymentHistory::class, $history);
+		self::assertSame('purchase', $history->getDocumentType());
+		self::assertSame($purchase->getId(), $history->getDocumentId());
+		self::assertSame('40.0000', $history->getAmount());
+		self::assertContains('payment.recorded', array_map(
+			static fn ($entry): string => $entry->getEventKey(),
+			$this->documentTimelineBuilder->forPurchase($store, $purchase),
+		));
 	}
 
 	public function testPaymentMustTargetExactlyOneDocument(): void
@@ -146,6 +195,21 @@ class PaymentManagerTest extends KernelTestCase
 		self::assertSame($reversal, $payment->getReversedByPayment());
 		self::assertSame('0.0000', $order->getPaidAmountBase());
 		self::assertSame(PaymentStatusEnum::REFUNDED, $order->getPaymentStatus());
+
+		$history = $this->entityManager->getRepository(PaymentHistory::class)->findOneBy([
+			'payment' => $reversal,
+			'order' => $order,
+			'eventKey' => 'payment.reversed',
+		]);
+		self::assertInstanceOf(PaymentHistory::class, $history);
+		self::assertSame([
+			'original_payment_id' => $payment->getId(),
+			'reason' => 'Original payment was entered by mistake.',
+		], $history->getPayload());
+		self::assertContains('payment.reversed', array_map(
+			static fn ($entry): string => $entry->getEventKey(),
+			$this->documentTimelineBuilder->forOrder($order),
+		));
 	}
 
 	public function testReversePaymentRequiresReason(): void

@@ -48,6 +48,7 @@ package "06 Purchases" as Purchases {
 
 package "07 Payments" as Payments {
     entity Payment
+    entity PaymentHistory
 }
 
 package "08 Production" as Production {
@@ -66,6 +67,7 @@ Store ||--o{ Warehouse
 Store ||--o{ Order
 Store ||--o{ Purchase
 Store ||--o{ Payment
+Store ||--o{ PaymentHistory
 Store ||--o{ InventoryDocument
 Store ||--o{ ProductionRecipe
 Store ||--o{ ProductionOrder
@@ -98,11 +100,15 @@ Order ||--o{ OrderEntry
 Order ||--o{ OrderComment
 Order ||--o{ OrderHistory
 Order |o--o{ Payment
+Order |o--o{ PaymentHistory
 Order ||--o{ InventoryDocument
 
 Purchase ||--o{ PurchaseEntry
 Purchase |o--o{ Payment
+Purchase |o--o{ PaymentHistory
 Purchase ||--o{ InventoryDocument
+
+Payment ||--o{ PaymentHistory
 
 InventoryDocument ||--o{ InventoryDocumentLine
 InventoryDocumentLine ||--o{ StockMovement

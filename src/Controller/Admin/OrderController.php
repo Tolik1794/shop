@@ -14,8 +14,8 @@ use App\Form\Admin\Type\OrderType;
 use App\Manager\OrderManager;
 use App\Manager\OrderCommentManager;
 use App\Repository\CustomerRepository;
-use App\Repository\OrderHistoryRepository;
 use App\Service\FilterFormHandler;
+use App\Service\History\DocumentTimelineBuilder;
 use App\Service\Inventory\OrderShipmentUseCase;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
@@ -39,7 +39,7 @@ class OrderController extends AbstractAdvancedController
 		private readonly OrderManager $orderManager,
 		private readonly OrderCommentManager $orderCommentManager,
 		private readonly CustomerRepository $customerRepository,
-		private readonly OrderHistoryRepository $orderHistoryRepository,
+		private readonly DocumentTimelineBuilder $documentTimelineBuilder,
 		private readonly OrderShipmentUseCase $orderShipmentUseCase,
 	)
 	{
@@ -633,7 +633,7 @@ class OrderController extends AbstractAdvancedController
 	{
 		return [
 			'comments' => $this->orderCommentManager->getRepository()->findVisibleByOrder($order),
-			'history_entries' => $this->orderHistoryRepository->findTimelineByOrder($order),
+			'history_entries' => $this->documentTimelineBuilder->forOrder($order),
 		];
 	}
 

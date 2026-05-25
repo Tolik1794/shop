@@ -5,13 +5,12 @@ namespace App\Controller\Admin;
 use App\Entity\Purchase;
 use App\Entity\PurchaseEntry;
 use App\Entity\PurchaseStatus;
-use App\Entity\StatusHistoryEntityType;
 use App\Entity\Store;
 use App\Form\Admin\FilterType\PurchaseFilterType;
 use App\Form\Admin\Type\PurchaseType;
 use App\Manager\PurchaseManager;
-use App\Repository\StatusHistoryRepository;
 use App\Service\FilterFormHandler;
+use App\Service\History\DocumentTimelineBuilder;
 use App\Service\Inventory\PurchaseReceiptUseCase;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
@@ -33,7 +32,7 @@ class PurchaseController extends AbstractAdvancedController
 
 	public function __construct(
 		private readonly PurchaseManager $purchaseManager,
-		private readonly StatusHistoryRepository $statusHistoryRepository,
+		private readonly DocumentTimelineBuilder $documentTimelineBuilder,
 		private readonly PurchaseReceiptUseCase $purchaseReceiptUseCase,
 	)
 	{
@@ -200,7 +199,7 @@ class PurchaseController extends AbstractAdvancedController
 
 		return $this->render('admin/purchase/history.html.twig', [
 			'entity' => $purchase,
-			'status_history_entries' => $this->statusHistoryRepository->findTimelineFor($store, StatusHistoryEntityType::PURCHASE, (int) $purchase->getId()),
+			'history_entries' => $this->documentTimelineBuilder->forPurchase($store, $purchase),
 		]);
 	}
 
@@ -410,7 +409,7 @@ class PurchaseController extends AbstractAdvancedController
 			]),
 			'history' => $this->renderView('admin/purchase/history.html.twig', [
 				'entity' => $purchase,
-				'status_history_entries' => $this->statusHistoryRepository->findTimelineFor($store, StatusHistoryEntityType::PURCHASE, (int) $purchase->getId()),
+				'history_entries' => $this->documentTimelineBuilder->forPurchase($store, $purchase),
 			]),
 			'row' => $this->renderView('admin/purchase/_index_row.html.twig', [
 				'entity' => $purchase,

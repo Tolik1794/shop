@@ -48,6 +48,30 @@ entity Payment {
     * updatedAt: DateTimeImmutable
 }
 
+entity PaymentHistory {
+    * id: int
+    --
+    * eventKey: string(100)
+    * documentType: string(32)
+    * documentId: int
+    * title: string(255)
+    description: text?
+    * amount: decimal(14, 4)
+    * amountBase: decimal(14, 4)
+    * currencyCode: string(3)
+    * direction: PaymentDirectionEnum
+    * type: PaymentTypeEnum
+    externalReference: string(255)?
+    payload: json?
+    * occurredAt: DateTimeImmutable
+    actorNameSnapshot: string(255)?
+    * store: Store
+    order: Order?
+    purchase: Purchase?
+    * payment: Payment
+    actor: User?
+}
+
 
 
 Store ||--o{ Payment : has payments
@@ -58,6 +82,13 @@ Payment |o--o| Payment : reversal of
 User |o--o{ Payment : records/updates payments
 PaymentDirectionEnum ||--o{ Payment : defines direction
 PaymentTypeEnum ||--o{ Payment : classifies
+Store ||--o{ PaymentHistory : has payment events
+Order |o--o{ PaymentHistory : shows in timeline
+Purchase |o--o{ PaymentHistory : shows in timeline
+Payment ||--o{ PaymentHistory : creates event
+User |o--o{ PaymentHistory : performs event
+PaymentDirectionEnum ||--o{ PaymentHistory : event direction
+PaymentTypeEnum ||--o{ PaymentHistory : event type
 
 note right of Payment
   Universal payment table for customer payments and supplier payments.
@@ -88,6 +119,21 @@ note right of Payment
 
   They should be recalculated from Payment rows after creating payments or explicit linked reversals.
   paidAt can store the date when the document became fully paid.
+end note
+
+note right of PaymentHistory
+  Append-only financial activity timeline for payments attached to Order or Purchase.
+
+  It records payment.recorded and payment.reversed events for new operations.
+  Existing Payment rows are not automatically backfilled.
+
+  documentType/documentId are denormalized timeline keys.
+  order or purchase keeps the direct FK for current supported document types.
+  Exactly one of order or purchase should be filled.
+
+  title/description are display snapshots; payload keeps machine-readable context
+  such as original_payment_id and reversal reason.
+  Payment rows remain the financial source of truth; PaymentHistory is the audit/feed layer.
 end note
 
 @enduml

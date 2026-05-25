@@ -125,6 +125,7 @@ Warehouse |o--o{ OrderEntry : ships from
 WarehouseStockBatch |o--o{ OrderEntry : priced/reserved from
 Order ||--o{ OrderComment : has comments
 Order ||--o{ OrderHistory : has timeline
+Order |o--o{ PaymentHistory : shows payment events
 User ||--o{ OrderComment : authors
 User |o--o{ OrderHistory : performs
 OrderHistorySource ||--o{ OrderHistory : classifies source
@@ -137,7 +138,8 @@ note right of Order
   canceledAt should be filled when status becomes canceled.
   customerNameSnapshot/customerPhoneSnapshot/customerEmailSnapshot store contact data at order time.
   Free-form communication is stored in OrderComment rows, not on Order itself.
-  Full order timeline is stored in OrderHistory rows.
+  Operational order timeline is stored in OrderHistory rows.
+  The visible admin history also merges linked PaymentHistory events.
 
   currency stores the original sale currency.
   exchangeRateToBase is a snapshot: 1 order currency = X Store.baseCurrency.
@@ -177,6 +179,12 @@ note right of OrderHistory
 
   relatedEntityType/relatedEntityId can link future order-side records
   without changing the base timeline model each time.
+end note
+
+note right of PaymentHistory
+  PaymentHistory rows are append-only financial timeline events.
+  They are displayed together with OrderHistory in the order admin history,
+  but Payment remains the financial source of truth.
 end note
 
 note right of OrderStatus
