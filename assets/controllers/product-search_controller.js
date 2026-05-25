@@ -206,12 +206,13 @@ export default class extends Controller {
         const batchLayers = option.batchLayers || []
         const batchLabel = option.batchId ? ` · Batch #${option.batchId}` : ''
         const receivedMeta = option.batchReceivedAt ? ` · ${option.batchReceivedAt}` : ''
+        const available = this.formatQuantity(this.numberValue(option.available), product.unitPrecision)
 
         return this.renderOptionButton({
             product: product,
             sourceType: 'stock',
             label: `${trans('order.source.stock', 'Stock')}: ${option.warehouseName || ''}${batchLabel}`,
-            meta: `${trans('order.product.available', 'Available')}: ${option.available || '0.0000'} · ${trans('order.product.price', 'Price')}: ${option.price || product.price || '0.00'}${receivedMeta}`,
+            meta: `${trans('order.product.available', 'Available')}: ${available} · ${trans('order.product.price', 'Price')}: ${option.price || product.price || '0.00'}${receivedMeta}`,
             available: option.available,
             price: option.price || product.price,
             warehouseId: option.warehouseId || '',
@@ -372,6 +373,28 @@ export default class extends Controller {
         } catch (error) {
             return fallback
         }
+    }
+
+    numberValue(value) {
+        const number = Number.parseFloat(String(value || '').replace(',', '.'))
+
+        return Number.isFinite(number) ? number : 0
+    }
+
+    formatQuantity(value, precision) {
+        const unitPrecision = this.normalizedUnitPrecision(precision)
+
+        if (unitPrecision === 0) {
+            return String(Math.trunc(value))
+        }
+
+        return value.toFixed(unitPrecision)
+    }
+
+    normalizedUnitPrecision(precision) {
+        const unitPrecision = Number.parseInt(precision, 10)
+
+        return Number.isFinite(unitPrecision) ? Math.min(4, Math.max(0, unitPrecision)) : 4
     }
 
     escapeHtml(value) {
