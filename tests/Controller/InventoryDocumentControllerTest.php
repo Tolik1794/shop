@@ -57,6 +57,61 @@ class InventoryDocumentControllerTest extends WebTestCase
 		self::assertResponseIsSuccessful();
 		self::assertPageTitleContains('Inventory documents');
 		self::assertSelectorTextContains('body', 'Inventory documents');
+		self::assertSelectorTextContains('body', 'New operation');
+		self::assertSelectorTextContains('body', 'Write-off');
+		self::assertSelectorTextContains('body', 'Stock adjustment');
+	}
+
+	public function testWriteOffOperationCreatesDraftDocumentWithReason(): void
+	{
+		$this->client->loginUser($this->createUser('inventory-document-write-off-admin-' . uniqid() . '@example.com'));
+		[$store, $warehouse, $product] = $this->createStoreWarehouseAndProduct('inventory-document-write-off-' . uniqid());
+		$reason = $this->createInventoryReason($store, 'Damaged unit ' . uniqid(), InventoryReasonType::DAMAGE);
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/inventory-document/write-off/new', $store->getId()));
+		self::assertResponseIsSuccessful();
+
+		$form = $crawler->selectButton('Create write-off draft')->form();
+		$form['inventory_write_off_operation[product]'] = (string) $product->getId();
+		$form['inventory_write_off_operation[warehouse]'] = (string) $warehouse->getId();
+		$form['inventory_write_off_operation[reason]'] = (string) $reason->getId();
+		$form['inventory_write_off_operation[quantity]'] = '2';
+		$form['inventory_write_off_operation[number]'] = 'WOF-TEST-' . uniqid();
+
+		$this->client->submit($form);
+
+		$document = $this->entityManager->getRepository(InventoryDocument::class)->findOneBy([
+			'store' => $store,
+			'reason' => $reason,
+		]);
+
+		self::assertInstanceOf(InventoryDocument::class, $document);
+		self::assertResponseRedirects(sprintf('/admin/store/%d/inventory-document/?id=%d', $store->getId(), $document->getId()));
+		self::assertSame(InventoryDocumentType::WRITE_OFF, $document->getType());
+		self::assertSame(InventoryDocumentStatus::DRAFT, $document->getStatus());
+		self::assertCount(1, $document->getLines());
+		self::assertSame(InventoryDirection::OUT, $document->getLines()->first()->getDirection());
+	}
+
+	public function testManualOperationFormsRender(): void
+	{
+		$this->client->loginUser($this->createUser('inventory-document-operations-admin-' . uniqid() . '@example.com'));
+		[$store] = $this->createStoreWarehouseAndProduct('inventory-document-operations-' . uniqid());
+		$this->createInventoryReason($store, 'Cycle count ' . uniqid(), InventoryReasonType::INVENTORY_COUNT);
+		$this->createInventoryReason($store, 'Transfer reason ' . uniqid(), InventoryReasonType::TRANSFER);
+		$this->createInventoryReason($store, 'Return reason ' . uniqid(), InventoryReasonType::RETURN);
+
+		foreach ([
+			'stock-adjustment/new' => 'New stock adjustment',
+			'transfer/new' => 'New transfer',
+			'customer-return/new' => 'New customer return',
+			'supplier-return/new' => 'New supplier return',
+		] as $path => $title) {
+			$this->client->request('GET', sprintf('/admin/store/%d/inventory-document/%s', $store->getId(), $path));
+
+			self::assertResponseIsSuccessful();
+			self::assertSelectorTextContains('body', $title);
+		}
 	}
 
 	public function testShowDisplaysHeaderLinesAndStockMovements(): void
@@ -260,6 +315,7 @@ class InventoryDocumentControllerTest extends WebTestCase
 			->setType($type);
 
 		$this->entityManager->persist($inventoryReason);
+		$this->entityManager->flush();
 
 		return $inventoryReason;
 	}

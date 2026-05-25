@@ -3,7 +3,9 @@
 namespace App\Repository;
 
 use App\Entity\PurchaseEntry;
+use App\Entity\Store;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -38,6 +40,22 @@ class PurchaseEntryRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
+
+	public function findReturnableByStoreQB(Store $store): QueryBuilder
+	{
+		return $this->createQueryBuilder('purchaseEntry')
+			->innerJoin('purchaseEntry.purchase', 'purchase')
+			->addSelect('purchase')
+			->innerJoin('purchaseEntry.product', 'product')
+			->addSelect('product')
+			->innerJoin('purchaseEntry.warehouse', 'warehouse')
+			->addSelect('warehouse')
+			->andWhere('purchase.store = :store')
+			->andWhere('COALESCE(purchaseEntry.receivedQuantity, 0) > COALESCE(purchaseEntry.returnedQuantity, 0)')
+			->setParameter('store', $store)
+			->orderBy('purchase.id', 'DESC')
+			->addOrderBy('purchaseEntry.id', 'ASC');
+	}
 
 //    /**
 //     * @return PurchaseEntry[] Returns an array of PurchaseEntry objects

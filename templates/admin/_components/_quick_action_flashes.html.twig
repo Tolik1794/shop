@@ -8,7 +8,7 @@
 			{% set alert_type = type == 'error' ? 'danger' : type %}
 			<div class="alert alert-{{ alert_type }} alert-dismissible mb-2 quick-action-flash" role="alert" data-alert-type="{{ alert_type }}">
 				<button type="button" class="btn-close" aria-label="{{ 'admin.common.close'|trans }}" data-action="reload-card#dismissFlash"></button>
-				<div class="alert-message">{{ message }}</div>
+				<div class="alert-message">{{ message|trans }}</div>
 			</div>
 		{% endfor %}
 	{% endfor %}

@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\InventoryDocument;
+use App\Entity\InventoryReason;
 use App\Entity\Store;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -69,5 +70,26 @@ class InventoryDocumentRepository extends ServiceEntityRepository
 			->addOrderBy('stockMovement.id', 'ASC')
 			->getQuery()
 			->getOneOrNullResult();
+	}
+
+	/**
+	 * @return list<InventoryDocument>
+	 */
+	public function findRecentByReason(InventoryReason $reason, int $limit = 10): array
+	{
+		return $this->createQueryBuilder('inventoryDocument')
+			->leftJoin('inventoryDocument.order', 'orders')
+			->addSelect('orders')
+			->leftJoin('inventoryDocument.purchase', 'purchase')
+			->addSelect('purchase')
+			->leftJoin('inventoryDocument.productionOrder', 'productionOrder')
+			->addSelect('productionOrder')
+			->andWhere('inventoryDocument.reason = :reason')
+			->setParameter('reason', $reason)
+			->orderBy('inventoryDocument.documentDate', 'DESC')
+			->addOrderBy('inventoryDocument.id', 'DESC')
+			->setMaxResults($limit)
+			->getQuery()
+			->getResult();
 	}
 }

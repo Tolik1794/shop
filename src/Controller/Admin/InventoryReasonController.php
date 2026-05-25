@@ -4,9 +4,11 @@ namespace App\Controller\Admin;
 
 use App\Entity\InventoryReason;
 use App\Entity\Store;
+use App\Enum\InventoryReasonType as InventoryReasonTypeEnum;
 use App\Form\Admin\FilterType\InventoryReasonFilterType;
 use App\Form\Admin\Type\InventoryReasonType;
 use App\Manager\InventoryReasonManager;
+use App\Repository\InventoryDocumentRepository;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
@@ -19,7 +21,10 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/admin/store/{store_id}/inventory-reason', name: 'app_admin_inventory_reason_'), IsGranted('ROLE_STORE_ADMIN')]
 class InventoryReasonController extends AbstractAdvancedController
 {
-	public function __construct(private readonly InventoryReasonManager $inventoryReasonManager)
+	public function __construct(
+		private readonly InventoryReasonManager $inventoryReasonManager,
+		private readonly InventoryDocumentRepository $inventoryDocumentRepository,
+	)
 	{
 	}
 
@@ -134,6 +139,8 @@ class InventoryReasonController extends AbstractAdvancedController
 		return $this->render('admin/inventory_reason/show.html.twig', [
 			'entity' => $inventoryReason,
 			'query_params' => $request->query->all(),
+			'reason_usage_description' => $this->reasonUsageDescription($inventoryReason->getType()),
+			'reason_documents' => $this->inventoryDocumentRepository->findRecentByReason($inventoryReason),
 		]);
 	}
 
@@ -158,5 +165,20 @@ class InventoryReasonController extends AbstractAdvancedController
 		if ($inventoryReason->getStore()?->getId() !== $store->getId() || $inventoryReason->getDeletedAt() !== null) {
 			throw $this->createNotFoundException();
 		}
+	}
+
+	private function reasonUsageDescription(InventoryReasonTypeEnum $type): string
+	{
+		return match ($type) {
+			InventoryReasonTypeEnum::WRITE_OFF => 'Available for write-off documents.',
+			InventoryReasonTypeEnum::STOCK_ADJUSTMENT,
+			InventoryReasonTypeEnum::INVENTORY_COUNT,
+			InventoryReasonTypeEnum::INITIAL_STOCK => 'Available for stock adjustment documents.',
+			InventoryReasonTypeEnum::TRANSFER => 'Available for internal warehouse transfers.',
+			InventoryReasonTypeEnum::RETURN => 'Available for customer and supplier return documents.',
+			InventoryReasonTypeEnum::DAMAGE,
+			InventoryReasonTypeEnum::PRODUCTION_LOSS => 'Available for write-off documents where stock is lost or damaged.',
+			InventoryReasonTypeEnum::OTHER => 'Available as a fallback reason for manual inventory operations.',
+		};
 	}
 }

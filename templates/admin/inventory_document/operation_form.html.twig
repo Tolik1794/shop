@@ -1,0 +1,83 @@
+{% extends 'admin/_store_components/layout.html.twig' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block navbar_breadcrumb %}
+	{{ include('admin/_components/_breadcrumb.html.twig', {
+		breadcrumb_class: 'mb-0',
+		items: [
+			{
+				label: 'Inventory documents',
+				url: path('app_admin_inventory_document_index', {store_id: app.request.attributes.get('store_id')})
+			},
+			{label: title}
+		]
+	}) }}
+{% endblock %}
+
+{% block main_content %}
+	<main class="content" {{ stimulus_controller(form.lines is defined ? 'inventory-adjustment-form select-two' : 'select-two') }}>
+		<div class="container-fluid p-0">
+			<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+				<div>
+					<h1 class="h3 mb-1">{{ title|trans }}</h1>
+					<div class="text-muted">{{ 'The document will be created as a draft. Post it after reviewing the lines.'|trans }}</div>
+				</div>
+				<div class="d-flex flex-wrap gap-2">
+					<button form="inventory-operation-form" type="submit" class="btn btn-primary">{{ submit_label|trans }}</button>
+					<a href="{{ path('app_admin_inventory_document_index', {store_id: app.request.attributes.get('store_id')}) }}" class="btn btn-light">{{ 'Cancel'|trans }}</a>
+				</div>
+			</div>
+
+			{{ form_start(form, {attr: {id: 'inventory-operation-form', 'data-select-two-target': 'form'}}) }}
+				{{ form_errors(form) }}
+
+				<div class="row g-3">
+					<div class="col-12 {{ form.lines is defined ? 'col-xl-4' : 'col-xl-6' }}">
+						<div class="card">
+							<div class="card-header">
+								<h5 class="card-title mb-0">{{ 'General'|trans }}</h5>
+							</div>
+							<div class="card-body">
+								{% for name, widget in form %}
+									{% if name not in ['lines', '_token'] %}
+										{{ form_row(widget) }}
+									{% endif %}
+								{% endfor %}
+							</div>
+						</div>
+					</div>
+
+					{% if form.lines is defined %}
+						<div class="col-12 col-xl-8">
+							<div class="card">
+								<div class="card-header d-flex justify-content-between align-items-center">
+									<h5 class="card-title mb-0">{{ 'Adjustment lines'|trans }}</h5>
+									<button type="button" class="btn btn-light btn-sm" data-action="inventory-adjustment-form#addEntry">
+										<i class="fa-solid fa-plus me-1"></i>{{ 'Add line'|trans }}
+									</button>
+								</div>
+								<div class="card-body">
+									{{ form_errors(form.lines) }}
+									<div data-inventory-adjustment-form-target="entries">
+										{% for line in form.lines %}
+											{{ include('admin/inventory_document/_stock_adjustment_line.html.twig', {line: line}) }}
+										{% endfor %}
+									</div>
+									<div class="text-muted {{ form.lines|length > 0 ? 'd-none' : '' }}" data-inventory-adjustment-form-target="emptyState">
+										{{ 'No adjustment lines added.'|trans }}
+									</div>
+									<template data-inventory-adjustment-form-target="prototype">
+										{{ include('admin/inventory_document/_stock_adjustment_line.html.twig', {line: form.lines.vars.prototype}) }}
+									</template>
+								</div>
+							</div>
+						</div>
+					{% endif %}
+				</div>
+
+				{{ form_widget(form._token) }}
+			{{ form_end(form, {'render_rest': false}) }}
+		</div>
+	</main>
+{% endblock %}

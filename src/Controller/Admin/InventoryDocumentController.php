@@ -2,18 +2,34 @@
 
 namespace App\Controller\Admin;
 
+use App\Dto\Admin\Inventory\InventoryCustomerReturnOperation;
+use App\Dto\Admin\Inventory\InventoryStockAdjustmentOperation;
+use App\Dto\Admin\Inventory\InventorySupplierReturnOperation;
+use App\Dto\Admin\Inventory\InventoryTransferOperation;
+use App\Dto\Admin\Inventory\InventoryWriteOffOperation;
 use App\Entity\InventoryDocument;
 use App\Entity\StatusHistoryEntityType;
 use App\Entity\Store;
 use App\Form\Admin\FilterType\InventoryDocumentFilterType;
+use App\Form\Admin\Type\InventoryCustomerReturnOperationType;
+use App\Form\Admin\Type\InventoryStockAdjustmentOperationType;
+use App\Form\Admin\Type\InventorySupplierReturnOperationType;
+use App\Form\Admin\Type\InventoryTransferOperationType;
+use App\Form\Admin\Type\InventoryWriteOffOperationType;
 use App\Repository\InventoryDocumentRepository;
 use App\Repository\StatusHistoryRepository;
 use App\Service\FilterFormHandler;
+use App\Service\Inventory\CustomerReturnUseCase;
+use App\Service\Inventory\InventoryTransferUseCase;
+use App\Service\Inventory\SupplierReturnUseCase;
+use App\Service\Inventory\WriteOffAdjustmentUseCase;
 use App\Service\InventoryPostingService;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
 use RuntimeException;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
+use Symfony\Component\Form\FormError;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -28,6 +44,10 @@ class InventoryDocumentController extends AbstractAdvancedController
 		private readonly InventoryDocumentRepository $inventoryDocumentRepository,
 		private readonly InventoryPostingService $inventoryPostingService,
 		private readonly StatusHistoryRepository $statusHistoryRepository,
+		private readonly WriteOffAdjustmentUseCase $writeOffAdjustmentUseCase,
+		private readonly InventoryTransferUseCase $inventoryTransferUseCase,
+		private readonly CustomerReturnUseCase $customerReturnUseCase,
+		private readonly SupplierReturnUseCase $supplierReturnUseCase,
 	)
 	{
 	}
@@ -75,6 +95,189 @@ class InventoryDocumentController extends AbstractAdvancedController
 			'first_entity' => $inventoryDocument,
 			'filter_form' => $filterForm->createView(),
 		]);
+	}
+
+	#[Route('/write-off/new', name: 'write_off_new', methods: ['GET', 'POST'])]
+	public function newWriteOff(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+	): Response
+	{
+		$operation = new InventoryWriteOffOperation();
+		$form = $this->createForm(InventoryWriteOffOperationType::class, $operation, ['store' => $store]);
+		$form->handleRequest($request);
+
+		if ($form->isSubmitted() && $form->isValid()) {
+			try {
+				$document = $this->writeOffAdjustmentUseCase->createWriteOffDraft(
+					$store,
+					$operation->product,
+					$operation->warehouse,
+					$this->decimalString($operation->quantity),
+					$operation->reason,
+					$this->blankToNull($operation->number),
+				);
+				$this->addFlash('success', 'Write-off draft created.');
+
+				return $this->redirectToInventoryDocumentIndex($store, $document);
+			} catch (RuntimeException $exception) {
+				$form->addError(new FormError($exception->getMessage()));
+			}
+		}
+
+		return $this->renderOperationForm($form, 'New write-off', 'Create write-off draft', $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK);
+	}
+
+	#[Route('/stock-adjustment/new', name: 'stock_adjustment_new', methods: ['GET', 'POST'])]
+	public function newStockAdjustment(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+	): Response
+	{
+		$operation = new InventoryStockAdjustmentOperation();
+		$form = $this->createForm(InventoryStockAdjustmentOperationType::class, $operation, ['store' => $store]);
+		$form->handleRequest($request);
+
+		if ($form->isSubmitted() && $form->isValid()) {
+			try {
+				$lines = [];
+
+				foreach ($operation->lines as $line) {
+					$lines[] = [
+						'product' => $line->product,
+						'warehouse' => $line->warehouse,
+						'direction' => $line->direction,
+						'quantity' => $this->decimalString($line->quantity),
+						'unitCost' => $this->optionalDecimalString($line->unitCost),
+					];
+				}
+
+				$document = $this->writeOffAdjustmentUseCase->createStockAdjustmentDraft(
+					$store,
+					$operation->reason,
+					$lines,
+					$this->blankToNull($operation->number),
+				);
+				$this->addFlash('success', 'Stock adjustment draft created.');
+
+				return $this->redirectToInventoryDocumentIndex($store, $document);
+			} catch (RuntimeException $exception) {
+				$form->addError(new FormError($exception->getMessage()));
+			}
+		}
+
+		return $this->renderOperationForm($form, 'New stock adjustment', 'Create adjustment draft', $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK);
+	}
+
+	#[Route('/transfer/new', name: 'transfer_new', methods: ['GET', 'POST'])]
+	public function newTransfer(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+	): Response
+	{
+		$operation = new InventoryTransferOperation();
+		$form = $this->createForm(InventoryTransferOperationType::class, $operation, ['store' => $store]);
+		$form->handleRequest($request);
+
+		if ($form->isSubmitted() && $form->isValid()) {
+			try {
+				$document = $this->inventoryTransferUseCase->createDraft(
+					$store,
+					$operation->product,
+					$operation->sourceWarehouse,
+					$operation->destinationWarehouse,
+					$this->decimalString($operation->quantity),
+					$operation->reason,
+					$this->blankToNull($operation->number),
+				);
+				$this->addFlash('success', 'Transfer draft created.');
+
+				return $this->redirectToInventoryDocumentIndex($store, $document);
+			} catch (RuntimeException $exception) {
+				$form->addError(new FormError($exception->getMessage()));
+			}
+		}
+
+		return $this->renderOperationForm($form, 'New transfer', 'Create transfer draft', $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK);
+	}
+
+	#[Route('/customer-return/new', name: 'customer_return_new', methods: ['GET', 'POST'])]
+	public function newCustomerReturn(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+	): Response
+	{
+		$operation = new InventoryCustomerReturnOperation();
+		$form = $this->createForm(InventoryCustomerReturnOperationType::class, $operation, ['store' => $store]);
+		$form->handleRequest($request);
+
+		if ($form->isSubmitted() && $form->isValid()) {
+			$quantity = $this->decimalString($operation->quantity);
+			$available = $this->returnableQuantity($operation->orderEntry?->getShippedQuantity(), $operation->orderEntry?->getReturnedQuantity());
+
+			if ((float) $quantity > (float) $available) {
+				$form->get('quantity')->addError(new FormError('Quantity cannot exceed available return quantity.'));
+			} else {
+				try {
+					$document = $this->customerReturnUseCase->createDraft(
+						$operation->orderEntry->getOrder(),
+						$operation->orderEntry,
+						$quantity,
+						$operation->reason,
+						$this->blankToNull($operation->number),
+					);
+					$this->addFlash('success', 'Customer return draft created.');
+
+					return $this->redirectToInventoryDocumentIndex($store, $document);
+				} catch (RuntimeException $exception) {
+					$form->addError(new FormError($exception->getMessage()));
+				}
+			}
+		}
+
+		return $this->renderOperationForm($form, 'New customer return', 'Create customer return draft', $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK);
+	}
+
+	#[Route('/supplier-return/new', name: 'supplier_return_new', methods: ['GET', 'POST'])]
+	public function newSupplierReturn(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+	): Response
+	{
+		$operation = new InventorySupplierReturnOperation();
+		$form = $this->createForm(InventorySupplierReturnOperationType::class, $operation, ['store' => $store]);
+		$form->handleRequest($request);
+
+		if ($form->isSubmitted() && $form->isValid()) {
+			$quantity = $this->decimalString($operation->quantity);
+			$available = $this->returnableQuantity($operation->purchaseEntry?->getReceivedQuantity(), $operation->purchaseEntry?->getReturnedQuantity());
+
+			if ((float) $quantity > (float) $available) {
+				$form->get('quantity')->addError(new FormError('Quantity cannot exceed available return quantity.'));
+			} else {
+				try {
+					$document = $this->supplierReturnUseCase->createDraft(
+						$operation->purchaseEntry->getPurchase(),
+						$operation->purchaseEntry,
+						$quantity,
+						$operation->reason,
+						$this->blankToNull($operation->number),
+					);
+					$this->addFlash('success', 'Supplier return draft created.');
+
+					return $this->redirectToInventoryDocumentIndex($store, $document);
+				} catch (RuntimeException $exception) {
+					$form->addError(new FormError($exception->getMessage()));
+				}
+			}
+		}
+
+		return $this->renderOperationForm($form, 'New supplier return', 'Create supplier return draft', $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK);
 	}
 
 	#[Route('/{id}/show', name: 'show', methods: ['GET'])]
@@ -211,5 +414,40 @@ class InventoryDocumentController extends AbstractAdvancedController
 				'first_entity' => $inventoryDocument,
 			]),
 		], $status);
+	}
+
+	private function renderOperationForm(FormInterface $form, string $title, string $submitLabel, int $status): Response
+	{
+		return $this->render('admin/inventory_document/operation_form.html.twig', [
+			'form' => $form,
+			'title' => $title,
+			'submit_label' => $submitLabel,
+		], new Response(status: $status));
+	}
+
+	private function decimalString(string|float|int|null $value): string
+	{
+		return number_format((float) str_replace(',', '.', (string) $value), 4, '.', '');
+	}
+
+	private function optionalDecimalString(string|float|int|null $value): ?string
+	{
+		if ($value === null || $value === '') {
+			return null;
+		}
+
+		return $this->decimalString($value);
+	}
+
+	private function blankToNull(?string $value): ?string
+	{
+		$value = trim((string) $value);
+
+		return $value === '' ? null : $value;
+	}
+
+	private function returnableQuantity(?string $completed, ?string $returned): string
+	{
+		return number_format(max(0, (float) ($completed ?? '0') - (float) ($returned ?? '0')), 4, '.', '');
 	}
 }

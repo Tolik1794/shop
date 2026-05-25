@@ -3,7 +3,9 @@
 namespace App\Repository;
 
 use App\Entity\OrderEntry;
+use App\Entity\Store;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -38,6 +40,22 @@ class OrderEntryRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
+
+	public function findReturnableByStoreQB(Store $store): QueryBuilder
+	{
+		return $this->createQueryBuilder('orderEntry')
+			->innerJoin('orderEntry.order', 'orders')
+			->addSelect('orders')
+			->innerJoin('orderEntry.product', 'product')
+			->addSelect('product')
+			->leftJoin('orderEntry.warehouse', 'warehouse')
+			->addSelect('warehouse')
+			->andWhere('orders.store = :store')
+			->andWhere('COALESCE(orderEntry.shippedQuantity, 0) > COALESCE(orderEntry.returnedQuantity, 0)')
+			->setParameter('store', $store)
+			->orderBy('orders.id', 'DESC')
+			->addOrderBy('orderEntry.id', 'ASC');
+	}
 
 //    /**
 //     * @return OrderEntry[] Returns an array of OrderEntry objects

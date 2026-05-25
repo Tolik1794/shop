@@ -3,11 +3,14 @@
 namespace App\Tests\Controller;
 
 use App\Entity\Currency;
+use App\Entity\InventoryDocument;
 use App\Entity\InventoryReason;
 use App\Entity\Store;
 use App\Entity\User\RoleEnum;
 use App\Entity\User\User;
 use App\Enum\ActiveStatusEnum;
+use App\Enum\InventoryDocumentStatus;
+use App\Enum\InventoryDocumentType;
 use App\Enum\InventoryReasonType;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
@@ -50,6 +53,7 @@ class InventoryReasonControllerTest extends WebTestCase
 		$this->client->loginUser($this->createUser('inventory-reason-show-admin-' . uniqid() . '@example.com'));
 		$store = $this->createStore('inventory-reason-show-store-' . uniqid());
 		$inventoryReason = $this->createInventoryReason($store, 'Cycle count', InventoryReasonType::INVENTORY_COUNT);
+		$this->createInventoryDocument($store, $inventoryReason, 'ADJ-REASON-' . uniqid());
 
 		$this->client->request('GET', sprintf(
 			'/admin/store/%d/inventory-reason/%d/show',
@@ -60,6 +64,8 @@ class InventoryReasonControllerTest extends WebTestCase
 		self::assertResponseIsSuccessful();
 		self::assertSelectorTextContains('body', 'Cycle count');
 		self::assertSelectorTextContains('body', InventoryReasonType::INVENTORY_COUNT->value);
+		self::assertSelectorTextContains('body', 'Recent inventory documents');
+		self::assertSelectorTextContains('body', 'ADJ-REASON-');
 	}
 
 	public function testShowRejectsInventoryReasonFromAnotherStore(): void
@@ -168,6 +174,21 @@ class InventoryReasonControllerTest extends WebTestCase
 		$this->entityManager->flush();
 
 		return $inventoryReason;
+	}
+
+	private function createInventoryDocument(Store $store, InventoryReason $reason, string $number): InventoryDocument
+	{
+		$document = (new InventoryDocument())
+			->setStore($store)
+			->setNumber($number)
+			->setType(InventoryDocumentType::STOCK_ADJUSTMENT)
+			->setStatus(InventoryDocumentStatus::DRAFT)
+			->setReason($reason);
+
+		$this->entityManager->persist($document);
+		$this->entityManager->flush();
+
+		return $document;
 	}
 
 	private function createCurrency(): Currency

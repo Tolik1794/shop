@@ -1,0 +1,15 @@
+<div class="border rounded p-3 mb-3" data-inventory-adjustment-form-target="row">
+	<div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+		<div class="fw-semibold">{{ 'Line'|trans }}</div>
+		<button type="button" class="btn btn-light btn-sm" data-action="inventory-adjustment-form#removeEntry">
+			<i class="fa-solid fa-trash me-1"></i>{{ 'Remove'|trans }}
+		</button>
+	</div>
+	<div class="row g-2">
+		<div class="col-12 col-lg-6">{{ form_row(line.product) }}</div>
+		<div class="col-12 col-lg-6">{{ form_row(line.warehouse) }}</div>
+		<div class="col-12 col-md-4">{{ form_row(line.direction) }}</div>
+		<div class="col-12 col-md-4">{{ form_row(line.quantity) }}</div>
+		<div class="col-12 col-md-4">{{ form_row(line.unitCost) }}</div>
+	</div>
+</div>

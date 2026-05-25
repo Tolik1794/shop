@@ -35,6 +35,38 @@
             </tbody>
         </table>
 
+        <div class="alert alert-info py-2">
+            {{ reason_usage_description|trans }}
+        </div>
+
+        <h6 class="mt-4 mb-2">{{ 'Recent inventory documents'|trans }}</h6>
+        <table class="table table-sm mb-4">
+            <thead>
+            <tr>
+                <th>{{ 'Date'|trans }}</th>
+                <th>{{ 'Number'|trans }}</th>
+                <th>{{ 'Type'|trans }}</th>
+                <th>{{ 'Status'|trans }}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for document in reason_documents %}
+                <tr>
+                    <td>{{ document.documentDate|date('Y-m-d') }}</td>
+                    <td>
+                        <a href="{{ path('app_admin_inventory_document_index', {store_id: app.request.attributes.get('store_id'), id: document.id}) }}">
+                            {{ document.number }}
+                        </a>
+                    </td>
+                    <td>{{ document.type.value }}</td>
+                    <td>{{ document.status.value }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="4" class="text-muted">{{ 'No inventory documents use this reason yet.'|trans }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
         <p class="text-muted small mb-2">{{ 'Archived reasons remain available for historical inventory documents and reports.'|trans }}</p>
         <form method="post" action="{{ path('app_admin_inventory_reason_archive', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" onsubmit="return confirm('{{ 'Archive inventory reason? Historical documents will remain readable.'|trans|e('js') }}');">
             <input type="hidden" name="_token" value="{{ csrf_token('archive_inventory_reason_' ~ entity.id) }}">
