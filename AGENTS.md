@@ -22,6 +22,17 @@ Do not rewrite large parts of the project unless explicitly asked.
 Do not mix unrelated refactoring with the requested fix.
 Do not reformat unrelated files.
 
+## Documentation, i18n, and UML sync rules
+
+- For any database structure change, always update the matching `src/Uml/database/` PlantUML source files in the same task.
+- When editing `src/Uml/database/`, keep the split logical by bounded context. Do not add schema elements to random files only because it is faster.
+- After any `src/Uml/` change, regenerate the matching `.svg` files with the local PlantUML toolchain, not through Docker. Prefer `/opt/homebrew/bin/plantuml -tsvg ...` when available.
+- When adding a new service, add or update the relevant service documentation in the appropriate local documentation location, such as a nearby module `README.md`, `docs/services/`, or `src/Uml/services/`.
+- When changing business logic or adding functionality, update all relevant documentation in the same task: architecture/business docs, service docs, UML implementation diagrams, and user-facing documentation.
+- User-facing behavior changes must be reflected in user documentation, currently including `docs/admin-user-guide.md` when the admin workflow changes.
+- Any new or changed visible UI text must be wired through Symfony Translation and include Ukrainian translations in `translations/messages.uk.yaml` while keeping English source strings as the baseline.
+- After translation changes, run or suggest `php bin/console debug:translation uk --domain=messages --only-missing` inside Docker and resolve missing messages.
+
 ## Protected files and directories
 
 Do not edit:
@@ -171,6 +182,10 @@ When relevant, run or suggest verification commands through Docker:
 - `vendor/bin/phpunit`
 - `yarn encore dev`
 
+For UML SVG generation, use the local PlantUML binary instead of Docker, for example:
+
+- `/opt/homebrew/bin/plantuml -tsvg src/Uml/database/*.puml`
+
 Do not run database-changing commands without explicit approval.
 
 If the exact Docker service name is unclear, inspect `docker-compose.yml` first.
@@ -204,6 +219,7 @@ Main backend code is in `src/`:
 - `src/DataFixtures/` - Doctrine fixtures.
 - `src/Enum/` - enum classes.
 - `src/Validator/` - Symfony validators and constraints.
+- `src/Uml/` - PlantUML diagrams for database, domain, service, and implementation documentation.
 - `migrations/` - Doctrine migrations. Do not edit committed or already executed migrations.
 - `tests/` - PHPUnit and controller tests.
 - `docker/` - Docker configs.
