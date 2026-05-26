@@ -47,7 +47,6 @@ class UserController extends AbstractAdvancedController
 	}
 
 	#[Route('/{user_id}/info', name: 'info', methods: ['GET'])]
-	#[IsGranted('user.view')]
 	public function info(): Response
 	{
 		$user = $this->getUser();

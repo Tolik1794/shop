@@ -4,9 +4,9 @@ namespace App\Security;
 
 final class PermissionCatalog
 {
-	public const SYSTEM_ALL = 'system.all';
+	public const string SYSTEM_ALL = 'system.all';
 
-	public const PERMISSIONS = [
+	public const array PERMISSIONS = [
 		self::SYSTEM_ALL => ['System', 'Full system access', 'Allows every permission unless an individual deny override exists.'],
 		'rbac.view' => ['Security', 'View groups and permissions', 'Can view RBAC configuration.'],
 		'rbac.manage' => ['Security', 'Manage groups and permissions', 'Can manage user groups and permission assignments.'],
@@ -70,7 +70,7 @@ final class PermissionCatalog
 		'production_order.cancel' => ['Production', 'Cancel production', 'Can cancel production orders.'],
 	];
 
-	private const GROUP_PERMISSIONS = [
+	private const array GROUP_PERMISSIONS = [
 		'super_admin' => [self::SYSTEM_ALL],
 		'admin' => [
 			'rbac.view', 'rbac.manage', 'user.view', 'user.edit',
@@ -120,7 +120,7 @@ final class PermissionCatalog
 		'user' => ['store.view', 'dashboard.view'],
 	];
 
-	public const GROUPS = [
+	public const array GROUPS = [
 		'super_admin' => ['Super Administrator', 'Full system access.', true],
 		'admin' => ['Administrator', 'Global administrator without the system.all bypass.', true],
 		'store_admin' => ['Store Administrator', 'Can manage assigned stores and store operations.', true],
@@ -129,7 +129,7 @@ final class PermissionCatalog
 		'user' => ['User', 'Minimal dashboard access for assigned stores.', true],
 	];
 
-	private const LEGACY_ROLE_GROUPS = [
+	private const array LEGACY_ROLE_GROUPS = [
 		'ROLE_SUPER_ADMIN' => ['super_admin'],
 		'ROLE_ADMIN' => ['admin'],
 		'ROLE_STORE_ADMIN' => ['store_admin'],

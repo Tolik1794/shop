@@ -32,8 +32,9 @@ class RequestSubscriber implements EventSubscriberInterface
 			$this->blameableListener->setUserValue($user);
 
 			if (
-				!$this->isUserHasFullData($user)
-				&& $this->isRoute($requestEvent->getRequest(), 'admin_user_profile')
+				$user instanceof User
+				&& !$this->isUserHasFullData($user)
+				&& !$this->isCurrentRoute($requestEvent->getRequest(), 'admin_user_profile')
 			) {
 				$requestEvent->setResponse(new RedirectResponse($this->router->generate('admin_user_profile')));
 			}
@@ -48,9 +49,17 @@ class RequestSubscriber implements EventSubscriberInterface
 		];
 	}
 
-	private function isRoute(Request $request, string $routeName): bool
+	private function isCurrentRoute(Request $request, string $routeName): bool
 	{
-		return $request->attributes->get('_route') !== $routeName && $request->getPathInfo() !== '/_fragment';
+		$pathInfo = $request->getPathInfo();
+		$localizedProfilePath = $this->router->generate($routeName, ['_locale' => $request->getLocale()]);
+
+		return $request->attributes->get('_route') === $routeName
+			|| $request->attributes->get('_canonical_route') === $routeName
+			|| $pathInfo === $localizedProfilePath
+			|| $pathInfo === '/admin/user/profile'
+			|| $pathInfo === '/uk/admin/user/profile'
+			|| $pathInfo === '/_fragment';
 	}
 
 	private function isUserHasFullData(User $user): bool

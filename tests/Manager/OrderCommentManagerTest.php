@@ -35,7 +35,7 @@ class OrderCommentManagerTest extends KernelTestCase
 
 	public function testCommentLifecycleCreatesAppendOnlyHistory(): void
 	{
-		$currency = $this->persistCurrency('M' . substr(uniqid(), -2), 'Comment currency');
+		$currency = $this->persistCurrency($this->uniqueCurrencyCode(), 'Comment currency');
 		$store = $this->persistStore('order-comment-' . uniqid(), $currency);
 		$author = $this->persistUser('order-comment-author-' . uniqid() . '@example.com');
 		$order = $this->orderManager->createDraft($store);
@@ -68,6 +68,15 @@ class OrderCommentManagerTest extends KernelTestCase
 		self::assertSame([
 			'body' => ['from' => 'Initial note', 'to' => 'Updated note'],
 		], $editedHistory->getChanges());
+	}
+
+	private function uniqueCurrencyCode(): string
+	{
+		do {
+			$code = 'M' . strtoupper(substr(base_convert((string) random_int(36, 1295), 10, 36), -2));
+		} while ($this->entityManager->getRepository(Currency::class)->find($code) instanceof Currency);
+
+		return $code;
 	}
 
 	private function persistCurrency(string $code, string $name): Currency

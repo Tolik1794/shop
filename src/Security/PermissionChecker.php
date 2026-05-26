@@ -7,9 +7,9 @@ use App\Enum\PermissionOverrideEffect;
 use Doctrine\DBAL\Exception\TableNotFoundException;
 use Symfony\Component\Security\Core\User\UserInterface;
 
-final class PermissionChecker
+final readonly class PermissionChecker
 {
-	public function __construct(private readonly PermissionCatalog $permissionCatalog)
+	public function __construct(private PermissionCatalog $permissionCatalog)
 	{
 	}
 
