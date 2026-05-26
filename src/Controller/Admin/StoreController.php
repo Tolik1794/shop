@@ -7,8 +7,10 @@ use App\Form\Admin\FilterType\StoreFilterType;
 use App\Form\Admin\Type\StoreType;
 use App\Manager\StoreManager;
 use App\Security\Voter\StoreVoter;
+use App\Service\Dashboard\StoreDashboardProvider;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
+use DateTimeImmutable;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\HttpFoundation\Request;
@@ -122,9 +124,57 @@ class StoreController extends AbstractAdvancedController
 	}
 
 	#[Route('/{store_id}/main', name: 'main')]
-	public function main(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store): Response
+	public function main(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store, StoreDashboardProvider $dashboardProvider): Response
 	{
-		return $this->render('admin/store/main.html.twig');
+		$availableStore = $this->storeManager
+			->getRepository()
+			->findAvailableStoresQB($this->getUser())
+			->andWhere('store = :dashboardStore')
+			->setParameter('dashboardStore', $store)
+			->getQuery()
+			->getOneOrNullResult();
+
+		if (!$availableStore instanceof Store) {
+			throw $this->createAccessDeniedException();
+		}
+
+		return $this->render('admin/store/main.html.twig', [
+			'dashboard' => $dashboardProvider->build(
+				store: $store,
+				from: $this->parseDate($request->query->get('from')),
+				to: $this->parseDate($request->query->get('to')),
+				warehouseId: $this->parseNullablePositiveInt($request->query->get('warehouse')),
+				canViewFinancial: $this->isGranted('ROLE_STORE_ADMIN'),
+			),
+		]);
+	}
+
+	private function parseDate(mixed $value): ?DateTimeImmutable
+	{
+		if (!is_string($value) || $value === '') {
+			return null;
+		}
+
+		$date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+
+		return $date ?: null;
+	}
+
+	private function parseNullablePositiveInt(mixed $value): ?int
+	{
+		if (is_int($value)) {
+			return $value > 0 ? $value : null;
+		}
+
+		if (!is_string($value) || $value === '') {
+			return null;
+		}
+
+		$integer = filter_var($value, FILTER_VALIDATE_INT, [
+			'options' => ['min_range' => 1],
+		]);
+
+		return $integer === false ? null : $integer;
 	}
 
 }

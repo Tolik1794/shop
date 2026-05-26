@@ -1,9 +1,352 @@
 {% extends 'admin/_store_components/layout.html.twig' %}
 
-{% block title %}{{ store().name }}{% endblock %}
+{% block title %}{{ 'admin.dashboard.title'|trans }} - {{ store().name }}{% endblock %}
+
+{% macro money_value(value, currency) %}
+    {{ value|default(0)|money }}{% if currency %} {{ currency }}{% endif %}
+{% endmacro %}
+
+{% macro stat_card(label, value, icon, tone) %}
+    <div class="col-sm-6 col-xl-3">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col mt-0">
+                        <h5 class="card-title">{{ label|trans }}</h5>
+                    </div>
+                    <div class="col-auto">
+                        <div class="stat text-{{ tone|default('primary') }}">
+                            <i class="fa-solid {{ icon }}"></i>
+                        </div>
+                    </div>
+                </div>
+                <h1 class="mt-1 mb-3">{{ value }}</h1>
+            </div>
+        </div>
+    </div>
+{% endmacro %}
+
+{% import _self as dashboard_ui %}
+
+{% set currency = dashboard.baseCurrency %}
 
 {% block main_content %}
     <main class="content">
+        <div class="container-fluid p-0">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                <div>
+                    <h1 class="h3 mb-1">{{ 'admin.dashboard.title'|trans }}</h1>
+                    <div class="text-muted">
+                        {{ store().name }} · {{ dashboard.range.fromLabel }} - {{ dashboard.range.toLabel }}
+                    </div>
+                </div>
+                <form method="get" class="d-flex flex-wrap align-items-end gap-2">
+                    <div>
+                        <label class="form-label mb-1" for="dashboard-from">{{ 'admin.dashboard.filters.from'|trans }}</label>
+                        <input id="dashboard-from" class="form-control form-control-sm" type="date" name="from" value="{{ dashboard.range.from }}">
+                    </div>
+                    <div>
+                        <label class="form-label mb-1" for="dashboard-to">{{ 'admin.dashboard.filters.to'|trans }}</label>
+                        <input id="dashboard-to" class="form-control form-control-sm" type="date" name="to" value="{{ dashboard.range.to }}">
+                    </div>
+                    <div>
+                        <label class="form-label mb-1" for="dashboard-warehouse">{{ 'admin.dashboard.filters.warehouse'|trans }}</label>
+                        <select id="dashboard-warehouse" class="form-select form-select-sm" name="warehouse">
+                            <option value="">{{ 'admin.dashboard.filters.all_warehouses'|trans }}</option>
+                            {% for warehouse in dashboard.warehouseChoices %}
+                                <option value="{{ warehouse.id }}"{{ dashboard.warehouseId == warehouse.id ? ' selected' : '' }}>{{ warehouse.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button class="btn btn-primary btn-sm" type="submit">
+                        <i class="fa-solid fa-filter me-1"></i>{{ 'admin.common.filter'|trans }}
+                    </button>
+                </form>
+            </div>
 
+            <div class="row">
+                {% if dashboard.canViewFinancial %}
+                    {{ dashboard_ui.stat_card('admin.dashboard.kpi.sales', dashboard_ui.money_value(dashboard.overview.salesTotal, currency), 'fa-chart-line', 'primary') }}
+                    {{ dashboard_ui.stat_card('admin.dashboard.kpi.incoming', dashboard_ui.money_value(dashboard.overview.incomingPayments, currency), 'fa-arrow-trend-up', 'success') }}
+                    {{ dashboard_ui.stat_card('admin.dashboard.kpi.outgoing', dashboard_ui.money_value(dashboard.overview.outgoingPayments, currency), 'fa-arrow-trend-down', 'danger') }}
+                    {{ dashboard_ui.stat_card('admin.dashboard.kpi.net_cash_flow', dashboard_ui.money_value(dashboard.overview.netCashFlow, currency), 'fa-scale-balanced', 'info') }}
+                {% else %}
+                    {{ dashboard_ui.stat_card('admin.dashboard.kpi.orders', dashboard.overview.ordersCount, 'fa-cart-shopping', 'primary') }}
+                    {{ dashboard_ui.stat_card('admin.dashboard.kpi.ready_to_ship', dashboard.overview.readyToShipOrders, 'fa-truck-fast', 'success') }}
+                    {{ dashboard_ui.stat_card('admin.dashboard.kpi.awaiting_stock', dashboard.overview.awaitingStockOrders, 'fa-box-open', 'warning') }}
+                    {{ dashboard_ui.stat_card('admin.dashboard.kpi.production_in_progress', dashboard.overview.productionInProgress, 'fa-industry', 'info') }}
+                {% endif %}
+            </div>
+
+            <ul class="nav nav-tabs mb-3" role="tablist">
+                {% for key, label in {
+                    overview: 'admin.dashboard.tabs.overview',
+                    sales: 'admin.dashboard.tabs.sales',
+                    stock: 'admin.dashboard.tabs.stock',
+                    purchases: 'admin.dashboard.tabs.purchases',
+                    production: 'admin.dashboard.tabs.production',
+                    payments: 'admin.dashboard.tabs.payments',
+                    control: 'admin.dashboard.tabs.control'
+                } %}
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link{{ loop.first ? ' active' : '' }}" href="#dashboard-{{ key }}" data-bs-toggle="tab" role="tab">
+                            {{ label|trans }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane active" id="dashboard-overview" role="tabpanel">
+                    <div class="row">
+                        <div class="col-xl-4">
+                            <div class="card">
+                                <div class="card-header pb-0"><h5 class="card-title mb-0">{{ 'admin.dashboard.sections.action_queue'|trans }}</h5></div>
+                                <div class="card-body">
+                                    <div class="list-group list-group-flush">
+                                        <a class="list-group-item list-group-item-action d-flex justify-content-between" href="{{ path('app_admin_order_index', {store_id: app.request.attributes.get('store_id')}) }}">
+                                            <span>{{ 'admin.dashboard.kpi.awaiting_stock'|trans }}</span><strong>{{ dashboard.overview.awaitingStockOrders }}</strong>
+                                        </a>
+                                        <a class="list-group-item list-group-item-action d-flex justify-content-between" href="{{ path('app_admin_order_index', {store_id: app.request.attributes.get('store_id')}) }}">
+                                            <span>{{ 'admin.dashboard.kpi.ready_to_ship'|trans }}</span><strong>{{ dashboard.overview.readyToShipOrders }}</strong>
+                                        </a>
+                                        <a class="list-group-item list-group-item-action d-flex justify-content-between" href="{{ path('app_admin_purchase_index', {store_id: app.request.attributes.get('store_id')}) }}">
+                                            <span>{{ 'admin.dashboard.kpi.purchases_to_receive'|trans }}</span><strong>{{ dashboard.overview.purchasesToReceive }}</strong>
+                                        </a>
+                                        <a class="list-group-item list-group-item-action d-flex justify-content-between" href="{{ path('app_admin_inventory_document_index', {store_id: app.request.attributes.get('store_id')}) }}">
+                                            <span>{{ 'admin.dashboard.kpi.draft_inventory_documents'|trans }}</span><strong>{{ dashboard.overview.draftInventoryDocuments }}</strong>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-8">
+                            <div class="card">
+                                <div class="card-header pb-0"><h5 class="card-title mb-0">{{ 'admin.dashboard.sections.summary'|trans }}</h5></div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <div class="text-muted">{{ 'admin.dashboard.kpi.orders'|trans }}</div>
+                                            <h4>{{ dashboard.overview.ordersCount }}</h4>
+                                        </div>
+                                        {% if dashboard.canViewFinancial %}
+                                            <div class="col-md-4 mb-3">
+                                                <div class="text-muted">{{ 'admin.dashboard.kpi.average_order_value'|trans }}</div>
+                                                <h4>{{ dashboard_ui.money_value(dashboard.overview.averageOrderValue, currency) }}</h4>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <div class="text-muted">{{ 'admin.dashboard.kpi.unpaid_orders'|trans }}</div>
+                                                <h4>{{ dashboard_ui.money_value(dashboard.overview.unpaidOrdersTotal, currency) }}</h4>
+                                            </div>
+                                            <div class="col-md-4 mb-3">
+                                                <div class="text-muted">{{ 'admin.dashboard.kpi.unpaid_purchases'|trans }}</div>
+                                                <h4>{{ dashboard_ui.money_value(dashboard.overview.unpaidPurchasesTotal, currency) }}</h4>
+                                            </div>
+                                        {% endif %}
+                                        <div class="col-md-4 mb-3">
+                                            <div class="text-muted">{{ 'admin.dashboard.kpi.stock_reserved'|trans }}</div>
+                                            <h4>{{ dashboard.stock.reservedQuantity|number_format(4, '.', '') }}</h4>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <div class="text-muted">{{ 'admin.dashboard.kpi.overdue_production'|trans }}</div>
+                                            <h4>{{ dashboard.production.overdue }}</h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane" id="dashboard-sales" role="tabpanel">
+                    <div class="row">
+                        <div class="col-xl-8">
+                            <div class="card">
+                                <div class="card-header pb-0"><h5 class="card-title mb-0">{{ 'admin.dashboard.sections.sales_by_day'|trans }}</h5></div>
+                                <div class="card-body">
+                                    {% if dashboard.canViewFinancial %}
+                                        <div class="chart chart-sm" {{ stimulus_controller('dashboard-chart', {
+                                            config: {
+                                                type: 'line',
+                                                labels: dashboard.sales.chart.labels,
+                                                datasets: [
+                                                    {label: 'admin.dashboard.kpi.sales'|trans, data: dashboard.sales.chart.values, color: '#3b7ddd'}
+                                                ]
+                                            }
+                                        }) }}>
+                                            <canvas data-dashboard-chart-target="canvas"></canvas>
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted mb-0">{{ 'admin.dashboard.messages.financial_hidden'|trans }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-4">
+                            <div class="card">
+                                <div class="card-header pb-0"><h5 class="card-title mb-0">{{ 'admin.dashboard.sections.order_statuses'|trans }}</h5></div>
+                                <div class="card-body">
+                                    {% for status in dashboard.sales.statuses %}
+                                        <div class="d-flex justify-content-between border-bottom py-2"><span>{{ status.status }}</span><strong>{{ status.count }}</strong></div>
+                                    {% else %}
+                                        <p class="text-muted mb-0">{{ 'admin.common.empty'|trans }}</p>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% if dashboard.canViewFinancial %}
+                        <div class="row">
+                            <div class="col-xl-6">{{ _self.table_card('admin.dashboard.sections.top_products', ['admin.common.name', 'admin.common.quantity', 'admin.common.total'], dashboard.sales.topProducts, currency, 'products') }}</div>
+                            <div class="col-xl-6">{{ _self.table_card('admin.dashboard.sections.top_customers', ['admin.common.name', 'admin.dashboard.table.orders', 'admin.common.total'], dashboard.sales.topCustomers, currency, 'customers') }}</div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="tab-pane" id="dashboard-stock" role="tabpanel">
+                    <div class="row">
+                        {% if dashboard.canViewFinancial %}
+                            {{ dashboard_ui.stat_card('admin.dashboard.kpi.stock_value', dashboard_ui.money_value(dashboard.stock.stockValue, currency), 'fa-warehouse', 'primary') }}
+                        {% endif %}
+                        {{ dashboard_ui.stat_card('admin.dashboard.kpi.stock_on_hand', dashboard.stock.quantityOnHand|number_format(4, '.', ''), 'fa-boxes-stacked', 'info') }}
+                        {{ dashboard_ui.stat_card('admin.dashboard.kpi.stock_reserved', dashboard.stock.reservedQuantity|number_format(4, '.', ''), 'fa-lock', 'warning') }}
+                        {{ dashboard_ui.stat_card('admin.dashboard.kpi.out_of_stock', dashboard.stock.outOfStockCount, 'fa-triangle-exclamation', 'danger') }}
+                    </div>
+                    <div class="card">
+                        <div class="card-header pb-0"><h5 class="card-title mb-0">{{ 'admin.dashboard.sections.critical_stock'|trans }}</h5></div>
+                        <div class="card-body table-responsive">
+                            <table class="table table-hover">
+                                <thead><tr><th>{{ 'admin.common.name'|trans }}</th><th>{{ 'admin.common.warehouse'|trans }}</th><th>{{ 'admin.dashboard.table.on_hand'|trans }}</th><th>{{ 'admin.dashboard.table.reserved'|trans }}</th><th>{{ 'admin.dashboard.table.available'|trans }}</th>{% if dashboard.canViewFinancial %}<th>{{ 'admin.dashboard.table.average_cost'|trans }}</th>{% endif %}</tr></thead>
+                                <tbody>
+                                {% for row in dashboard.criticalStock %}
+                                    <tr>
+                                        <td>{{ row.name }}</td><td>{{ row.warehouse }}</td><td>{{ row.onHand|number_format(4, '.', '') }} {{ row.unit }}</td><td>{{ row.reserved|number_format(4, '.', '') }} {{ row.unit }}</td><td>{{ row.available|number_format(4, '.', '') }} {{ row.unit }}</td>{% if dashboard.canViewFinancial %}<td>{{ dashboard_ui.money_value(row.averageCost, currency) }}</td>{% endif %}
+                                    </tr>
+                                {% else %}
+                                    <tr><td colspan="{{ dashboard.canViewFinancial ? 6 : 5 }}" class="text-muted">{{ 'admin.common.empty'|trans }}</td></tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane" id="dashboard-purchases" role="tabpanel">
+                    <div class="row">
+                        {% if dashboard.canViewFinancial %}
+                            {{ dashboard_ui.stat_card('admin.dashboard.kpi.purchase_total', dashboard_ui.money_value(dashboard.purchases.summary.total, currency), 'fa-file-invoice', 'primary') }}
+                            {{ dashboard_ui.stat_card('admin.dashboard.kpi.unpaid_purchases', dashboard_ui.money_value(dashboard.overview.unpaidPurchasesTotal, currency), 'fa-money-bill-wave', 'danger') }}
+                        {% endif %}
+                        {{ dashboard_ui.stat_card('admin.dashboard.kpi.purchases', dashboard.purchases.summary.purchasesCount|default(0), 'fa-basket-shopping', 'info') }}
+                        {{ dashboard_ui.stat_card('admin.dashboard.kpi.purchases_to_receive', dashboard.overview.purchasesToReceive, 'fa-truck-ramp-box', 'warning') }}
+                    </div>
+                    <div class="row">
+                        <div class="col-xl-6">
+                            <div class="card"><div class="card-header pb-0"><h5 class="card-title mb-0">{{ 'admin.dashboard.sections.purchase_statuses'|trans }}</h5></div><div class="card-body">
+                                {% for status in dashboard.purchases.statuses %}<div class="d-flex justify-content-between border-bottom py-2"><span>{{ status.status }}</span><strong>{{ status.count }}</strong></div>{% else %}<p class="text-muted mb-0">{{ 'admin.common.empty'|trans }}</p>{% endfor %}
+                            </div></div>
+                        </div>
+                        {% if dashboard.canViewFinancial %}
+                            <div class="col-xl-6">{{ _self.table_card('admin.dashboard.sections.top_suppliers', ['admin.common.name', 'admin.dashboard.table.purchases', 'admin.common.total'], dashboard.purchases.topSuppliers, currency, 'suppliers') }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="tab-pane" id="dashboard-production" role="tabpanel">
+                    <div class="row">
+                        {{ dashboard_ui.stat_card('admin.dashboard.kpi.production_in_progress', dashboard.overview.productionInProgress, 'fa-industry', 'info') }}
+                        {{ dashboard_ui.stat_card('admin.dashboard.kpi.overdue_production', dashboard.production.overdue, 'fa-clock', 'danger') }}
+                        {{ dashboard_ui.stat_card('admin.dashboard.kpi.production_planned', dashboard.production.planVsFact.planned|number_format(4, '.', ''), 'fa-list-check', 'primary') }}
+                        {{ dashboard_ui.stat_card('admin.dashboard.kpi.production_completed', dashboard.production.planVsFact.completed|number_format(4, '.', ''), 'fa-circle-check', 'success') }}
+                    </div>
+                    <div class="card"><div class="card-header pb-0"><h5 class="card-title mb-0">{{ 'admin.dashboard.sections.production_statuses'|trans }}</h5></div><div class="card-body">
+                        {% for status in dashboard.production.statuses %}<div class="d-flex justify-content-between border-bottom py-2"><span>{{ status.status }}</span><strong>{{ status.count }}</strong></div>{% else %}<p class="text-muted mb-0">{{ 'admin.common.empty'|trans }}</p>{% endfor %}
+                    </div></div>
+                </div>
+
+                <div class="tab-pane" id="dashboard-payments" role="tabpanel">
+                    {% if dashboard.canViewFinancial %}
+                        <div class="row">
+                            <div class="col-xl-8">
+                                <div class="card"><div class="card-header pb-0"><h5 class="card-title mb-0">{{ 'admin.dashboard.sections.payments_by_day'|trans }}</h5></div><div class="card-body">
+                                    <div class="chart chart-sm" {{ stimulus_controller('dashboard-chart', {
+                                        config: {
+                                            type: 'bar',
+                                            labels: dashboard.payments.chart.labels,
+                                            datasets: [
+                                                {label: 'admin.dashboard.kpi.incoming'|trans, data: dashboard.payments.chart.incoming, color: '#1cbb8c'},
+                                                {label: 'admin.dashboard.kpi.outgoing'|trans, data: dashboard.payments.chart.outgoing, color: '#dc3545'}
+                                            ]
+                                        }
+                                    }) }}>
+                                        <canvas data-dashboard-chart-target="canvas"></canvas>
+                                    </div>
+                                </div></div>
+                            </div>
+                            <div class="col-xl-4">
+                                <div class="card"><div class="card-header pb-0"><h5 class="card-title mb-0">{{ 'admin.dashboard.sections.payment_types'|trans }}</h5></div><div class="card-body">
+                                    {% for row in dashboard.payments.byType %}<div class="d-flex justify-content-between border-bottom py-2"><span>{{ row.direction }} · {{ row.type }}</span><strong>{{ dashboard_ui.money_value(row.total, currency) }}</strong></div>{% else %}<p class="text-muted mb-0">{{ 'admin.common.empty'|trans }}</p>{% endfor %}
+                                </div></div>
+                            </div>
+                        </div>
+                        <div class="card"><div class="card-header pb-0"><h5 class="card-title mb-0">{{ 'admin.dashboard.sections.recent_payments'|trans }}</h5></div><div class="card-body table-responsive">
+                            <table class="table table-hover"><thead><tr><th>{{ 'admin.common.date'|trans }}</th><th>{{ 'admin.common.type'|trans }}</th><th>{{ 'admin.common.source'|trans }}</th><th>{{ 'admin.common.total'|trans }}</th></tr></thead><tbody>
+                            {% for row in dashboard.payments.recent %}<tr><td>{{ row.paidAt }}</td><td>{{ row.direction }} · {{ row.type }}</td><td>{{ row.document }}</td><td>{{ dashboard_ui.money_value(row.amount, currency) }}</td></tr>{% else %}<tr><td colspan="4" class="text-muted">{{ 'admin.common.empty'|trans }}</td></tr>{% endfor %}
+                            </tbody></table>
+                        </div></div>
+                    {% else %}
+                        <div class="card"><div class="card-body"><p class="text-muted mb-0">{{ 'admin.dashboard.messages.financial_hidden'|trans }}</p></div></div>
+                    {% endif %}
+                </div>
+
+                <div class="tab-pane" id="dashboard-control" role="tabpanel">
+                    <div class="row">
+                        {% for type, count in dashboard.control.adjustments %}
+                            {{ dashboard_ui.stat_card('admin.dashboard.control.' ~ type, count, 'fa-clipboard-check', 'warning') }}
+                        {% endfor %}
+                    </div>
+                    <div class="card"><div class="card-header pb-0"><h5 class="card-title mb-0">{{ 'admin.dashboard.sections.recent_stock_movements'|trans }}</h5></div><div class="card-body table-responsive">
+                        <table class="table table-hover"><thead><tr><th>{{ 'admin.common.date'|trans }}</th><th>{{ 'admin.common.product'|trans }}</th><th>{{ 'admin.common.warehouse'|trans }}</th><th>{{ 'admin.common.quantity'|trans }}</th>{% if dashboard.canViewFinancial %}<th>{{ 'admin.dashboard.table.unit_cost'|trans }}</th>{% endif %}<th>{{ 'admin.common.document'|trans }}</th></tr></thead><tbody>
+                        {% for row in dashboard.control.recentStockMovements %}
+                            <tr><td>{{ row.createdAt }}</td><td>{{ row.product }}</td><td>{{ row.warehouse }}</td><td>{{ row.quantity|number_format(4, '.', '') }}</td>{% if dashboard.canViewFinancial %}<td>{{ dashboard_ui.money_value(row.unitCost, currency) }}</td>{% endif %}<td>{{ row.document }}</td></tr>
+                        {% else %}
+                            <tr><td colspan="{{ dashboard.canViewFinancial ? 6 : 5 }}" class="text-muted">{{ 'admin.common.empty'|trans }}</td></tr>
+                        {% endfor %}
+                        </tbody></table>
+                    </div></div>
+                </div>
+            </div>
+        </div>
     </main>
 {% endblock %}
+
+{% macro table_card(title, headers, rows, currency, type) %}
+    {% import _self as dashboard_ui %}
+    <div class="card">
+        <div class="card-header pb-0"><h5 class="card-title mb-0">{{ title|trans }}</h5></div>
+        <div class="card-body table-responsive">
+            <table class="table table-hover">
+                <thead><tr>{% for header in headers %}<th>{{ header|trans }}</th>{% endfor %}</tr></thead>
+                <tbody>
+                {% for row in rows %}
+                    <tr>
+                        <td>{{ row.name }}</td>
+                        {% if type == 'products' %}
+                            <td>{{ row.quantity|number_format(4, '.', '') }}</td>
+                            <td>{{ dashboard_ui.money_value(row.total, currency) }}</td>
+                        {% elseif type == 'customers' %}
+                            <td>{{ row.orders }}</td>
+                            <td>{{ dashboard_ui.money_value(row.total, currency) }}</td>
+                        {% else %}
+                            <td>{{ row.purchases }}</td>
+                            <td>{{ dashboard_ui.money_value(row.total, currency) }}</td>
+                        {% endif %}
+                    </tr>
+                {% else %}
+                    <tr><td colspan="{{ headers|length }}" class="text-muted">{{ 'admin.common.empty'|trans }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endmacro %}

@@ -61,6 +61,17 @@ final class MenuBuilder
 			],
 		]);
 
+		$menu->addChild($this->trans('admin.menu.dashboard'), [
+			'route' => 'admin_store_main',
+			'routeParameters' => $routeParameters,
+			'attributes' => [
+				'class' => 'sidebar-item',
+			],
+			'linkAttributes' => [
+				'class' => 'sidebar-link'
+			]
+		]);
+
 		$menu->addChild($this->trans('admin.menu.orders'), [
 			'route' => 'app_admin_order_index',
 			'routeParameters' => $routeParameters,
