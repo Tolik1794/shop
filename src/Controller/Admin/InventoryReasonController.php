@@ -18,7 +18,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/store/{store_id}/inventory-reason', name: 'app_admin_inventory_reason_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/admin/store/{store_id}/inventory-reason', name: 'app_admin_inventory_reason_'), IsGranted('inventory_reason.manage')]
 class InventoryReasonController extends AbstractAdvancedController
 {
 	public function __construct(

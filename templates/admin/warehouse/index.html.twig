@@ -3,7 +3,7 @@
 {% block title %}Warehouse list{% endblock %}
 
 {% set table_actions %}
-    {% if is_granted('ROLE_STORE_ADMIN') %}
+    {% if is_granted('warehouse.manage') %}
         <a class="btn btn-light btn-sm" href="{{ path('app_admin_warehouse_new', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-plus me-1"></i>{{ 'New'|trans }}</a>
     {% endif %}
 {% endset %}

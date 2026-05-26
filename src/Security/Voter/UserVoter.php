@@ -2,19 +2,17 @@
 
 namespace App\Security\Voter;
 
-use App\Entity\User\RoleEnum;
 use App\Entity\User\User;
-use App\Manager\UserManager;
+use App\Security\PermissionChecker;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
-use Symfony\Component\Security\Core\User\UserInterface;
 
 class UserVoter extends Voter
 {
-    public const EDIT = 'POST_EDIT';
-    public const VIEW = 'POST_VIEW';
+    public const EDIT = 'user.edit';
+    public const VIEW = 'user.view';
 
-	public function __construct(private readonly UserManager $userManager)
+	public function __construct(private readonly PermissionChecker $permissionChecker)
 	{
 	}
 
@@ -26,7 +24,7 @@ class UserVoter extends Voter
 	protected function voteOnAttribute(string $attribute, $subject, TokenInterface $token): bool
 	{
 		$user = $token->getUser();
-		if (!$user instanceof UserInterface) {
+		if (!$user instanceof User) {
 			return false;
 		}
 
@@ -38,15 +36,26 @@ class UserVoter extends Voter
 
 	}
 
-	private function canEdit(User|UserInterface $user, User $manager): bool
+	private function canEdit(User $user, User $manager): bool
 	{
-		return $user->getChildren()->exists(fn (int $key, User $value) => $value->getId() === $manager->getId())
-			&& $this->userManager->hasRole(RoleEnum::ROLE_STORE_ADMIN, $user)
-			|| $this->userManager->hasRole(RoleEnum::ROLE_ADMIN);
+		if (!$this->permissionChecker->isGranted($user, self::EDIT)) {
+			return false;
+		}
+
+		return $this->permissionChecker->isGranted($user, 'rbac.manage')
+			|| $user->getId() === $manager->getId()
+			|| $user->getChildren()->exists(fn (int $key, User $value) => $value->getId() === $manager->getId());
 	}
 
-	private function canView(User|UserInterface $user, User $manager): bool
+	private function canView(User $user, User $manager): bool
 	{
-		return $this->canEdit($user, $manager) || $this->canEdit($user->getParent(), $manager);
+		if (!$this->permissionChecker->isGranted($user, self::VIEW)) {
+			return false;
+		}
+
+		return $this->permissionChecker->isGranted($user, 'rbac.view')
+			|| $user->getId() === $manager->getId()
+			|| $user->getChildren()->exists(fn (int $key, User $value) => $value->getId() === $manager->getId())
+			|| $user->getParent()?->getId() === $manager->getId();
 	}
 }

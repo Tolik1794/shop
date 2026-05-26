@@ -35,7 +35,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/store/{store_id}/inventory-document', name: 'app_admin_inventory_document_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/admin/store/{store_id}/inventory-document', name: 'app_admin_inventory_document_'), IsGranted('inventory_document.view')]
 class InventoryDocumentController extends AbstractAdvancedController
 {
 	use QuickActionResponseTrait;
@@ -98,6 +98,7 @@ class InventoryDocumentController extends AbstractAdvancedController
 	}
 
 	#[Route('/write-off/new', name: 'write_off_new', methods: ['GET', 'POST'])]
+	#[IsGranted('inventory_document.create')]
 	public function newWriteOff(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -130,6 +131,7 @@ class InventoryDocumentController extends AbstractAdvancedController
 	}
 
 	#[Route('/stock-adjustment/new', name: 'stock_adjustment_new', methods: ['GET', 'POST'])]
+	#[IsGranted('inventory_document.create')]
 	public function newStockAdjustment(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -172,6 +174,7 @@ class InventoryDocumentController extends AbstractAdvancedController
 	}
 
 	#[Route('/transfer/new', name: 'transfer_new', methods: ['GET', 'POST'])]
+	#[IsGranted('inventory_document.create')]
 	public function newTransfer(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -205,6 +208,7 @@ class InventoryDocumentController extends AbstractAdvancedController
 	}
 
 	#[Route('/customer-return/new', name: 'customer_return_new', methods: ['GET', 'POST'])]
+	#[IsGranted('inventory_document.create')]
 	public function newCustomerReturn(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -243,6 +247,7 @@ class InventoryDocumentController extends AbstractAdvancedController
 	}
 
 	#[Route('/supplier-return/new', name: 'supplier_return_new', methods: ['GET', 'POST'])]
+	#[IsGranted('inventory_document.create')]
 	public function newSupplierReturn(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -312,6 +317,7 @@ class InventoryDocumentController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/post', name: 'post', methods: ['POST'])]
+	#[IsGranted('inventory_document.post')]
 	public function post(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -325,6 +331,7 @@ class InventoryDocumentController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/cancel', name: 'cancel', methods: ['POST'])]
+	#[IsGranted('inventory_document.cancel')]
 	public function cancel(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]

@@ -3,19 +3,18 @@
 namespace App\Security\Voter;
 
 use App\Entity\Store;
-use App\Entity\User\RoleEnum;
 use App\Entity\User\User;
-use App\Manager\UserManager;
+use App\Security\PermissionChecker;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 class StoreVoter extends Voter
 {
-    public const EDIT = 'POST_EDIT';
-    public const VIEW = 'POST_VIEW';
+    public const EDIT = 'store.edit';
+    public const VIEW = 'store.view';
 
-	public function __construct(private readonly UserManager $userManager)
+	public function __construct(private readonly PermissionChecker $permissionChecker)
 	{
 	}
 
@@ -28,7 +27,7 @@ class StoreVoter extends Voter
     protected function voteOnAttribute(string $attribute, $subject, TokenInterface $token): bool
     {
         $user = $token->getUser();
-        if (!$user instanceof UserInterface) {
+        if (!$user instanceof User) {
             return false;
         }
 
@@ -42,15 +41,23 @@ class StoreVoter extends Voter
 
 	private function canEdit(User|UserInterface $user, Store $store): bool
 	{
-		return $user->getManagerStores()->exists(fn (int $key, Store $value) => $value->getId() === $store->getId())
-			&& $this->userManager->hasRole(RoleEnum::ROLE_STORE_ADMIN)
-			|| $this->userManager->hasRole(RoleEnum::ROLE_SUPER_ADMIN);
+		return $this->permissionChecker->isGranted($user, self::EDIT)
+			&& ($this->permissionChecker->isGranted($user, 'store.view_all') || $this->managesStore($user, $store));
 	}
 
 	private function canView(User|UserInterface $user, Store $store): bool
 	{
 		$parent = $user->getParent();
 
-		return $this->canEdit($user, $store) || ($parent && $this->canEdit($parent, $store));
+		return $this->permissionChecker->isGranted($user, 'store.view_all')
+			|| (
+				$this->permissionChecker->isGranted($user, self::VIEW)
+				&& ($this->managesStore($user, $store) || ($parent && $this->managesStore($parent, $store)))
+			);
+	}
+
+	private function managesStore(User|UserInterface $user, Store $store): bool
+	{
+		return $user->getManagerStores()->exists(fn (int $key, Store $value) => $value->getId() === $store->getId());
 	}
 }

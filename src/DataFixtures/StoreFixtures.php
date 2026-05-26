@@ -5,7 +5,6 @@ namespace App\DataFixtures;
 use App\Entity\Category;
 use App\Entity\Currency;
 use App\Entity\Store;
-use App\Entity\User\RoleEnum;
 use App\Entity\User\User;
 use App\Entity\Warehouse;
 use App\Enum\ActiveStatusEnum;
@@ -45,10 +44,7 @@ class StoreFixtures extends Fixture implements DependentFixtureInterface
 			->setStatus(ActiveStatusEnum::ACTIVE);
 
 		foreach ($manager->getRepository(User::class)->findAll() as $user) {
-			if (in_array(RoleEnum::ROLE_STORE_ADMIN->name, $user->getRoles(), true)
-				|| in_array(RoleEnum::ROLE_STORE_MANAGER->name, $user->getRoles(), true)
-				|| in_array(RoleEnum::ROLE_SUPER_ADMIN->name, $user->getRoles(), true)
-			) {
+			if ($this->hasStoreAccessGroup($user)) {
 				$store->addManager($user);
 			}
 		}
@@ -91,6 +87,17 @@ class StoreFixtures extends Fixture implements DependentFixtureInterface
 		] as $name => $description) {
 			$this->category($manager, $store, $name, $materials, $description);
 		}
+	}
+
+	private function hasStoreAccessGroup(User $user): bool
+	{
+		foreach ($user->getGroups() as $group) {
+			if (in_array($group->getCode(), ['super_admin', 'store_admin', 'manager', 'stockkeeper'], true)) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	private function category(ObjectManager $manager, Store $store, string $name, ?Category $parent, string $description): Category

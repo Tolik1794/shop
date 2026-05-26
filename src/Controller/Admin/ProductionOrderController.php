@@ -26,7 +26,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/store/{store_id}/production/order', name: 'app_admin_production_order_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/admin/store/{store_id}/production/order', name: 'app_admin_production_order_'), IsGranted('production_order.view')]
 class ProductionOrderController extends AbstractAdvancedController
 {
 	use QuickActionResponseTrait;
@@ -84,6 +84,7 @@ class ProductionOrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
+	#[IsGranted('production_order.create')]
 	public function new(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -155,6 +156,7 @@ class ProductionOrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/edit', name: 'edit', methods: ['GET', 'POST'])]
+	#[IsGranted('production_order.edit')]
 	public function edit(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -230,24 +232,28 @@ class ProductionOrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/plan', name: 'plan', methods: ['POST'])]
+	#[IsGranted('production_order.plan')]
 	public function plan(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store, ProductionOrder $order): Response
 	{
 		return $this->applyAction($request, $store, $order, 'plan_production_order_', fn () => $this->productionManager->plan($order));
 	}
 
 	#[Route('/{id}/reserve-materials', name: 'reserve_materials', methods: ['POST'])]
+	#[IsGranted('production_order.reserve_materials')]
 	public function reserveMaterials(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store, ProductionOrder $order): Response
 	{
 		return $this->applyAction($request, $store, $order, 'reserve_production_order_', fn () => $this->productionManager->reserveMaterials($order));
 	}
 
 	#[Route('/{id}/start', name: 'start', methods: ['POST'])]
+	#[IsGranted('production_order.start')]
 	public function start(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store, ProductionOrder $order): Response
 	{
 		return $this->applyAction($request, $store, $order, 'start_production_order_', fn () => $this->productionManager->start($order));
 	}
 
 	#[Route('/{id}/complete', name: 'complete', methods: ['POST'])]
+	#[IsGranted('production_order.complete')]
 	public function complete(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store, ProductionOrder $order): Response
 	{
 		return $this->applyAction($request, $store, $order, 'complete_production_order_', function () use ($request, $order): void {
@@ -256,6 +262,7 @@ class ProductionOrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/cancel', name: 'cancel', methods: ['POST'])]
+	#[IsGranted('production_order.cancel')]
 	public function cancel(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store, ProductionOrder $order): Response
 	{
 		return $this->applyAction($request, $store, $order, 'cancel_production_order_', fn () => $this->productionManager->cancel($order));

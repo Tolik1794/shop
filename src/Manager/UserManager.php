@@ -2,7 +2,6 @@
 
 namespace App\Manager;
 
-use App\Entity\User\RoleEnum;
 use App\Entity\User\User;
 use App\Manager\Avatar\AvatarTrait;
 use App\Repository\UserRepository;
@@ -10,7 +9,6 @@ use App\Service\FileUploader;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Symfony\Component\Security\Core\Role\RoleHierarchyInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Core\User\UserInterface;
 
@@ -24,7 +22,6 @@ class UserManager extends AbstractManager
 		private readonly Security $security,
 		private readonly FileUploader $fileUp,
 		private readonly Filesystem $filesystem,
-		private readonly RoleHierarchyInterface $roleHierarchy,
 		private readonly UserPasswordHasherInterface $passwordHasher,
 	)
 	{
@@ -38,16 +35,6 @@ class UserManager extends AbstractManager
 	public function getCurrentUser(): UserInterface|User|null
 	{
 		return $this->security->getUser();
-	}
-
-	public function hasRole(RoleEnum $role, User|UserInterface $user = null): bool
-	{
-		if (!$user) $user = $this->getCurrentUser();
-		$reachableRoles = $this->roleHierarchy->getReachableRoleNames($user->getRoles());
-
-		if (in_array($role->name, $reachableRoles, true)) return true;
-
-		return false;
 	}
 
 	public function updatePassword(User $user, string $password)

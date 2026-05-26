@@ -18,7 +18,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/store', name: 'admin_store_'), IsGranted('ROLE_STORE_MANAGER')]
+#[Route('/admin/store', name: 'admin_store_'), IsGranted('store.view')]
 class StoreController extends AbstractAdvancedController
 {
 	public function __construct(private readonly StoreManager $storeManager)
@@ -65,7 +65,7 @@ class StoreController extends AbstractAdvancedController
 		]);
 	}
 
-	#[IsGranted('ROLE_SUPER_ADMIN')]
+	#[IsGranted('store.create')]
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
 	public function new(Request $request): Response
 	{
@@ -116,6 +116,8 @@ class StoreController extends AbstractAdvancedController
 	#[Route('/{store_id}/show', name: 'show')]
 	public function show(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store): Response
 	{
+		$this->denyAccessUnlessGranted(StoreVoter::VIEW, $store);
+
 		return $this->render('admin/store/show.html.twig', [
 			'entity' => $store,
 			'avatar' => $this->storeManager->getAvatar($store)?->getPathname(),
@@ -124,6 +126,7 @@ class StoreController extends AbstractAdvancedController
 	}
 
 	#[Route('/{store_id}/main', name: 'main')]
+	#[IsGranted('dashboard.view')]
 	public function main(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store, StoreDashboardProvider $dashboardProvider): Response
 	{
 		$availableStore = $this->storeManager
@@ -144,7 +147,7 @@ class StoreController extends AbstractAdvancedController
 				from: $this->parseDate($request->query->get('from')),
 				to: $this->parseDate($request->query->get('to')),
 				warehouseId: $this->parseNullablePositiveInt($request->query->get('warehouse')),
-				canViewFinancial: $this->isGranted('ROLE_STORE_ADMIN'),
+				canViewFinancial: $this->isGranted('dashboard.financial'),
 			),
 		]);
 	}

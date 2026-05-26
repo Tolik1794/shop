@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/api/admin/store/{store_id}/order', name: 'app_api_admin_order_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/api/admin/store/{store_id}/order', name: 'app_api_admin_order_'), IsGranted('order.view')]
 class OrderController extends AbstractController
 {
 	public function __construct(

@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/api/admin/store/{store_id}/payment', name: 'app_api_admin_payment_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/api/admin/store/{store_id}/payment', name: 'app_api_admin_payment_'), IsGranted('payment.view')]
 class PaymentController extends AbstractController
 {
 	public function __construct(

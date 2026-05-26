@@ -18,7 +18,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/store/{store_id}/exchange-rate', name: 'app_admin_exchange_rate_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/admin/store/{store_id}/exchange-rate', name: 'app_admin_exchange_rate_'), IsGranted('exchange_rate.manage')]
 class ExchangeRateController extends AbstractAdvancedController
 {
 	public function __construct(private readonly ExchangeRateManager $exchangeRateManager)

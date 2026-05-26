@@ -23,7 +23,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/store/{store_id}/purchase', name: 'app_admin_purchase_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/admin/store/{store_id}/purchase', name: 'app_admin_purchase_'), IsGranted('purchase.view')]
 class PurchaseController extends AbstractAdvancedController
 {
 	use QuickActionResponseTrait;
@@ -87,6 +87,7 @@ class PurchaseController extends AbstractAdvancedController
 	}
 
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
+	#[IsGranted('purchase.create')]
 	public function new(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -123,6 +124,7 @@ class PurchaseController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/edit', name: 'edit', methods: ['GET', 'POST'])]
+	#[IsGranted('purchase.edit')]
 	public function edit(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -204,6 +206,7 @@ class PurchaseController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/order', name: 'order', methods: ['POST'])]
+	#[IsGranted('purchase.order')]
 	public function order(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -232,6 +235,7 @@ class PurchaseController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/return-to-draft', name: 'return_to_draft', methods: ['POST'])]
+	#[IsGranted('purchase.edit')]
 	public function returnToDraft(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -260,6 +264,7 @@ class PurchaseController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/cancel', name: 'cancel', methods: ['POST'])]
+	#[IsGranted('purchase.cancel')]
 	public function cancel(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -288,6 +293,7 @@ class PurchaseController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/complete', name: 'complete', methods: ['POST'])]
+	#[IsGranted('purchase.complete')]
 	public function complete(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -316,6 +322,7 @@ class PurchaseController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/receive', name: 'receive', methods: ['POST'])]
+	#[IsGranted('purchase.receive')]
 	public function receive(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]

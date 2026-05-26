@@ -19,7 +19,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/store/{store_id}/product/price', name: 'app_admin_product_price_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/admin/store/{store_id}/product/price', name: 'app_admin_product_price_'), IsGranted('product_price.manage')]
 class ProductPriceController extends AbstractAdvancedController
 {
 	private const DEFAULT_PAGE_LIMIT = 20;

@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/store/{store_id}/warehouse/stock', name: 'app_admin_warehouse_stock_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/admin/store/{store_id}/warehouse/stock', name: 'app_admin_warehouse_stock_'), IsGranted('warehouse_stock.view')]
 class WarehouseStockController extends AbstractAdvancedController
 {
 	private const DEFAULT_PAGE_LIMIT = 20;
@@ -86,6 +86,7 @@ class WarehouseStockController extends AbstractAdvancedController
 	}
 
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
+	#[IsGranted('warehouse_stock.manage')]
 	public function new(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -131,6 +132,7 @@ class WarehouseStockController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/edit', name: 'edit', methods: ['GET', 'POST'])]
+	#[IsGranted('warehouse_stock.manage')]
 	public function edit(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]

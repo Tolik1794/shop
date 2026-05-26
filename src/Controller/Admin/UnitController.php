@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/store/{store_id}/unit', name: 'app_admin_unit_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/admin/store/{store_id}/unit', name: 'app_admin_unit_'), IsGranted('unit.manage')]
 class UnitController extends AbstractAdvancedController
 {
 	public function __construct(private readonly UnitManager $unitManager)
@@ -73,6 +73,7 @@ class UnitController extends AbstractAdvancedController
 	}
 
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
+	#[IsGranted('unit.manage')]
 	public function new(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store): Response
 	{
 		$unit = new Unit();
@@ -99,6 +100,7 @@ class UnitController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/edit', name: 'edit', methods: ['GET', 'POST'])]
+	#[IsGranted('unit.manage')]
 	public function edit(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -138,6 +140,7 @@ class UnitController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/archive', name: 'archive', methods: ['POST'])]
+	#[IsGranted('unit.manage')]
 	public function archive(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]

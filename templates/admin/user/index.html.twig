@@ -2,17 +2,13 @@
 
 {% block title %}User list{% endblock %}
 
-{% set table_actions %}
-    {% if is_granted('ROLE_STORE_ADMIN') %}
-        <a class="btn btn-light btn-sm" href="{{ path('admin_store_new') }}"><i class="fa-solid fa-plus me-1"></i>{{ 'New'|trans }}</a>
-    {% endif %}
-{% endset %}
+{% set table_actions %}{% endset %}
 
 {% set table_head %}
     <tr>
         <th>{{ 'Email'|trans }}</th>
         <th>{{ 'Nickname'|trans }}</th>
-        <th>{{ 'Roles'|trans }}</th>
+        <th>{{ 'Groups'|trans }}</th>
     </tr>
 {% endset %}
 
@@ -28,7 +24,13 @@
         >
             <td>{{ entity.email }}</td>
             <td>{{ entity.nickname }}</td>
-            <td>{{ entity.roles|join(', ') }}</td>
+            <td>
+                {% for group in entity.groups %}
+                    <span class="badge bg-light text-dark">{{ group.name }}</span>
+                {% else %}
+                    <span class="text-muted">{{ 'No groups'|trans }}</span>
+                {% endfor %}
+            </td>
         </tr>
     {% endfor %}
 {% endset %}

@@ -24,7 +24,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/store/{store_id}/payment', name: 'app_admin_payment_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/admin/store/{store_id}/payment', name: 'app_admin_payment_'), IsGranted('payment.view')]
 class PaymentController extends AbstractAdvancedController
 {
 	public function __construct(
@@ -84,6 +84,7 @@ class PaymentController extends AbstractAdvancedController
 	}
 
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
+	#[IsGranted('payment.create')]
 	public function new(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -180,6 +181,7 @@ class PaymentController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/reverse', name: 'reverse', methods: ['POST'])]
+	#[IsGranted('payment.reverse')]
 	public function reverse(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]

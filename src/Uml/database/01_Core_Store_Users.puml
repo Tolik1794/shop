@@ -4,12 +4,9 @@ title Shop database - Core, stores, users and currencies
 
 !include ./_common.puml
 
-enum RoleEnum {
-    ROLE_SUPER_ADMIN
-    ROLE_ADMIN
-    ROLE_STORE_ADMIN
-    ROLE_STORE_MANAGER
-    ROLE_USER
+enum PermissionOverrideEffect {
+    allow
+    deny
 }
 
 enum ActiveStatusEnum {
@@ -60,8 +57,51 @@ entity User {
     lastName: string(255)?
     dateOfBirth: date?
     * isVerified: bool
-    * roles: json
+    * roles: json <<legacy compatibility>>
     parent: User?
+}
+
+entity Permission {
+    * id: int
+    --
+    * code: string(120) <<unique>>
+    * name: string(120)
+    * category: string(80)
+    description: text?
+    * sortOrder: int
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+}
+
+entity UserGroup {
+    * id: int
+    --
+    * code: string(80) <<unique>>
+    * name: string(120)
+    description: text?
+    * system: bool
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+}
+
+entity UserGroupPermission {
+    * user_group_id: int
+    * permission_id: int
+}
+
+entity UserUserGroup {
+    * user_id: int
+    * user_group_id: int
+}
+
+entity UserPermissionOverride {
+    * id: int
+    --
+    * user: User
+    * permission: Permission
+    * effect: PermissionOverrideEffect
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
 }
 
 entity UserStore {
@@ -87,6 +127,13 @@ entity ExchangeRate {
 User |o--o{ User : parent
 User ||--o{ UserStore : manages
 Store ||--o{ UserStore : managed by
+User ||--o{ UserUserGroup : member of
+UserGroup ||--o{ UserUserGroup : has members
+UserGroup ||--o{ UserGroupPermission : grants
+Permission ||--o{ UserGroupPermission : granted to
+User ||--o{ UserPermissionOverride : has override
+Permission ||--o{ UserPermissionOverride : overridden
+PermissionOverrideEffect ||--o{ UserPermissionOverride : effect
 CostingMethodEnum ||--o{ Store : costing method
 Currency ||--o{ Store : base currency
 Currency ||--o{ ExchangeRate : from/to
@@ -129,11 +176,42 @@ note right of User
   Unique:
   nickname
   email
+
+  roles is retained only for legacy Symfony/test compatibility.
+  Application authorization is based on permissions resolved from:
+  user groups + individual allow/deny overrides.
+end note
+
+note right of Permission
+  code uses stable permission identifiers such as:
+  dashboard.view
+  order.edit
+  warehouse_stock.manage
+
+  system.all grants all known permissions unless a user
+  has an explicit deny override for a permission.
+end note
+
+note right of UserPermissionOverride
+  Unique:
+  (user_id, permission_id)
+
+  deny overrides group permissions and individual allows.
 end note
 
 note right of UserStore
   Primary key:
   (user_id, store_id)
+end note
+
+note right of UserGroupPermission
+  Primary key:
+  (user_group_id, permission_id)
+end note
+
+note right of UserUserGroup
+  Primary key:
+  (user_id, user_group_id)
 end note
 
 @enduml

@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/store/{store_id}/supplier', name: 'app_admin_supplier_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/admin/store/{store_id}/supplier', name: 'app_admin_supplier_'), IsGranted('supplier.view')]
 class SupplierController extends AbstractAdvancedController
 {
 	public function __construct(private readonly SupplierManager $supplierManager)
@@ -73,6 +73,7 @@ class SupplierController extends AbstractAdvancedController
 	}
 
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
+	#[IsGranted('supplier.manage')]
 	public function new(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store): Response
 	{
 		$supplier = new Supplier();
@@ -99,6 +100,7 @@ class SupplierController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/edit', name: 'edit', methods: ['GET', 'POST'])]
+	#[IsGranted('supplier.manage')]
 	public function edit(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -138,6 +140,7 @@ class SupplierController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/delete', name: 'delete', methods: ['POST'])]
+	#[IsGranted('supplier.manage')]
 	public function delete(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]

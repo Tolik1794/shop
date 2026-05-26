@@ -2,9 +2,8 @@
 
 namespace App\Entity\User;
 
-use App\Entity\Permission;
-use App\Entity\Role;
 use App\Entity\Store;
+use App\Enum\PermissionOverrideEffect;
 use App\Manager\Avatar\AvatarEntityInterface;
 use App\Repository\UserRepository;
 use DateTimeInterface;
@@ -72,10 +71,21 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarE
 	#[ORM\InverseJoinColumn(name: 'store_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
 	private Collection $managerStores;
 
+	#[ORM\ManyToMany(targetEntity: UserGroup::class, inversedBy: 'users')]
+	#[ORM\JoinTable(name: 'user_user_group')]
+	#[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+	#[ORM\InverseJoinColumn(name: 'user_group_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+	private Collection $groups;
+
+	#[ORM\OneToMany(mappedBy: 'user', targetEntity: UserPermissionOverride::class, cascade: ['persist'], orphanRemoval: true)]
+	private Collection $permissionOverrides;
+
 	public function __construct()
 	{
 		$this->managerStores = new ArrayCollection();
 		$this->children = new ArrayCollection();
+		$this->groups = new ArrayCollection();
+		$this->permissionOverrides = new ArrayCollection();
 	}
 
 	public function __toString(): string
@@ -214,14 +224,22 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarE
 
 	public function getRoles(): array
 	{
-		return $this->roles;
+		$roles = $this->roles;
+		$roles[] = 'ROLE_USER';
+
+		return array_values(array_unique($roles));
 	}
 
 	public function setRoles(array $roles): self
 	{
-		$this->roles = $roles;
+		$this->roles = array_values(array_unique($roles));
 
 		return $this;
+	}
+
+	public function getLegacyRoles(): array
+	{
+		return $this->roles;
 	}
 
 	public function getUserIdentifier(): string
@@ -293,5 +311,72 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface, AvatarE
 		$this->managerStores->removeElement($managerStore);
 
 		return $this;
+	}
+
+	/**
+	 * @return Collection<int, UserGroup>
+	 */
+	public function getGroups(): Collection
+	{
+		return $this->groups;
+	}
+
+	public function addGroup(UserGroup $group): self
+	{
+		if (!$this->groups->contains($group)) {
+			$this->groups->add($group);
+		}
+
+		return $this;
+	}
+
+	public function removeGroup(UserGroup $group): self
+	{
+		$this->groups->removeElement($group);
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, UserPermissionOverride>
+	 */
+	public function getPermissionOverrides(): Collection
+	{
+		return $this->permissionOverrides;
+	}
+
+	public function addPermissionOverride(UserPermissionOverride $override): self
+	{
+		if (!$this->permissionOverrides->contains($override)) {
+			$this->permissionOverrides->add($override);
+			$override->setUser($this);
+		}
+
+		return $this;
+	}
+
+	public function removePermissionOverride(UserPermissionOverride $override): self
+	{
+		$this->permissionOverrides->removeElement($override);
+
+		return $this;
+	}
+
+	public function clearPermissionOverrides(): self
+	{
+		$this->permissionOverrides->clear();
+
+		return $this;
+	}
+
+	public function hasPermissionOverride(string $permissionCode, PermissionOverrideEffect $effect): bool
+	{
+		foreach ($this->permissionOverrides as $override) {
+			if ($override->getPermission()->getCode() === $permissionCode && $override->getEffect() === $effect) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

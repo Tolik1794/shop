@@ -3,9 +3,8 @@
 namespace App\Repository;
 
 use App\Entity\Store;
-use App\Entity\User\RoleEnum;
 use App\Entity\User\User;
-use App\Manager\UserManager;
+use App\Security\PermissionChecker;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -21,7 +20,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
  */
 class StoreRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry, private readonly UserManager $userManager)
+    public function __construct(ManagerRegistry $registry, private readonly PermissionChecker $permissionChecker)
     {
         parent::__construct($registry, Store::class);
     }
@@ -49,10 +48,9 @@ class StoreRepository extends ServiceEntityRepository
 		$qb = $this->createQueryBuilder('store')
 			->leftJoin('store.managers', 'managers');
 
-		if ($this->userManager->hasRole(RoleEnum::ROLE_SUPER_ADMIN, $user)) return $qb;
-		elseif ($this->userManager->hasRole(RoleEnum::ROLE_ADMIN, $user)) $manager = $user;
-		elseif ($this->userManager->hasRole(RoleEnum::ROLE_STORE_ADMIN, $user)) $manager = $user;
-		elseif ($user->getManagerStores()->count() > 0) $manager = $user;
+		if ($this->permissionChecker->isGranted($user, 'store.view_all')) return $qb;
+
+		if ($user->getManagerStores()->count() > 0) $manager = $user;
 		else $manager = $user->getParent();
 
 		$qb->where('managers = :manager')

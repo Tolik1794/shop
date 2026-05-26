@@ -31,8 +31,14 @@
                 </tr>
             {% endif %}
             <tr>
-                <th>{{ 'Roles'|trans }}</th>
-                <td>{{ entity.roles|join(', ') }}</td>
+                <th>{{ 'Groups'|trans }}</th>
+                <td>
+                    {% for group in entity.groups %}
+                        <span class="badge bg-light text-dark">{{ group.name }}</span>
+                    {% else %}
+                        <span class="text-muted">{{ 'No groups'|trans }}</span>
+                    {% endfor %}
+                </td>
             </tr>
             </tbody>
         </table>

@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/user', name: 'admin_user_'), IsGranted('ROLE_STORE_MANAGER')]
+#[Route('/admin/user', name: 'admin_user_')]
 class UserController extends AbstractAdvancedController
 {
 	public function __construct(private readonly UserManager $userManager)
@@ -47,6 +47,7 @@ class UserController extends AbstractAdvancedController
 	}
 
 	#[Route('/{user_id}/info', name: 'info', methods: ['GET'])]
+	#[IsGranted('user.view')]
 	public function info(): Response
 	{
 		$user = $this->getUser();
@@ -57,6 +58,7 @@ class UserController extends AbstractAdvancedController
 	}
 
 	#[Route('/', name: 'index')]
+	#[IsGranted('user.view')]
 	public function index(PaginatorInterface $paginator, Request $request, FilterFormHandler $filterTypeHandler): Response
 	{
 		$queryBuilder = $this->userManager
@@ -95,6 +97,7 @@ class UserController extends AbstractAdvancedController
 	}
 
 	#[Route('/{user_id}/edit', name: 'edit', methods: ['GET', 'POST'])]
+	#[IsGranted('user.edit')]
 	public function edit(Request $request, string $user_id): Response
 	{
 		$user = $this->userManager->getRepository()->findOneBy(['nickname' => $user_id]);
@@ -113,6 +116,11 @@ class UserController extends AbstractAdvancedController
 
 		if ($form->isSubmitted() && $form->isValid()) {
 			if ($avatar = $form->get('avatar')->getData()) $this->userManager->updateAvatar($user, $avatar);
+			$this->syncPermissionOverrides(
+				$user,
+				$this->permissionFormDataToArray($form->get('allowedPermissions')->getData()),
+				$this->permissionFormDataToArray($form->get('deniedPermissions')->getData()),
+			);
 			$this->userManager->save($user);
 
 			return $this->stayOrRedirect('admin_user_index');
@@ -126,6 +134,7 @@ class UserController extends AbstractAdvancedController
 	}
 
 	#[Route('/{user_id}/show', name: 'show', methods: ['GET'])]
+	#[IsGranted('user.view')]
 	public function show(Request $request, string $user_id): Response
 	{
 		$user = $this->userManager->getRepository()->findOneBy(['nickname' => $user_id]);
@@ -138,4 +147,47 @@ class UserController extends AbstractAdvancedController
 			'query_params' => $request->query->all()
 		]);
 	}
+
+	private function permissionFormDataToArray(mixed $permissions): array
+	{
+		if (is_array($permissions)) {
+			return $permissions;
+		}
+
+		if (method_exists($permissions, 'toArray')) {
+			return $permissions->toArray();
+		}
+
+		return [];
+	}
+
+	/**
+	 * @param Permission[] $allowedPermissions
+	 * @param Permission[] $deniedPermissions
+	 */
+	private function syncPermissionOverrides(User $user, array $allowedPermissions, array $deniedPermissions): void
+	{
+		$user->clearPermissionOverrides();
+
+		$deniedCodes = array_map(static fn (Permission $permission): string => $permission->getCode(), $deniedPermissions);
+
+		foreach ($allowedPermissions as $permission) {
+			if (in_array($permission->getCode(), $deniedCodes, true)) {
+				continue;
+			}
+
+			$user->addPermissionOverride((new UserPermissionOverride())
+				->setPermission($permission)
+				->setEffect(PermissionOverrideEffect::ALLOW));
+		}
+
+		foreach ($deniedPermissions as $permission) {
+			$user->addPermissionOverride((new UserPermissionOverride())
+				->setPermission($permission)
+				->setEffect(PermissionOverrideEffect::DENY));
+		}
+	}
 }
+use App\Entity\Permission;
+use App\Entity\User\UserPermissionOverride;
+use App\Enum\PermissionOverrideEffect;

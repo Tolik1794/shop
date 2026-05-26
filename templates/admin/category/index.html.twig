@@ -3,7 +3,7 @@
 {% block title %}Category list{% endblock %}
 
 {% set table_actions %}
-    {% if is_granted('ROLE_STORE_ADMIN') %}
+    {% if is_granted('category.manage') %}
         <a class="btn btn-light btn-sm"
            href="{{ path('admin_category_new', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-plus me-1"></i>{{ 'New'|trans }}</a>
     {% endif %}

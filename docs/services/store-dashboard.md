@@ -14,7 +14,7 @@ The store dashboard is a read-only reporting surface for one selected store.
 - Historical order and purchase totals are not recalculated from current product prices.
 - Stock value uses the current warehouse stock quantity and average cost.
 - Reversed payments are separated from normal incoming/outgoing cash-flow totals.
-- Store managers without `ROLE_STORE_ADMIN` receive operational counts without financial totals.
+- Users without `dashboard.financial` receive operational counts without financial totals.
 
 ## Filters
 

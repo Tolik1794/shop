@@ -1,5 +1,5 @@
 {% set table_actions %}
-    {% if is_granted('ROLE_SUPER_ADMIN') %}
+    {% if is_granted('category_parameter.manage') %}
         <a class="btn btn-light btn-sm" href="{{ path('admin_category_product_parameter_name_new',
             {
                 store_id: store.id,

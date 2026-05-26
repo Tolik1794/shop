@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/store/{store_id}/warehouse', name: 'app_admin_warehouse_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/admin/store/{store_id}/warehouse', name: 'app_admin_warehouse_'), IsGranted('warehouse.view')]
 class WarehouseController extends AbstractAdvancedController
 {
 	public function __construct(private readonly WarehouseManager $warehouseManager)
@@ -68,7 +68,7 @@ class WarehouseController extends AbstractAdvancedController
 		]);
 	}
 
-	#[IsGranted('ROLE_SUPER_ADMIN')]
+	#[IsGranted('warehouse.manage')]
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
 	public function new(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store): Response
 	{
@@ -97,6 +97,7 @@ class WarehouseController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/edit', name: 'edit', methods: ['GET', 'POST'])]
+	#[IsGranted('warehouse.manage')]
 	public function edit(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]

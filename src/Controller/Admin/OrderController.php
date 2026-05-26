@@ -28,7 +28,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/store/{store_id}/order', name: 'app_admin_order_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/admin/store/{store_id}/order', name: 'app_admin_order_'), IsGranted('order.view')]
 class OrderController extends AbstractAdvancedController
 {
 	use QuickActionResponseTrait;
@@ -94,6 +94,7 @@ class OrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
+	#[IsGranted('order.create')]
 	public function new(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -138,6 +139,7 @@ class OrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/edit', name: 'edit', methods: ['GET', 'POST'])]
+	#[IsGranted('order.edit')]
 	public function edit(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -238,6 +240,7 @@ class OrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/confirm', name: 'confirm', methods: ['POST'])]
+	#[IsGranted('order.confirm')]
 	public function confirm(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -266,6 +269,7 @@ class OrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/cancel', name: 'cancel', methods: ['POST'])]
+	#[IsGranted('order.cancel')]
 	public function cancel(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -294,6 +298,7 @@ class OrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/return-to-draft', name: 'return_to_draft', methods: ['POST'])]
+	#[IsGranted('order.rollback')]
 	public function returnToDraft(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -322,6 +327,7 @@ class OrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/rollback-status', name: 'rollback_status', methods: ['POST'])]
+	#[IsGranted('order.rollback')]
 	public function rollbackStatus(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -350,6 +356,7 @@ class OrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/mark-delivered', name: 'mark_delivered', methods: ['POST'])]
+	#[IsGranted('order.mark_delivered')]
 	public function markDelivered(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -378,6 +385,7 @@ class OrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/complete', name: 'complete', methods: ['POST'])]
+	#[IsGranted('order.complete')]
 	public function complete(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -406,6 +414,7 @@ class OrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/ship', name: 'ship', methods: ['POST'])]
+	#[IsGranted('order.ship')]
 	public function ship(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -437,6 +446,7 @@ class OrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/comment', name: 'comment_add', methods: ['POST'])]
+	#[IsGranted('order.comment.manage')]
 	public function addComment(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -464,6 +474,7 @@ class OrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/comment/{commentId}/edit', name: 'comment_edit', methods: ['POST'])]
+	#[IsGranted('order.comment.manage')]
 	public function editComment(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]
@@ -494,6 +505,7 @@ class OrderController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/comment/{commentId}/delete', name: 'comment_delete', methods: ['POST'])]
+	#[IsGranted('order.comment.manage')]
 	public function deleteComment(
 		Request $request,
 		#[MapEntity(expr: 'repository.find(store_id)')]

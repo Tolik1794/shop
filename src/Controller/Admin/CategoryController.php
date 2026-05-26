@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/store/{store_id}/category', name: 'admin_category_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/admin/store/{store_id}/category', name: 'admin_category_'), IsGranted('category.manage')]
 class CategoryController extends AbstractAdvancedController
 {
 	public function __construct(private readonly CategoryManager $categoryManager)
@@ -67,7 +67,7 @@ class CategoryController extends AbstractAdvancedController
 		]);
 	}
 
-	#[IsGranted('ROLE_SUPER_ADMIN')]
+	#[IsGranted('category.manage')]
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
 	public function new(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store): Response
 	{

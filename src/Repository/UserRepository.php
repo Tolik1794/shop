@@ -2,9 +2,8 @@
 
 namespace App\Repository;
 
-use App\Entity\User\RoleEnum;
 use App\Entity\User\User;
-use App\Manager\UserManager;
+use App\Security\PermissionChecker;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -23,7 +22,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
  */
 class UserRepository extends ServiceEntityRepository implements PasswordUpgraderInterface
 {
-	public function __construct(ManagerRegistry $registry, private readonly UserManager $userManager)
+	public function __construct(ManagerRegistry $registry, private readonly PermissionChecker $permissionChecker)
 	{
 		parent::__construct($registry, User::class);
 	}
@@ -64,11 +63,17 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
 	{
 		$qb = $this->createQueryBuilder('user');
 
-		if ($this->userManager->hasRole(RoleEnum::ROLE_SUPER_ADMIN, $user)) return $qb;
+		if ($this->permissionChecker->isGranted($user, 'rbac.view')) return $qb;
 
-		$director = $this->userManager->hasRole(RoleEnum::ROLE_STORE_ADMIN, $user) ? $user : $user->getParent();
+		$director = $user->getChildren()->count() > 0 ? $user : $user->getParent();
 
-		$qb->where('user.parent = :user')
+		if (!$director instanceof User) {
+			return $qb
+				->where('user = :user')
+				->setParameter('user', $user);
+		}
+
+		$qb->where('user.parent = :user OR user = :user')
 			->setParameter('user', $director);
 
 		return $qb;

@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/admin/store/{store_id}/product', name: 'admin_product_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/admin/store/{store_id}/product', name: 'admin_product_'), IsGranted('product.view')]
 class ProductController extends AbstractAdvancedController
 {
 	private const DEFAULT_PAGE_LIMIT = 20;
@@ -76,7 +76,7 @@ class ProductController extends AbstractAdvancedController
 		]);
 	}
 
-	#[IsGranted('ROLE_SUPER_ADMIN')]
+	#[IsGranted('product.manage')]
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
 	public function new(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store): Response
 	{
@@ -108,6 +108,7 @@ class ProductController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/edit', name: 'edit', methods: ['GET', 'POST'])]
+	#[IsGranted('product.manage')]
 	public function edit(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store, Product $product): Response
 	{
 //		$this->denyAccessUnlessGranted(StoreVoter::EDIT, $store);

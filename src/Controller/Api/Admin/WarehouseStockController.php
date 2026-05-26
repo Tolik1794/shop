@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-#[Route('/api/admin/store/{store_id}/warehouse/stock', name: 'app_api_admin_warehouse_stock_'), IsGranted('ROLE_STORE_ADMIN')]
+#[Route('/api/admin/store/{store_id}/warehouse/stock', name: 'app_api_admin_warehouse_stock_'), IsGranted('warehouse_stock.view')]
 class WarehouseStockController extends AbstractController
 {
 	public function __construct(

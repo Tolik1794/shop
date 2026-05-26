@@ -5,6 +5,7 @@ namespace App\Menu;
 use Knp\Menu\FactoryInterface;
 use Knp\Menu\ItemInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 final class MenuBuilder
@@ -13,6 +14,7 @@ final class MenuBuilder
 		private readonly FactoryInterface $factory,
 		private readonly RequestStack $requestStack,
 		private readonly TranslatorInterface $translator,
+		private readonly AuthorizationCheckerInterface $authorizationChecker,
 	)
 	{
 	}
@@ -25,27 +27,9 @@ final class MenuBuilder
 			],
 		]);
 
-		$menu->addChild($this->trans('admin.menu.stores'), [
-			'route' => 'admin_store_index',
-			'routeParameters' => $this->routeParameters(),
-			'attributes' => [
-				'class' => 'sidebar-item',
-			],
-			'linkAttributes' => [
-				'class' => 'sidebar-link'
-			],
-		]);
-
-		$menu->addChild($this->trans('admin.menu.managers'), [
-			'route' => 'admin_user_index',
-			'routeParameters' => $this->routeParameters(),
-			'attributes' => [
-				'class' => 'sidebar-item',
-			],
-			'linkAttributes' => [
-				'class' => 'sidebar-link'
-			],
-		]);
+		$this->addSidebarLink($menu, 'store.view', 'admin.menu.stores', 'admin_store_index', $this->routeParameters());
+		$this->addSidebarLink($menu, 'user.view', 'admin.menu.managers', 'admin_user_index', $this->routeParameters());
+		$this->addSidebarLink($menu, 'rbac.view', 'admin.menu.access_groups', 'admin_user_group_index', $this->routeParameters());
 
 		return $menu;
 	}
@@ -61,176 +45,42 @@ final class MenuBuilder
 			],
 		]);
 
-		$menu->addChild($this->trans('admin.menu.dashboard'), [
-			'route' => 'admin_store_main',
-			'routeParameters' => $routeParameters,
-			'attributes' => [
-				'class' => 'sidebar-item',
-			],
-			'linkAttributes' => [
-				'class' => 'sidebar-link'
-			]
-		]);
+		$this->addSidebarLink($menu, 'dashboard.view', 'admin.menu.dashboard', 'admin_store_main', $routeParameters);
+		$this->addSidebarLink($menu, 'order.view', 'admin.menu.orders', 'app_admin_order_index', $routeParameters);
+		$this->addSidebarLink($menu, 'purchase.view', 'admin.menu.purchases', 'app_admin_purchase_index', $routeParameters);
+		$this->addSidebarLink($menu, 'production_order.view', 'admin.menu.production', 'app_admin_production_order_index', $routeParameters);
+		$this->addSidebarLink($menu, 'payment.view', 'admin.menu.payments', 'app_admin_payment_index', $routeParameters);
+		$this->addSidebarLink($menu, 'inventory_document.view', 'admin.menu.inventory_documents', 'app_admin_inventory_document_index', $routeParameters);
+		$this->addSidebarLink($menu, 'customer.view', 'admin.menu.customers', 'app_admin_customer_index', $routeParameters);
+		$this->addSidebarLink($menu, 'supplier.view', 'admin.menu.suppliers', 'app_admin_supplier_index', $routeParameters);
 
-		$menu->addChild($this->trans('admin.menu.orders'), [
-			'route' => 'app_admin_order_index',
-			'routeParameters' => $routeParameters,
-			'attributes' => [
-				'class' => 'sidebar-item',
-			],
-			'linkAttributes' => [
-				'class' => 'sidebar-link'
-			]
-		]);
-
-		$menu->addChild($this->trans('admin.menu.purchases'), [
-			'route' => 'app_admin_purchase_index',
-			'routeParameters' => $routeParameters,
-			'attributes' => [
-				'class' => 'sidebar-item',
-			],
-			'linkAttributes' => [
-				'class' => 'sidebar-link'
-			]
-		]);
-
-		$menu->addChild($this->trans('admin.menu.production'), [
-			'route' => 'app_admin_production_order_index',
-			'routeParameters' => $routeParameters,
-			'attributes' => [
-				'class' => 'sidebar-item',
-			],
-			'linkAttributes' => [
-				'class' => 'sidebar-link'
-			]
-		]);
-
-		$menu->addChild($this->trans('admin.menu.payments'), [
-			'route' => 'app_admin_payment_index',
-			'routeParameters' => $routeParameters,
-			'attributes' => [
-				'class' => 'sidebar-item',
-			],
-			'linkAttributes' => [
-				'class' => 'sidebar-link'
-			]
-		]);
-
-		$menu->addChild($this->trans('admin.menu.inventory_documents'), [
-			'route' => 'app_admin_inventory_document_index',
-			'routeParameters' => $routeParameters,
-			'attributes' => [
-				'class' => 'sidebar-item',
-			],
-			'linkAttributes' => [
-				'class' => 'sidebar-link'
-			]
-		]);
-
-		$menu->addChild($this->trans('admin.menu.customers'), [
-			'route' => 'app_admin_customer_index',
-			'routeParameters' => $routeParameters,
-			'attributes' => [
-				'class' => 'sidebar-item',
-			],
-			'linkAttributes' => [
-				'class' => 'sidebar-link'
-			],
-		]);
-
-		$menu->addChild($this->trans('admin.menu.suppliers'), [
-			'route' => 'app_admin_supplier_index',
-			'routeParameters' => $routeParameters,
-			'attributes' => [
-				'class' => 'sidebar-item',
-			],
-			'linkAttributes' => [
-				'class' => 'sidebar-link'
-			],
-		]);
-
-		$item = $menu->addChild($this->trans('admin.menu.settings'), [
+		$settings = $this->factory->createItem($this->trans('admin.menu.settings'), [
 			'uri' => '#',
 			'linkAttributes' => [
 				'data-bs-target' => '#setting',
 				'data-bs-toggle' => 'collapse',
 				'aria-expanded' => 'false',
-				'class' => 'sidebar-link collapsed'
+				'class' => 'sidebar-link collapsed',
 			],
 			'childrenAttributes' => [
 				'class' => 'sidebar-dropdown list-unstyled collapse show',
 				'id' => 'setting',
-				'data-bs-parent' => 'sidebar'
+				'data-bs-parent' => 'sidebar',
 			],
 		]);
 
-		$item->addChild($this->trans('admin.menu.categories'), [
-			'route' => 'admin_category_index',
-			'routeParameters' => $routeParameters,
-			'attributes' => [
-				'class' => 'sidebar-item',
-			],
-			'linkAttributes' => [
-				'class' => 'sidebar-link'
-			]
-		]);
+		$this->addSidebarLink($settings, 'category.manage', 'admin.menu.categories', 'admin_category_index', $routeParameters);
+		$this->addSidebarLink($settings, 'product.view', 'admin.menu.products', 'admin_product_index', $routeParameters);
+		$this->addSidebarLink($settings, 'unit.manage', 'admin.menu.units', 'app_admin_unit_index', $routeParameters);
+		$this->addSidebarLink($settings, 'warehouse.view', 'admin.menu.warehouses', 'app_admin_warehouse_index', $routeParameters);
+		$this->addSidebarLink($settings, 'inventory_reason.manage', 'admin.menu.inventory_reasons', 'app_admin_inventory_reason_index', $routeParameters);
+		$this->addSidebarLink($settings, 'exchange_rate.manage', 'admin.menu.exchange_rates', 'app_admin_exchange_rate_index', $routeParameters);
 
-			$item->addChild($this->trans('admin.menu.products'), [
-				'route' => 'admin_product_index',
-				'routeParameters' => $routeParameters,
-				'attributes' => [
-					'class' => 'sidebar-item',
-			],
-			'linkAttributes' => [
-				'class' => 'sidebar-link'
-				]
-			]);
+		if ($settings->count() > 0) {
+			$menu->addChild($settings);
+		}
 
-			$item->addChild($this->trans('admin.menu.units'), [
-				'route' => 'app_admin_unit_index',
-				'routeParameters' => $routeParameters,
-				'attributes' => [
-					'class' => 'sidebar-item',
-				],
-				'linkAttributes' => [
-					'class' => 'sidebar-link'
-				]
-			]);
-
-			$item->addChild($this->trans('admin.menu.warehouses'), [
-				'route' => 'app_admin_warehouse_index',
-				'routeParameters' => $routeParameters,
-				'attributes' => [
-					'class' => 'sidebar-item',
-				],
-				'linkAttributes' => [
-					'class' => 'sidebar-link'
-				]
-			]);
-
-			$item->addChild($this->trans('admin.menu.inventory_reasons'), [
-				'route' => 'app_admin_inventory_reason_index',
-				'routeParameters' => $routeParameters,
-				'attributes' => [
-					'class' => 'sidebar-item',
-				],
-				'linkAttributes' => [
-					'class' => 'sidebar-link'
-				]
-			]);
-
-			$item->addChild($this->trans('admin.menu.exchange_rates'), [
-				'route' => 'app_admin_exchange_rate_index',
-				'routeParameters' => $routeParameters,
-				'attributes' => [
-					'class' => 'sidebar-item',
-				],
-				'linkAttributes' => [
-					'class' => 'sidebar-link'
-				]
-			]);
-
-			return $menu;
+		return $menu;
 	}
 
 	public function userAdminMenu(array $options): ItemInterface
@@ -260,6 +110,27 @@ final class MenuBuilder
 		}
 
 		return $menu;
+	}
+
+	/**
+	 * @param array<string, mixed> $routeParameters
+	 */
+	private function addSidebarLink(ItemInterface $menu, string $permission, string $label, string $route, array $routeParameters): void
+	{
+		if (!$this->authorizationChecker->isGranted($permission)) {
+			return;
+		}
+
+		$menu->addChild($this->trans($label), [
+			'route' => $route,
+			'routeParameters' => $routeParameters,
+			'attributes' => [
+				'class' => 'sidebar-item',
+			],
+			'linkAttributes' => [
+				'class' => 'sidebar-link',
+			],
+		]);
 	}
 
 	/**
