@@ -6,6 +6,15 @@
 - Project uses Symfony 7.4. Verify exact installed Symfony component versions from `composer.json` and `composer.lock` before relying on version-specific APIs.
 - This is a Symfony shop/admin project with products, warehouses, stock, orders, forms, admin UI, AJAX endpoints, Twig templates, Doctrine entities, fixtures, and frontend assets built with Encore.
 
+## Fast path for future work
+
+- Start by reading the controller/form/service/template/repository that owns the behavior being changed.
+- If the change touches admin access, buttons, menu items, AJAX routes, or business actions, apply the RBAC rules below before editing.
+- If the change touches database structure, update Doctrine mapping, a new migration, and the matching `src/Uml/database/` diagram in the same task.
+- If visible UI text changes, keep English source strings and add Ukrainian translations.
+- If business behavior changes, update relevant docs, especially `docs/admin-user-guide.md` and nearby service docs.
+- Prefer the existing project pattern over introducing a new abstraction.
+
 ## Required workflow
 
 For any code change:
@@ -162,6 +171,21 @@ For complex flows such as order status changes, procurement, stock corrections, 
 - When adding admin actions, check permissions and CSRF protection where applicable.
 - Do not expose internal paths, secrets, stack traces, debug data, or sensitive data to users.
 - Do not log sensitive data.
+
+### RBAC and permission rules
+
+- Authorization is permission-based. Do not add new business decisions based on `ROLE_*`, `RoleEnum`, role hierarchy, or `UserManager::hasRole()`.
+- Permission codes are stable strings such as `dashboard.view`, `dashboard.financial`, `order.edit`, `warehouse_stock.manage`, and `rbac.manage`.
+- Main RBAC files to inspect before access changes: `src/Security/PermissionCatalog.php`, `src/Security/PermissionChecker.php`, `src/Security/Voter/PermissionVoter.php`, `src/Security/Voter/StoreVoter.php`, `src/Security/Voter/UserVoter.php`, and `src/EventSubscriber/AdminStoreAccessSubscriber.php`.
+- Resolution order is fixed: individual deny, individual allow, group permissions, then `system.all`; an exact individual deny still blocks `system.all`.
+- Groups are global. Concrete store access still depends on store assignment unless the user has an all-store permission such as `store.view_all`.
+- Protect read pages with `*.view` permissions and mutating actions with narrow action permissions such as `order.create`, `order.cancel`, `inventory_document.post`, or `payment.reverse`.
+- Use subject-aware checks for object decisions: `is_granted('store.edit', store)` or `denyAccessUnlessGranted(StoreVoter::EDIT, $store)`.
+- Twig should only show/hide UI with `is_granted('permission.code')`; controllers/services must still enforce the permission.
+- Service-level business checks should use `PermissionChecker`; do not duplicate permission rules in Twig, repositories, managers, or ad hoc conditionals.
+- When adding a new functional area or business action, add its permission to `PermissionCatalog`, assign default groups, update fixtures/migrations when seed data changes, and update docs/UML if the permission model or DB structure changes.
+- Keep `users.roles` only as legacy compatibility data for existing users/tests.
+- After RBAC changes, run or suggest at minimum: `php bin/console lint:container`, `php bin/console lint:twig templates`, `php bin/console doctrine:schema:validate`, `php bin/console debug:translation uk --domain=messages --only-missing`, and focused PHPUnit tests.
 
 ## Git rules
 
