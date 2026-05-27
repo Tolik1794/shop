@@ -25,3 +25,4 @@ import '../js/font-awesome'
 
 // start the Stimulus application
 import '../bootstrap';
+import './turbo-shell';

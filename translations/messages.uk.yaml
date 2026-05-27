@@ -511,3 +511,4 @@ Hi! Please confirm your email!: 'Вітаємо! Підтвердіть свій
 Confirm my Email: 'Підтвердити email'
 scrollable content: 'прокручуваний вміст'
 breadcrumb: 'навігаційний ланцюжок'
+admin.navigation.unsaved_changes: 'У вас є незбережені зміни. Залишити сторінку?'

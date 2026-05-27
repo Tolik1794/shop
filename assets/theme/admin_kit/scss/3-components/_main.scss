@@ -1,6 +1,7 @@
 .main {
   display: flex;
-  width: 100%;
+  flex: 1 1 auto;
+  width: auto;
   min-width: 0;
   min-height: 100vh;
   transition: $sidebar-transition;
@@ -8,4 +9,17 @@
   flex-direction: column;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
+}
+
+.turbo-progress-bar {
+  height: 3px;
+  background: $primary;
+}
+
+#admin-main-content {
+  transition: opacity .15s ease-in-out;
+}
+
+.admin-navigation-loading #admin-main-content {
+  opacity: .72;
 }

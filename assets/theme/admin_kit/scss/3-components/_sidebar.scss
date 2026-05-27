@@ -1,14 +1,18 @@
 .sidebar {
   min-width: $sidebar-width;
   max-width: $sidebar-width;
+  width: $sidebar-width;
+  flex: 0 0 $sidebar-width;
   transition: $sidebar-transition;
   direction: ltr;
   background: $sidebar-bg;
+  overflow: hidden;
 }
 
 .sidebar-content {
   transition: $sidebar-transition;
   display: flex;
+  width: 100%;
   height: 100vh;
   flex-direction: column;
   background: $sidebar-bg;
@@ -76,7 +80,9 @@ a.sidebar-link {
   font-weight: $sidebar-brand-font-weight;
   font-size: $sidebar-brand-font-size;
   padding: $sidebar-brand-padding-y $sidebar-brand-padding-x;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
   color: $sidebar-brand-color;
 
   &:hover {
@@ -89,6 +95,11 @@ a.sidebar-link {
   }
 }
 
+.sidebar-brand-icon {
+  color: $sidebar-brand-color;
+  flex: 0 0 auto;
+}
+
 // Toggle states
 .sidebar-toggle {
   cursor: pointer;
@@ -98,8 +109,87 @@ a.sidebar-link {
 }
 
 .sidebar {
-  &.collapsed {
-    margin-left: -$sidebar-width;
+  &.collapsed,
+  .sidebar-collapsed & {
+    min-width: $sidebar-collapsed-width;
+    max-width: $sidebar-collapsed-width;
+    width: $sidebar-collapsed-width;
+    flex-basis: $sidebar-collapsed-width;
+
+    .sidebar-nav {
+      padding-top: .75rem;
+    }
+
+    .sidebar-brand {
+      justify-content: center;
+      gap: 0;
+      padding-right: .75rem;
+      padding-left: .75rem;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .sidebar-brand .align-middle,
+    .sidebar-link .align-middle {
+      display: none;
+    }
+
+    .sidebar-link,
+    a.sidebar-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 46px;
+      height: 46px;
+      padding: 0;
+      margin: .125rem auto;
+      border-left-width: 0;
+      border-radius: .375rem;
+
+      i,
+      svg {
+        margin-right: 0;
+      }
+    }
+
+    .sidebar-dropdown {
+      display: none;
+    }
+
+    .sidebar-item.sidebar-submenu-open > .sidebar-dropdown {
+      display: block;
+      padding: .125rem 0 .375rem;
+    }
+
+    .sidebar-item.sidebar-submenu-open > .sidebar-dropdown .sidebar-link,
+    .sidebar-item.sidebar-submenu-open > .sidebar-dropdown a.sidebar-link {
+      display: flex;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      margin: .125rem auto;
+      border-radius: .375rem;
+
+      i,
+      svg {
+        margin-right: 0;
+      }
+    }
+
+    .sidebar-item.active > .sidebar-link,
+    .sidebar-item.active .sidebar-link:hover,
+    .sidebar-item.current_ancestor > .sidebar-link,
+    .sidebar-item.current_ancestor .sidebar-link:hover {
+      background: rgba($gray-200, .12);
+      color: $sidebar-link-active-color;
+
+      i,
+      svg {
+        color: $sidebar-link-active-color;
+      }
+    }
   }
 
   // Workaround for IE bug, more info:
@@ -111,7 +201,48 @@ a.sidebar-link {
 
     // Sidebar collapsed state (on mobile)
     &.collapsed {
+      min-width: $sidebar-width;
+      max-width: $sidebar-width;
+      width: $sidebar-width;
+      flex-basis: $sidebar-width;
       margin-left: 0;
+
+      .sidebar-brand {
+        justify-content: flex-start;
+        gap: .75rem;
+        padding: $sidebar-brand-padding-y $sidebar-brand-padding-x;
+        text-align: left;
+      }
+
+      .sidebar-brand .align-middle,
+      .sidebar-link .align-middle {
+        display: inline;
+      }
+
+      .sidebar-link,
+      a.sidebar-link {
+        display: block;
+        width: auto;
+        height: auto;
+        padding: $sidebar-link-padding;
+        margin: 0;
+        border-left-width: 3px;
+        border-radius: 0;
+        text-align: left;
+
+        i,
+        svg {
+          margin-right: .75rem;
+        }
+      }
+
+      .sidebar-dropdown {
+        display: block;
+      }
+
+      .sidebar-dropdown .sidebar-item {
+        padding-left: 1rem;
+      }
     }
   }
 }

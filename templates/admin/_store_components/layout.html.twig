@@ -1,11 +1,14 @@
 {% extends 'admin/layout.html.twig' %}
 
+{% block admin_shell_context %}store-{{ app.request.attributes.get('store_id') }}{% endblock %}
+
 {% block sidebar_brand %}
     <a class="sidebar-brand" href="{{ path('admin_store_index', {'_locale': app.request.locale}) }}">
+        <i class="fa-solid fa-store sidebar-brand-icon"></i>
         <span class="align-middle">{{ store().name }}</span>
     </a>
 {% endblock %}
 
 {% block sidebar_menu %}
-    {{ knp_menu_render('mainAdminStore',{'currentClass': 'active', 'allow_safe_labels': true}) }}
+    {{ knp_menu_render('mainAdminStore', {'currentClass': 'active', 'allow_safe_labels': true, template: 'menu/sidebar.html.twig'}) }}
 {% endblock %}

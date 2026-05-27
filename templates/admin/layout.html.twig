@@ -2,8 +2,8 @@
 
 {% block body %}
     {% block wrapper %}
-        <div class="wrapper">
-            <nav id="sidebar" class="sidebar js-sidebar">
+        <div class="wrapper" data-admin-shell-context="{% block admin_shell_context %}root{% endblock %}">
+            <nav id="sidebar" class="sidebar js-sidebar" data-turbo-prefetch="false">
                 <div class="sidebar-content js-simplebar" data-simplebar="init">
                     <div class="simplebar-wrapper" style="margin: 0px;">
                         <div class="simplebar-height-auto-observer-wrapper">
@@ -16,12 +16,13 @@
                                     <div class="simplebar-content" style="padding: 0px;">
                                         {% block sidebar_brand %}
                                             <a class="sidebar-brand" href="{{ path('admin_store_index', {'_locale': app.request.locale}) }}">
+                                                <i class="fa-solid fa-store sidebar-brand-icon"></i>
                                                 <span class="align-middle">MyStores</span>
                                             </a>
                                         {% endblock %}
 
                                         {% block sidebar_menu %}
-                                            {{ knp_menu_render('mainAdmin',{'currentClass': 'active', 'allow_safe_labels': true}) }}
+                                            {{ knp_menu_render('mainAdmin', {'currentClass': 'active', 'allow_safe_labels': true, template: 'menu/sidebar.html.twig'}) }}
                                         {% endblock sidebar_menu %}
 
                                     </div>
@@ -41,18 +42,18 @@
             </nav>
             {% block main %}
                 <div class="main">
-                    <nav class="navbar navbar-expand navbar-light navbar-bg">
+                    <nav id="admin-navbar" class="navbar navbar-expand navbar-light navbar-bg">
                         <a class="sidebar-toggle js-sidebar-toggle">
                             <i class="hamburger align-self-center"></i>
                         </a>
 
-                        <div class="flex-grow-1 ms-3">
+                        <div id="admin-navbar-breadcrumb" class="flex-grow-1 ms-3">
                             {% block navbar_breadcrumb %}{% endblock %}
                         </div>
 
                         <div class="navbar-collapse collapse">
                             <ul class="navbar-nav navbar-align">
-                                <li class="nav-item dropdown me-2">
+                                <li id="admin-navbar-locale" class="nav-item dropdown me-2">
                                     <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
                                         {{ app.request.locale|upper }}
                                     </a>
@@ -91,9 +92,11 @@
                         </div>
                     </nav>
 
-                    {% block main_content %}
+                    <div id="admin-main-content">
+                        {% block main_content %}
 
-                    {% endblock main_content %}
+                        {% endblock main_content %}
+                    </div>
                 </div>
             {% endblock main %}
 

@@ -27,9 +27,9 @@ final class MenuBuilder
 			],
 		]);
 
-		$this->addSidebarLink($menu, 'store.view', 'admin.menu.stores', 'admin_store_index', $this->routeParameters());
-		$this->addSidebarLink($menu, 'user.view', 'admin.menu.managers', 'admin_user_index', $this->routeParameters());
-		$this->addSidebarLink($menu, 'rbac.view', 'admin.menu.access_groups', 'admin_user_group_index', $this->routeParameters());
+		$this->addSidebarLink($menu, 'store.view', 'admin.menu.stores', 'admin_store_index', $this->routeParameters(), 'fa-store');
+		$this->addSidebarLink($menu, 'user.view', 'admin.menu.managers', 'admin_user_index', $this->routeParameters(), 'fa-users');
+		$this->addSidebarLink($menu, 'rbac.view', 'admin.menu.access_groups', 'admin_user_group_index', $this->routeParameters(), 'fa-user-shield');
 
 		return $menu;
 	}
@@ -45,17 +45,20 @@ final class MenuBuilder
 			],
 		]);
 
-		$this->addSidebarLink($menu, 'dashboard.view', 'admin.menu.dashboard', 'admin_store_main', $routeParameters);
-		$this->addSidebarLink($menu, 'order.view', 'admin.menu.orders', 'app_admin_order_index', $routeParameters);
-		$this->addSidebarLink($menu, 'purchase.view', 'admin.menu.purchases', 'app_admin_purchase_index', $routeParameters);
-		$this->addSidebarLink($menu, 'production_order.view', 'admin.menu.production', 'app_admin_production_order_index', $routeParameters);
-		$this->addSidebarLink($menu, 'payment.view', 'admin.menu.payments', 'app_admin_payment_index', $routeParameters);
-		$this->addSidebarLink($menu, 'inventory_document.view', 'admin.menu.inventory_documents', 'app_admin_inventory_document_index', $routeParameters);
-		$this->addSidebarLink($menu, 'customer.view', 'admin.menu.customers', 'app_admin_customer_index', $routeParameters);
-		$this->addSidebarLink($menu, 'supplier.view', 'admin.menu.suppliers', 'app_admin_supplier_index', $routeParameters);
+		$this->addSidebarLink($menu, 'dashboard.view', 'admin.menu.dashboard', 'admin_store_main', $routeParameters, 'fa-gauge-high');
+		$this->addSidebarLink($menu, 'order.view', 'admin.menu.orders', 'app_admin_order_index', $routeParameters, 'fa-cart-shopping');
+		$this->addSidebarLink($menu, 'purchase.view', 'admin.menu.purchases', 'app_admin_purchase_index', $routeParameters, 'fa-basket-shopping');
+		$this->addSidebarLink($menu, 'production_order.view', 'admin.menu.production', 'app_admin_production_order_index', $routeParameters, 'fa-industry');
+		$this->addSidebarLink($menu, 'payment.view', 'admin.menu.payments', 'app_admin_payment_index', $routeParameters, 'fa-money-bill-wave');
+		$this->addSidebarLink($menu, 'inventory_document.view', 'admin.menu.inventory_documents', 'app_admin_inventory_document_index', $routeParameters, 'fa-clipboard-list');
+		$this->addSidebarLink($menu, 'customer.view', 'admin.menu.customers', 'app_admin_customer_index', $routeParameters, 'fa-address-book');
+		$this->addSidebarLink($menu, 'supplier.view', 'admin.menu.suppliers', 'app_admin_supplier_index', $routeParameters, 'fa-truck');
 
 		$settings = $this->factory->createItem($this->trans('admin.menu.settings'), [
 			'uri' => '#',
+			'attributes' => [
+				'class' => 'sidebar-item',
+			],
 			'linkAttributes' => [
 				'data-bs-target' => '#setting',
 				'data-bs-toggle' => 'collapse',
@@ -63,18 +66,19 @@ final class MenuBuilder
 				'class' => 'sidebar-link collapsed',
 			],
 			'childrenAttributes' => [
-				'class' => 'sidebar-dropdown list-unstyled collapse show',
+				'class' => 'sidebar-dropdown list-unstyled collapse',
 				'id' => 'setting',
 				'data-bs-parent' => 'sidebar',
 			],
 		]);
+		$settings->setExtra('icon', 'fa-gears');
 
-		$this->addSidebarLink($settings, 'category.manage', 'admin.menu.categories', 'admin_category_index', $routeParameters);
-		$this->addSidebarLink($settings, 'product.view', 'admin.menu.products', 'admin_product_index', $routeParameters);
-		$this->addSidebarLink($settings, 'unit.manage', 'admin.menu.units', 'app_admin_unit_index', $routeParameters);
-		$this->addSidebarLink($settings, 'warehouse.view', 'admin.menu.warehouses', 'app_admin_warehouse_index', $routeParameters);
-		$this->addSidebarLink($settings, 'inventory_reason.manage', 'admin.menu.inventory_reasons', 'app_admin_inventory_reason_index', $routeParameters);
-		$this->addSidebarLink($settings, 'exchange_rate.manage', 'admin.menu.exchange_rates', 'app_admin_exchange_rate_index', $routeParameters);
+		$this->addSidebarLink($settings, 'category.manage', 'admin.menu.categories', 'admin_category_index', $routeParameters, 'fa-layer-group');
+		$this->addSidebarLink($settings, 'product.view', 'admin.menu.products', 'admin_product_index', $routeParameters, 'fa-box-open');
+		$this->addSidebarLink($settings, 'unit.manage', 'admin.menu.units', 'app_admin_unit_index', $routeParameters, 'fa-ruler-combined');
+		$this->addSidebarLink($settings, 'warehouse.view', 'admin.menu.warehouses', 'app_admin_warehouse_index', $routeParameters, 'fa-warehouse');
+		$this->addSidebarLink($settings, 'inventory_reason.manage', 'admin.menu.inventory_reasons', 'app_admin_inventory_reason_index', $routeParameters, 'fa-circle-question');
+		$this->addSidebarLink($settings, 'exchange_rate.manage', 'admin.menu.exchange_rates', 'app_admin_exchange_rate_index', $routeParameters, 'fa-money-bill-transfer');
 
 		if ($settings->count() > 0) {
 			$menu->addChild($settings);
@@ -115,13 +119,13 @@ final class MenuBuilder
 	/**
 	 * @param array<string, mixed> $routeParameters
 	 */
-	private function addSidebarLink(ItemInterface $menu, string $permission, string $label, string $route, array $routeParameters): void
+	private function addSidebarLink(ItemInterface $menu, string $permission, string $label, string $route, array $routeParameters, string $icon): void
 	{
 		if (!$this->authorizationChecker->isGranted($permission)) {
 			return;
 		}
 
-		$menu->addChild($this->trans($label), [
+		$item = $menu->addChild($this->trans($label), [
 			'route' => $route,
 			'routeParameters' => $routeParameters,
 			'attributes' => [
@@ -131,6 +135,7 @@ final class MenuBuilder
 				'class' => 'sidebar-link',
 			],
 		]);
+		$item->setExtra('icon', $icon);
 	}
 
 	/**
