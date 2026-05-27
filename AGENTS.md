@@ -140,6 +140,21 @@ For complex flows such as order status changes, procurement, stock corrections, 
 - For orders and procurement items, preserve price/name/currency snapshots where applicable.
 - Do not calculate historical document totals from current product prices.
 
+## Concurrency and simultaneous writes
+
+- This project has explicit protection against concurrent edits. Before changing order, purchase, production, payment, inventory, reservation, or stock mutation flows, inspect `src/Service/Concurrency/ConcurrencyGuard.php` and `src/Exception/ConcurrencyConflictException.php`.
+- Mutable business entities use optimistic `version` fields. Current versioned entities include `Order`, `Purchase`, `ProductionOrder`, `InventoryDocument`, `Payment`, `WarehouseStock`, and `WarehouseStockBatch`.
+- Admin edit forms for versioned entities must include an unmapped hidden `version` field and controllers must reject stale submits through `ConcurrencyFormTrait`/`ConcurrencyGuard::assertSubmittedVersion()`.
+- State-changing business operations must run inside `EntityManagerInterface::wrapInTransaction()` and lock persisted rows with `ConcurrencyGuard::lock()` or `ConcurrencyGuard::lockAll()` before changing state.
+- `ConcurrencyGuard::lock()` requires an active transaction. Do not call it before `wrapInTransaction()` or from read-only code paths.
+- Use row locks for actions that change status, post/cancel/reverse inventory documents, reserve/release/consume stock, consume FIFO batches, record/reverse payments, or create draft shipment/receipt documents.
+- Lock multiple existing rows in deterministic order with `lockAll()` to reduce deadlock risk. Do not manually loop and lock mixed entity lists in arbitrary order.
+- Convert lock conflicts and optimistic lock failures to `ConcurrencyConflictException` and return a user-safe conflict response, usually HTTP 409 for admin actions.
+- Do not bypass managers/services with direct controller mutations for protected flows. Keep status changes, stock posting, reservations, and payment recalculation in the existing manager/service layer where locks and transactions are enforced.
+- When adding a new mutable document or stock-like entity, add a `#[ORM\Version]` integer column, create a new migration, update `src/Uml/database/`, and add stale form protection if the entity has an edit form.
+- Database constraints are part of the concurrency safety net. Do not remove stock non-negative constraints or `reserved <= on_hand` / `remaining <= initial` constraints without replacing them with an equally strong invariant.
+- Tests for protected flows should cover repeated/double actions where practical: duplicate shipment/receipt draft creation, repeated status button clicks, stale form submit, stock over-reservation, and FIFO batch consumption.
+
 ## Admin and AJAX rules
 
 - Before changing an admin AJAX endpoint, inspect the related controller, route, JavaScript caller, Twig template, and CSS if relevant.
