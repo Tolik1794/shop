@@ -21,6 +21,10 @@ class Order implements WorkflowSubjectInterface
 	#[ORM\Column]
 	private ?int $id = null;
 
+	#[ORM\Version]
+	#[ORM\Column(type: Types::INTEGER)]
+	private int $version = 1;
+
 	#[ORM\Column(length: 255)]
 	private ?string $number = null;
 
@@ -127,6 +131,11 @@ class Order implements WorkflowSubjectInterface
 	public function getId(): ?int
 	{
 		return $this->id;
+	}
+
+	public function getVersion(): int
+	{
+		return $this->version;
 	}
 
 	public function getStatus(): ?OrderStatus

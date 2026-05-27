@@ -9,11 +9,13 @@ use App\Entity\OrderStatus;
 use App\Entity\Store;
 use App\Entity\Customer;
 use App\Entity\User\User;
+use App\Exception\ConcurrencyConflictException;
 use App\Form\Admin\FilterType\OrderFilterType;
 use App\Form\Admin\Type\OrderType;
 use App\Manager\OrderManager;
 use App\Manager\OrderCommentManager;
 use App\Repository\CustomerRepository;
+use App\Service\Concurrency\ConcurrencyGuard;
 use App\Service\FilterFormHandler;
 use App\Service\History\DocumentTimelineBuilder;
 use App\Service\Inventory\OrderShipmentUseCase;
@@ -32,6 +34,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class OrderController extends AbstractAdvancedController
 {
 	use QuickActionResponseTrait;
+	use ConcurrencyFormTrait;
 
 	private const int DEFAULT_PAGE_LIMIT = 20;
 
@@ -41,6 +44,7 @@ class OrderController extends AbstractAdvancedController
 		private readonly CustomerRepository $customerRepository,
 		private readonly DocumentTimelineBuilder $documentTimelineBuilder,
 		private readonly OrderShipmentUseCase $orderShipmentUseCase,
+		private readonly ConcurrencyGuard $concurrencyGuard,
 	)
 	{
 	}
@@ -113,6 +117,14 @@ class OrderController extends AbstractAdvancedController
 			try {
 				$this->orderManager->saveOrder($order);
 				$this->saveDraftComments($form, $order);
+			} catch (ConcurrencyConflictException $exception) {
+				$form->addError(new FormError($exception->getMessage()));
+
+				return $this->render('admin/order/form.html.twig', [
+					'entity' => $order,
+					'form' => $form,
+					'order_index_page' => null,
+				], new Response(status: Response::HTTP_CONFLICT));
 			} catch (RuntimeException $exception) {
 				$form->addError(new FormError($exception->getMessage()));
 
@@ -162,11 +174,29 @@ class OrderController extends AbstractAdvancedController
 			$this->resolveOrderCustomer($form, $order, $store);
 		}
 
+		if ($form->isSubmitted() && $this->rejectStaleForm($form, $order, $this->concurrencyGuard)) {
+			return $this->render('admin/order/form.html.twig', [
+				'entity' => $order,
+				'form' => $form,
+				'order_index_page' => $this->orderManager->getRepository()->getIndexPage($order, self::DEFAULT_PAGE_LIMIT),
+				...$this->getOrderDiscussionViewData($order),
+			], new Response(status: Response::HTTP_CONFLICT));
+		}
+
 		if ($form->isSubmitted() && $form->isValid()) {
 			$removedEntries = array_filter($originalEntries, static fn(OrderEntry $orderEntry) => !$order->getOrderEntries()->contains($orderEntry));
 
 			try {
 				$this->orderManager->saveOrder($order, $removedEntries);
+			} catch (ConcurrencyConflictException $exception) {
+				$form->addError(new FormError($exception->getMessage()));
+
+				return $this->render('admin/order/form.html.twig', [
+					'entity' => $order,
+					'form' => $form,
+					'order_index_page' => $this->orderManager->getRepository()->getIndexPage($order, self::DEFAULT_PAGE_LIMIT),
+					...$this->getOrderDiscussionViewData($order),
+				], new Response(status: Response::HTTP_CONFLICT));
 			} catch (RuntimeException $exception) {
 				$form->addError(new FormError($exception->getMessage()));
 
@@ -259,6 +289,10 @@ class OrderController extends AbstractAdvancedController
 		try {
 			$this->orderManager->confirm($order);
 			$this->addFlash('success', 'Order confirmed.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_CONFLICT);
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 
@@ -288,6 +322,10 @@ class OrderController extends AbstractAdvancedController
 		try {
 			$this->orderManager->cancel($order);
 			$this->addFlash('success', 'Order canceled.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_CONFLICT);
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 
@@ -317,6 +355,10 @@ class OrderController extends AbstractAdvancedController
 		try {
 			$this->orderManager->returnToDraft($order);
 			$this->addFlash('success', 'Order returned to draft.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_CONFLICT);
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 
@@ -346,6 +388,10 @@ class OrderController extends AbstractAdvancedController
 		try {
 			$this->orderManager->rollbackStatus($order);
 			$this->addFlash('success', 'Order status rolled back.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_CONFLICT);
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 
@@ -375,6 +421,10 @@ class OrderController extends AbstractAdvancedController
 		try {
 			$this->orderManager->markDelivered($order);
 			$this->addFlash('success', 'Order marked as delivered.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_CONFLICT);
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 
@@ -404,6 +454,10 @@ class OrderController extends AbstractAdvancedController
 		try {
 			$this->orderManager->complete($order);
 			$this->addFlash('success', 'Order completed.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_CONFLICT);
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 
@@ -433,6 +487,10 @@ class OrderController extends AbstractAdvancedController
 		try {
 			$inventoryDocument = $this->orderShipmentUseCase->createDraft($order);
 			$this->addFlash('success', 'Order shipment draft created. Review and post the inventory document to ship stock.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_CONFLICT);
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 

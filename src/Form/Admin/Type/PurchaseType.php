@@ -11,9 +11,12 @@ use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\GreaterThanOrEqual;
@@ -24,8 +27,14 @@ class PurchaseType extends AbstractType
 	{
 		/** @var Store|null $store */
 		$store = $options['store'];
+		/** @var Purchase|null $purchase */
+		$purchase = $builder->getData();
 
 		$builder
+			->add('version', HiddenType::class, [
+				'mapped' => false,
+				'data' => (string) ($purchase?->getVersion() ?? 1),
+			])
 			->add('supplier', EntityType::class, [
 				'class' => Supplier::class,
 				'query_builder' => fn (SupplierRepository $repository) => $store instanceof Store
@@ -80,6 +89,15 @@ class PurchaseType extends AbstractType
 				'by_reference' => false,
 				'label' => false,
 			]);
+
+		$builder->addEventListener(FormEvents::POST_SET_DATA, static function (FormEvent $event): void {
+			$purchase = $event->getData();
+			$form = $event->getForm();
+
+			if ($purchase instanceof Purchase && $form->has('version')) {
+				$form->get('version')->setData((string) $purchase->getVersion());
+			}
+		});
 	}
 
 	public function configureOptions(OptionsResolver $resolver): void

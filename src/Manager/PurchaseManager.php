@@ -10,6 +10,7 @@ use App\Entity\Store;
 use App\Entity\User\User;
 use App\Repository\PurchaseRepository;
 use App\Service\ExchangeRateResolver;
+use App\Service\Concurrency\ConcurrencyGuard;
 use App\Service\Purchase\PurchaseEntrySnapshotter;
 use App\Service\PurchaseCalculator;
 use App\Workflow\StatusTransitionService;
@@ -25,6 +26,7 @@ class PurchaseManager extends AbstractManager
 		private readonly PurchaseCalculator $purchaseCalculator,
 		private readonly StatusTransitionService $statusTransitionService,
 		private readonly UserManager $userManager,
+		private readonly ConcurrencyGuard $concurrencyGuard,
 	)
 	{
 	}
@@ -60,30 +62,42 @@ class PurchaseManager extends AbstractManager
 
 	public function order(Purchase $purchase): void
 	{
-		$this->statusTransitionService->apply($purchase, 'order', $this->transitionContext());
-		$this->savePurchase($purchase);
+		$this->entityManager->wrapInTransaction(function () use ($purchase): void {
+			$this->concurrencyGuard->lock($purchase);
+			$this->statusTransitionService->apply($purchase, 'order', $this->transitionContext());
+			$this->savePurchase($purchase);
+		});
 	}
 
 	public function returnToDraft(Purchase $purchase): void
 	{
-		$this->statusTransitionService->apply($purchase, 'return_to_draft', $this->transitionContext());
-		$this->savePurchase($purchase);
+		$this->entityManager->wrapInTransaction(function () use ($purchase): void {
+			$this->concurrencyGuard->lock($purchase);
+			$this->statusTransitionService->apply($purchase, 'return_to_draft', $this->transitionContext());
+			$this->savePurchase($purchase);
+		});
 	}
 
 	public function cancel(Purchase $purchase): void
 	{
-		if ($purchase->getStatus() === PurchaseStatus::CANCELED) {
-			return;
-		}
+		$this->entityManager->wrapInTransaction(function () use ($purchase): void {
+			$this->concurrencyGuard->lock($purchase);
+			if ($purchase->getStatus() === PurchaseStatus::CANCELED) {
+				return;
+			}
 
-		$this->statusTransitionService->apply($purchase, 'cancel', $this->transitionContext());
-		$this->savePurchase($purchase);
+			$this->statusTransitionService->apply($purchase, 'cancel', $this->transitionContext());
+			$this->savePurchase($purchase);
+		});
 	}
 
 	public function complete(Purchase $purchase): void
 	{
-		$this->statusTransitionService->apply($purchase, 'complete', $this->transitionContext());
-		$this->savePurchase($purchase);
+		$this->entityManager->wrapInTransaction(function () use ($purchase): void {
+			$this->concurrencyGuard->lock($purchase);
+			$this->statusTransitionService->apply($purchase, 'complete', $this->transitionContext());
+			$this->savePurchase($purchase);
+		});
 	}
 
 	public function getRepository(): PurchaseRepository

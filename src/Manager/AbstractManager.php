@@ -2,7 +2,9 @@
 
 namespace App\Manager;
 
+use App\Exception\ConcurrencyConflictException;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\OptimisticLockException;
 use Doctrine\Persistence\ObjectRepository;
 
 abstract class AbstractManager
@@ -29,7 +31,11 @@ abstract class AbstractManager
 	public function save(object $entity): void
 	{
 		$this->getEntityManager()->persist($entity);
-		$this->getEntityManager()->flush();
+		try {
+			$this->getEntityManager()->flush();
+		} catch (OptimisticLockException) {
+			throw new ConcurrencyConflictException();
+		}
 	}
 
 	public function delete(object $entity): void

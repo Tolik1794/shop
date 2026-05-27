@@ -10,6 +10,7 @@ use App\Entity\Unit;
 use App\Entity\Warehouse;
 use App\Enum\ProductKindEnum;
 use App\Exception\StockOperationException;
+use App\Service\Concurrency\ConcurrencyGuard;
 use App\Repository\WarehouseStockRepository;
 use App\Service\WarehouseStockService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -26,7 +27,8 @@ class WarehouseStockServiceTest extends KernelTestCase
 		$this->entityManager = static::getContainer()->get(EntityManagerInterface::class);
 		$this->warehouseStockService = new WarehouseStockService(
 			$this->entityManager,
-			static::getContainer()->get(WarehouseStockRepository::class)
+			static::getContainer()->get(WarehouseStockRepository::class),
+			static::getContainer()->get(ConcurrencyGuard::class),
 		);
 	}
 

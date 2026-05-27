@@ -10,6 +10,7 @@ use App\Entity\WarehouseStockBatch;
 use App\Enum\CostingMethodEnum;
 use App\Exception\StockOperationException;
 use App\Repository\WarehouseStockBatchRepository;
+use App\Service\Concurrency\ConcurrencyGuard;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
 
@@ -18,6 +19,7 @@ class WarehouseStockBatchPostingService
 	public function __construct(
 		private readonly EntityManagerInterface $entityManager,
 		private readonly WarehouseStockBatchRepository $warehouseStockBatchRepository,
+		private readonly ConcurrencyGuard $concurrencyGuard,
 	)
 	{
 	}
@@ -88,6 +90,8 @@ class WarehouseStockBatchPostingService
 		$selectedBatch = $line->getOrderEntry()?->getWarehouseStockBatch();
 
 		if ($selectedBatch instanceof WarehouseStockBatch) {
+			$this->concurrencyGuard->lock($selectedBatch);
+
 			return [$this->consumeBatch(
 				line: $line,
 				warehouseStock: $warehouseStock,
@@ -99,7 +103,10 @@ class WarehouseStockBatchPostingService
 			)];
 		}
 
-		foreach ($this->openBatches($warehouseStock) as $batch) {
+		$batches = $this->openBatches($warehouseStock);
+		$this->concurrencyGuard->lockAll($batches);
+
+		foreach ($batches as $batch) {
 			if ($remaining <= 0.00005) {
 				break;
 			}
@@ -201,6 +208,7 @@ class WarehouseStockBatchPostingService
 
 		foreach ($originalMovements as $originalMovement) {
 			$batch = $originalMovement->getWarehouseStockBatch();
+			$this->concurrencyGuard->lock($batch);
 			$quantityChange = -$this->numberValue($originalMovement->getQuantityChange());
 
 			if (abs($quantityChange) <= 0.00005) {

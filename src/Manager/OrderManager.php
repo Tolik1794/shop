@@ -16,6 +16,7 @@ use App\Repository\OrderHistoryRepository;
 use App\Repository\OrderRepository;
 use App\Repository\WarehouseStockRepository;
 use App\Service\BusinessDocumentStatusSynchronizer;
+use App\Service\Concurrency\ConcurrencyGuard;
 use App\Service\ExchangeRateResolver;
 use App\Service\Order\OrderEntryPricingService;
 use App\Service\Order\OrderEntrySnapshotter;
@@ -47,6 +48,7 @@ class OrderManager extends AbstractManager
 		private readonly WarehouseStockRepository $warehouseStockRepository,
 		private readonly StockReservationService $stockReservationService,
 		private readonly BusinessDocumentStatusSynchronizer $businessDocumentStatusSynchronizer,
+		private readonly ConcurrencyGuard $concurrencyGuard,
 	)
 	{
 	}
@@ -127,6 +129,7 @@ class OrderManager extends AbstractManager
 	public function confirm(Order $order): void
 	{
 		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->concurrencyGuard->lock($order);
 			$context = $this->transitionContext();
 			$this->statusTransitionService->apply($order, 'confirm', $context);
 			$this->saveOrder($order);
@@ -138,11 +141,12 @@ class OrderManager extends AbstractManager
 
 	public function cancel(Order $order): void
 	{
-		if ($order->getStatus() === OrderStatus::CANCELED) {
-			return;
-		}
-
 		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->concurrencyGuard->lock($order);
+			if ($order->getStatus() === OrderStatus::CANCELED) {
+				return;
+			}
+
 			$this->statusTransitionService->apply($order, 'cancel', $this->transitionContext());
 			$this->releaseActiveReservations($order);
 			$this->saveOrder($order);
@@ -152,6 +156,7 @@ class OrderManager extends AbstractManager
 	public function returnToDraft(Order $order): void
 	{
 		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->concurrencyGuard->lock($order);
 			$this->statusTransitionService->apply($order, 'return_to_draft', $this->transitionContext());
 			$this->releaseActiveReservations($order);
 			$this->saveOrder($order);
@@ -170,14 +175,15 @@ class OrderManager extends AbstractManager
 
 	public function rollbackStatus(Order $order): void
 	{
-		$targetHistoryEntry = $this->rollbackTargetHistoryEntry($order);
-		$targetStatus = $this->rollbackTargetStatus($targetHistoryEntry);
+		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->concurrencyGuard->lock($order);
+			$targetHistoryEntry = $this->rollbackTargetHistoryEntry($order);
+			$targetStatus = $this->rollbackTargetStatus($targetHistoryEntry);
 
-		if (!$targetStatus instanceof OrderStatus) {
-			throw new RuntimeException('Order has no previous status to rollback to.');
-		}
+			if (!$targetStatus instanceof OrderStatus) {
+				throw new RuntimeException('Order has no previous status to rollback to.');
+			}
 
-		$this->entityManager->wrapInTransaction(function () use ($order, $targetStatus, $targetHistoryEntry): void {
 			$fromStatus = $order->getStatus();
 			if (!$fromStatus instanceof OrderStatus) {
 				throw new RuntimeException('Order status is not set.');
@@ -220,6 +226,7 @@ class OrderManager extends AbstractManager
 	public function markDelivered(Order $order): void
 	{
 		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->concurrencyGuard->lock($order);
 			$this->statusTransitionService->apply($order, 'mark_delivered', $this->transitionContext());
 			$this->saveOrder($order);
 		});
@@ -228,6 +235,7 @@ class OrderManager extends AbstractManager
 	public function complete(Order $order): void
 	{
 		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->concurrencyGuard->lock($order);
 			$this->statusTransitionService->apply($order, 'complete', $this->transitionContext());
 			$this->saveOrder($order);
 		});

@@ -6,6 +6,7 @@ use App\Entity\Order;
 use App\Entity\Payment;
 use App\Entity\Purchase;
 use App\Entity\Store;
+use App\Exception\ConcurrencyConflictException;
 use App\Form\Admin\FilterType\PaymentFilterType;
 use App\Form\Admin\Type\PaymentType;
 use App\Manager\PaymentManager;
@@ -103,6 +104,10 @@ class PaymentController extends AbstractAdvancedController
 		if ($form->isSubmitted() && $this->paymentBusinessValidator->validate($payment, $store, $form) && $form->isValid()) {
 			try {
 				$this->paymentManager->savePayment($payment);
+			} catch (ConcurrencyConflictException $exception) {
+				$form->addError(new FormError($exception->getMessage()));
+
+				return $this->renderForm($payment, $form, Response::HTTP_CONFLICT);
 			} catch (RuntimeException $exception) {
 				$form->addError(new FormError($exception->getMessage()));
 
@@ -194,7 +199,10 @@ class PaymentController extends AbstractAdvancedController
 		if ($this->isCsrfTokenValid('reverse_payment_' . $payment->getId(), (string) $request->request->get('_token'))) {
 			try {
 				$this->paymentManager->reversePayment($payment, (string) $request->request->get('reason'));
-			} catch (RuntimeException) {
+			} catch (ConcurrencyConflictException $exception) {
+				$this->addFlash('danger', $exception->getMessage());
+			} catch (RuntimeException $exception) {
+				$this->addFlash('danger', $exception->getMessage());
 			}
 		}
 

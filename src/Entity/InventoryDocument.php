@@ -25,6 +25,10 @@ class InventoryDocument implements WorkflowSubjectInterface
 	#[ORM\Column]
 	private ?int $id = null;
 
+	#[ORM\Version]
+	#[ORM\Column(type: Types::INTEGER)]
+	private int $version = 1;
+
 	#[ORM\Column(length: 255)]
 	private ?string $number = null;
 
@@ -120,6 +124,7 @@ class InventoryDocument implements WorkflowSubjectInterface
 	}
 
 	public function getId(): ?int { return $this->id; }
+	public function getVersion(): int { return $this->version; }
 	public function getNumber(): ?string { return $this->number; }
 	public function setNumber(string $number): self { $this->number = $number; return $this; }
 	public function getType(): InventoryDocumentType { return $this->type; }

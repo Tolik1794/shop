@@ -10,6 +10,7 @@ use App\Entity\User\User;
 use App\Enum\PaymentDirectionEnum;
 use App\Enum\PaymentTypeEnum;
 use App\Repository\PaymentRepository;
+use App\Service\Concurrency\ConcurrencyGuard;
 use App\Service\ExchangeRateResolver;
 use App\Service\Payment\PaymentHistoryRecorder;
 use App\Service\Payment\PaymentRecalculationService;
@@ -25,6 +26,7 @@ class PaymentManager extends AbstractManager
 		private readonly PaymentRecalculationService $paymentRecalculationService,
 		private readonly PaymentHistoryRecorder $paymentHistoryRecorder,
 		private readonly UserManager $userManager,
+		private readonly ConcurrencyGuard $concurrencyGuard,
 	)
 	{
 	}
@@ -64,84 +66,92 @@ class PaymentManager extends AbstractManager
 
 	public function savePayment(Payment $payment, ?Order $previousOrder = null, ?Purchase $previousPurchase = null): void
 	{
-		if ($payment->getId() !== null) {
-			throw new RuntimeException('Recorded payments cannot be edited. Use reversal correction flow.');
-		}
+		$this->entityManager->wrapInTransaction(function () use ($payment, $previousOrder, $previousPurchase): void {
+			if ($payment->getId() !== null) {
+				throw new RuntimeException('Recorded payments cannot be edited. Use reversal correction flow.');
+			}
 
-		$this->assertValidTarget($payment);
-		$this->preparePayment($payment);
+			$this->assertValidTarget($payment);
+			$this->concurrencyGuard->lockAll($this->documentsToRecalculate($payment, $previousOrder, $previousPurchase));
+			$this->preparePayment($payment);
 
-		$actor = $this->currentActor();
-		if ($payment->getId() === null) {
-			$payment->setCreatedBy($actor);
-		}
+			$actor = $this->currentActor();
+			if ($payment->getId() === null) {
+				$payment->setCreatedBy($actor);
+			}
 
-		$payment
-			->setUpdatedBy($actor)
-			->setUpdatedAt(new DateTimeImmutable());
+			$payment
+				->setUpdatedBy($actor)
+				->setUpdatedAt(new DateTimeImmutable());
 
-		$this->syncOwningCollections($payment, $previousOrder, $previousPurchase);
+			$this->syncOwningCollections($payment, $previousOrder, $previousPurchase);
 
-		$this->entityManager->persist($payment);
-		foreach ($this->documentsToRecalculate($payment, $previousOrder, $previousPurchase) as $document) {
-			$this->paymentRecalculationService->recalculate($document);
-			$this->entityManager->persist($document);
-		}
-		$this->paymentHistoryRecorder->recordPaymentCreated($payment, $actor);
+			$this->entityManager->persist($payment);
+			foreach ($this->documentsToRecalculate($payment, $previousOrder, $previousPurchase) as $document) {
+				$this->paymentRecalculationService->recalculate($document);
+				$this->entityManager->persist($document);
+			}
+			$this->paymentHistoryRecorder->recordPaymentCreated($payment, $actor);
 
-		$this->entityManager->flush();
+			$this->entityManager->flush();
+		});
 	}
 
 	public function reversePayment(Payment $payment, string $reason): Payment
 	{
-		$reason = trim($reason);
+		return $this->entityManager->wrapInTransaction(function () use ($payment, $reason): Payment {
+			$this->concurrencyGuard->lock($payment);
+			$reason = trim($reason);
 
-		if ($reason === '') {
-			throw new RuntimeException('Reversal reason is required.');
-		}
+			if ($reason === '') {
+				throw new RuntimeException('Reversal reason is required.');
+			}
 
-		if ($payment->getId() === null) {
-			throw new RuntimeException('Only recorded payments can be reversed.');
-		}
+			if ($payment->getId() === null) {
+				throw new RuntimeException('Only recorded payments can be reversed.');
+			}
 
-		if ($payment->getType() === PaymentTypeEnum::REFUND) {
-			throw new RuntimeException('Refund payments cannot be reversed by this flow.');
-		}
+			if ($payment->getType() === PaymentTypeEnum::REFUND) {
+				throw new RuntimeException('Refund payments cannot be reversed by this flow.');
+			}
 
-		if ($payment->getReversedByPayment() instanceof Payment) {
-			throw new RuntimeException('Payment was already reversed.');
-		}
+			if ($payment->getReversedByPayment() instanceof Payment) {
+				throw new RuntimeException('Payment was already reversed.');
+			}
 
-		$actor = $this->currentActor();
-		$reversal = (new Payment())
-			->setStore($payment->getStore())
-			->setDirection($this->oppositeDirection($payment->getDirection()))
-			->setType(PaymentTypeEnum::REFUND)
-			->setAmount((string) $payment->getAmount())
-			->setAmountBase((string) $payment->getAmountBase())
-			->setPaidAt(new DateTimeImmutable())
-			->setCurrency($payment->getCurrency())
-			->setExchangeRateToBase((string) $payment->getExchangeRateToBase())
-			->setOrder($payment->getOrder())
-			->setPurchase($payment->getPurchase())
-			->setComment($reason)
-			->setCreatedBy($actor)
-			->setUpdatedBy($actor)
-			->setReversesPayment($payment);
+			$this->concurrencyGuard->lockAll($this->documentsToRecalculate($payment, null, null));
 
-		$payment->setReversedByPayment($reversal);
+			$actor = $this->currentActor();
+			$reversal = (new Payment())
+				->setStore($payment->getStore())
+				->setDirection($this->oppositeDirection($payment->getDirection()))
+				->setType(PaymentTypeEnum::REFUND)
+				->setAmount((string) $payment->getAmount())
+				->setAmountBase((string) $payment->getAmountBase())
+				->setPaidAt(new DateTimeImmutable())
+				->setCurrency($payment->getCurrency())
+				->setExchangeRateToBase((string) $payment->getExchangeRateToBase())
+				->setOrder($payment->getOrder())
+				->setPurchase($payment->getPurchase())
+				->setComment($reason)
+				->setCreatedBy($actor)
+				->setUpdatedBy($actor)
+				->setReversesPayment($payment);
 
-		$this->entityManager->persist($reversal);
-		foreach ($this->documentsToRecalculate($reversal, null, null) as $document) {
-			$document->addPayment($reversal);
-			$this->paymentRecalculationService->recalculate($document);
-			$this->entityManager->persist($document);
-		}
-		$this->paymentHistoryRecorder->recordPaymentReversed($payment, $reversal, $actor);
+			$payment->setReversedByPayment($reversal);
 
-		$this->entityManager->flush();
+			$this->entityManager->persist($reversal);
+			foreach ($this->documentsToRecalculate($reversal, null, null) as $document) {
+				$document->addPayment($reversal);
+				$this->paymentRecalculationService->recalculate($document);
+				$this->entityManager->persist($document);
+			}
+			$this->paymentHistoryRecorder->recordPaymentReversed($payment, $reversal, $actor);
 
-		return $reversal;
+			$this->entityManager->flush();
+
+			return $reversal;
+		});
 	}
 
 	public function getRepository(): PaymentRepository

@@ -479,6 +479,7 @@ class OrderManagerTest extends KernelTestCase
 		$this->orderManager->saveOrder($order);
 		$this->recordStatusChange($order, OrderStatus::DRAFT, OrderStatus::SHIPPED);
 		$order->setPaymentStatus(PaymentStatusEnum::PAID);
+		$this->entityManager->flush();
 		$this->orderManager->markDelivered($order);
 		$this->orderManager->complete($order);
 

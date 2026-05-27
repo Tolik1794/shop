@@ -103,6 +103,7 @@
 				</div>
 
 				{% if form._token is defined %}
+					{{ form_widget(form.version) }}
 					{{ form_widget(form._token) }}
 				{% endif %}
 			{{ form_end(form, {'render_rest': false}) }}

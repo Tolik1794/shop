@@ -21,6 +21,10 @@ class ProductionOrder implements WorkflowSubjectInterface
 	#[ORM\Column]
 	private ?int $id = null;
 
+	#[ORM\Version]
+	#[ORM\Column(type: Types::INTEGER)]
+	private int $version = 1;
+
 	#[ORM\Column(length: 255, enumType: ProductionOrderStatus::class)]
 	private ProductionOrderStatus $status;
 
@@ -106,6 +110,7 @@ class ProductionOrder implements WorkflowSubjectInterface
 	}
 
 	public function getId(): ?int { return $this->id; }
+	public function getVersion(): int { return $this->version; }
 	public function getStatus(): ProductionOrderStatus { return $this->status; }
 	public function setStatus(ProductionOrderStatus $status): self { $this->status = $status; return $this; }
 	public function getWorkflowKey(): string { return 'production_order'; }

@@ -6,9 +6,11 @@ use App\Entity\Purchase;
 use App\Entity\PurchaseEntry;
 use App\Entity\PurchaseStatus;
 use App\Entity\Store;
+use App\Exception\ConcurrencyConflictException;
 use App\Form\Admin\FilterType\PurchaseFilterType;
 use App\Form\Admin\Type\PurchaseType;
 use App\Manager\PurchaseManager;
+use App\Service\Concurrency\ConcurrencyGuard;
 use App\Service\FilterFormHandler;
 use App\Service\History\DocumentTimelineBuilder;
 use App\Service\Inventory\PurchaseReceiptUseCase;
@@ -27,6 +29,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class PurchaseController extends AbstractAdvancedController
 {
 	use QuickActionResponseTrait;
+	use ConcurrencyFormTrait;
 
 	private const int DEFAULT_PAGE_LIMIT = 20;
 
@@ -34,6 +37,7 @@ class PurchaseController extends AbstractAdvancedController
 		private readonly PurchaseManager $purchaseManager,
 		private readonly DocumentTimelineBuilder $documentTimelineBuilder,
 		private readonly PurchaseReceiptUseCase $purchaseReceiptUseCase,
+		private readonly ConcurrencyGuard $concurrencyGuard,
 	)
 	{
 	}
@@ -101,6 +105,15 @@ class PurchaseController extends AbstractAdvancedController
 		if ($form->isSubmitted() && $form->isValid()) {
 			try {
 				$this->purchaseManager->savePurchase($purchase);
+			} catch (ConcurrencyConflictException $exception) {
+				$form->addError(new FormError($exception->getMessage()));
+
+				return $this->renderForm(
+					$purchase,
+					$form,
+					null,
+					Response::HTTP_CONFLICT,
+				);
 			} catch (RuntimeException $exception) {
 				$form->addError(new FormError($exception->getMessage()));
 
@@ -143,6 +156,15 @@ class PurchaseController extends AbstractAdvancedController
 		$form = $this->createPurchaseForm($purchase, $store);
 		$form->handleRequest($request);
 
+		if ($form->isSubmitted() && $this->rejectStaleForm($form, $purchase, $this->concurrencyGuard)) {
+			return $this->renderForm(
+				$purchase,
+				$form,
+				$this->purchaseManager->getRepository()->getIndexPage($purchase, self::DEFAULT_PAGE_LIMIT),
+				Response::HTTP_CONFLICT,
+			);
+		}
+
 		if ($form->isSubmitted() && $form->isValid()) {
 			$removedEntries = array_filter(
 				$originalEntries,
@@ -151,6 +173,15 @@ class PurchaseController extends AbstractAdvancedController
 
 			try {
 				$this->purchaseManager->savePurchase($purchase, $removedEntries);
+			} catch (ConcurrencyConflictException $exception) {
+				$form->addError(new FormError($exception->getMessage()));
+
+				return $this->renderForm(
+					$purchase,
+					$form,
+					$this->purchaseManager->getRepository()->getIndexPage($purchase, self::DEFAULT_PAGE_LIMIT),
+					Response::HTTP_CONFLICT,
+				);
 			} catch (RuntimeException $exception) {
 				$form->addError(new FormError($exception->getMessage()));
 
@@ -225,6 +256,10 @@ class PurchaseController extends AbstractAdvancedController
 		try {
 			$this->purchaseManager->order($purchase);
 			$this->addFlash('success', 'Purchase ordered.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $purchase, Response::HTTP_CONFLICT);
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 
@@ -254,6 +289,10 @@ class PurchaseController extends AbstractAdvancedController
 		try {
 			$this->purchaseManager->returnToDraft($purchase);
 			$this->addFlash('success', 'Purchase returned to draft.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $purchase, Response::HTTP_CONFLICT);
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 
@@ -283,6 +322,10 @@ class PurchaseController extends AbstractAdvancedController
 		try {
 			$this->purchaseManager->cancel($purchase);
 			$this->addFlash('success', 'Purchase canceled.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $purchase, Response::HTTP_CONFLICT);
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 
@@ -312,6 +355,10 @@ class PurchaseController extends AbstractAdvancedController
 		try {
 			$this->purchaseManager->complete($purchase);
 			$this->addFlash('success', 'Purchase completed.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $purchase, Response::HTTP_CONFLICT);
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 
@@ -341,6 +388,10 @@ class PurchaseController extends AbstractAdvancedController
 		try {
 			$inventoryDocument = $this->purchaseReceiptUseCase->createDraft($purchase);
 			$this->addFlash('success', 'Purchase receipt draft created. Review and post the inventory document to receive stock.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $purchase, Response::HTTP_CONFLICT);
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 

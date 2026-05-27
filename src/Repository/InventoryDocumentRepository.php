@@ -4,7 +4,11 @@ namespace App\Repository;
 
 use App\Entity\InventoryDocument;
 use App\Entity\InventoryReason;
+use App\Entity\Order;
+use App\Entity\Purchase;
 use App\Entity\Store;
+use App\Enum\InventoryDocumentStatus;
+use App\Enum\InventoryDocumentType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -91,5 +95,35 @@ class InventoryDocumentRepository extends ServiceEntityRepository
 			->setMaxResults($limit)
 			->getQuery()
 			->getResult();
+	}
+
+	public function hasDraftForOrder(Order $order, InventoryDocumentType $type): bool
+	{
+		return (bool) $this->createQueryBuilder('inventoryDocument')
+			->select('1')
+			->andWhere('inventoryDocument.order = :order')
+			->andWhere('inventoryDocument.type = :type')
+			->andWhere('inventoryDocument.status = :status')
+			->setParameter('order', $order)
+			->setParameter('type', $type)
+			->setParameter('status', InventoryDocumentStatus::DRAFT)
+			->setMaxResults(1)
+			->getQuery()
+			->getOneOrNullResult();
+	}
+
+	public function hasDraftForPurchase(Purchase $purchase, InventoryDocumentType $type): bool
+	{
+		return (bool) $this->createQueryBuilder('inventoryDocument')
+			->select('1')
+			->andWhere('inventoryDocument.purchase = :purchase')
+			->andWhere('inventoryDocument.type = :type')
+			->andWhere('inventoryDocument.status = :status')
+			->setParameter('purchase', $purchase)
+			->setParameter('type', $type)
+			->setParameter('status', InventoryDocumentStatus::DRAFT)
+			->setMaxResults(1)
+			->getQuery()
+			->getOneOrNullResult();
 	}
 }

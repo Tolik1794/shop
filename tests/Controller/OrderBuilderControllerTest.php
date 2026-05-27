@@ -628,9 +628,11 @@ class OrderBuilderControllerTest extends WebTestCase
 		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/edit', $store->getId(), $order->getId()));
 		self::assertSame('1', $crawler->filter('[data-order-entry-target~="quantity"]')->attr('value'));
 		$token = $crawler->filter('input[name="order[_token]"]')->attr('value');
+		$version = $crawler->filter('input[name="order[version]"]')->attr('value');
 
 		$this->client->request('POST', sprintf('/admin/store/%d/order/%d/edit', $store->getId(), $order->getId()), [
 			'order' => [
+				'version' => $version,
 				'customer' => $customer->getId(),
 				'customerPhone' => $customer->getPhone(),
 				'customerName' => $customer->getName(),

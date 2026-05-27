@@ -10,6 +10,7 @@ use App\Dto\Admin\Inventory\InventoryWriteOffOperation;
 use App\Entity\InventoryDocument;
 use App\Entity\StatusHistoryEntityType;
 use App\Entity\Store;
+use App\Exception\ConcurrencyConflictException;
 use App\Form\Admin\FilterType\InventoryDocumentFilterType;
 use App\Form\Admin\Type\InventoryCustomerReturnOperationType;
 use App\Form\Admin\Type\InventoryStockAdjustmentOperationType;
@@ -364,6 +365,10 @@ class InventoryDocumentController extends AbstractAdvancedController
 		try {
 			$action();
 			$this->addFlash('success', $successMessage);
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $inventoryDocument, Response::HTTP_CONFLICT);
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 

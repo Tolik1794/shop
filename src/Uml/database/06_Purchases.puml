@@ -25,6 +25,7 @@ enum PurchaseStatus {
 
 entity Purchase {
     * id: int
+    * version: int
     --
     * number: string(255)
     * status: PurchaseStatus

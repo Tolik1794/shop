@@ -28,6 +28,7 @@ enum PaymentStatusEnum {
 
 entity Payment {
     * id: int
+    * version: int
     --
     * direction: PaymentDirectionEnum
     * type: PaymentTypeEnum

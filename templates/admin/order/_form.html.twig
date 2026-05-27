@@ -48,6 +48,10 @@
                     {{ include('admin/order/_entry_row.html.twig', {entry: form.orderEntries.vars.prototype, currency: form.currency.vars.data|default(null)}) }}
                 </template>
 
+                {% if form.version is defined %}
+                    {{ form_widget(form.version) }}
+                {% endif %}
+
                 {% if form._token is defined %}
                     {{ form_widget(form._token) }}
                 {% endif %}

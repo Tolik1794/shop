@@ -7,6 +7,7 @@ use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
 use App\Exception\StockOperationException;
 use App\Repository\WarehouseStockRepository;
+use App\Service\Concurrency\ConcurrencyGuard;
 use Doctrine\ORM\EntityManagerInterface;
 
 class WarehouseStockService
@@ -14,6 +15,7 @@ class WarehouseStockService
 	public function __construct(
 		private readonly EntityManagerInterface $entityManager,
 		private readonly WarehouseStockRepository $warehouseStockRepository,
+		private readonly ConcurrencyGuard $concurrencyGuard,
 	)
 	{
 	}
@@ -40,70 +42,89 @@ class WarehouseStockService
 
 	public function increase(Warehouse $warehouse, Product $product, string $quantity, ?string $averageCost = null): WarehouseStock
 	{
-		$this->assertNonNegativeQuantity($quantity);
+		return $this->entityManager->wrapInTransaction(function () use ($warehouse, $product, $quantity, $averageCost): WarehouseStock {
+			$this->assertNonNegativeQuantity($quantity);
 
-		$warehouseStock = $this->findOrCreate($warehouse, $product);
-		$warehouseStock->setQuantityOnHand($this->add($warehouseStock->getQuantityOnHand(), $quantity));
+			$warehouseStock = $this->findOrCreate($warehouse, $product);
+			$this->lockPersisted($warehouseStock);
+			$warehouseStock->setQuantityOnHand($this->add($warehouseStock->getQuantityOnHand(), $quantity));
 
-		if ($averageCost !== null) {
-			$this->assertNonNegativeQuantity($averageCost);
-			$warehouseStock->setAverageCost($averageCost);
-		}
+			if ($averageCost !== null) {
+				$this->assertNonNegativeQuantity($averageCost);
+				$warehouseStock->setAverageCost($averageCost);
+			}
 
-		$this->entityManager->flush();
+			$this->entityManager->flush();
 
-		return $warehouseStock;
+			return $warehouseStock;
+		});
 	}
 
 	public function decrease(Warehouse $warehouse, Product $product, string $quantity): WarehouseStock
 	{
-		$this->assertNonNegativeQuantity($quantity);
+		return $this->entityManager->wrapInTransaction(function () use ($warehouse, $product, $quantity): WarehouseStock {
+			$this->assertNonNegativeQuantity($quantity);
 
-		$warehouseStock = $this->findOrCreate($warehouse, $product);
-		$newQuantityOnHand = $this->subtract($warehouseStock->getQuantityOnHand(), $quantity);
+			$warehouseStock = $this->findOrCreate($warehouse, $product);
+			$this->lockPersisted($warehouseStock);
+			$newQuantityOnHand = $this->subtract($warehouseStock->getQuantityOnHand(), $quantity);
 
-		if ($this->isNegative($newQuantityOnHand)) {
-			throw new StockOperationException('Quantity on hand cannot be negative.');
-		}
+			if ($this->isNegative($newQuantityOnHand)) {
+				throw new StockOperationException('Quantity on hand cannot be negative.');
+			}
 
-		$this->assertReservationAllowed($warehouseStock, $newQuantityOnHand, $warehouseStock->getReservedQuantity());
+			$this->assertReservationAllowed($warehouseStock, $newQuantityOnHand, $warehouseStock->getReservedQuantity());
 
-		$warehouseStock->setQuantityOnHand($newQuantityOnHand);
-		$this->entityManager->flush();
+			$warehouseStock->setQuantityOnHand($newQuantityOnHand);
+			$this->entityManager->flush();
 
-		return $warehouseStock;
+			return $warehouseStock;
+		});
 	}
 
 	public function reserve(Warehouse $warehouse, Product $product, string $quantity): WarehouseStock
 	{
-		$this->assertNonNegativeQuantity($quantity);
+		return $this->entityManager->wrapInTransaction(function () use ($warehouse, $product, $quantity): WarehouseStock {
+			$this->assertNonNegativeQuantity($quantity);
 
-		$warehouseStock = $this->findOrCreate($warehouse, $product);
-		$newReservedQuantity = $this->add($warehouseStock->getReservedQuantity(), $quantity);
+			$warehouseStock = $this->findOrCreate($warehouse, $product);
+			$this->lockPersisted($warehouseStock);
+			$newReservedQuantity = $this->add($warehouseStock->getReservedQuantity(), $quantity);
 
-		$this->assertReservationAllowed($warehouseStock, $warehouseStock->getQuantityOnHand(), $newReservedQuantity);
+			$this->assertReservationAllowed($warehouseStock, $warehouseStock->getQuantityOnHand(), $newReservedQuantity);
 
-		$warehouseStock->setReservedQuantity($newReservedQuantity);
-		$this->entityManager->flush();
+			$warehouseStock->setReservedQuantity($newReservedQuantity);
+			$this->entityManager->flush();
 
-		return $warehouseStock;
+			return $warehouseStock;
+		});
 	}
 
 	public function release(Warehouse $warehouse, Product $product, string $quantity): WarehouseStock
 	{
-		$this->assertNonNegativeQuantity($quantity);
+		return $this->entityManager->wrapInTransaction(function () use ($warehouse, $product, $quantity): WarehouseStock {
+			$this->assertNonNegativeQuantity($quantity);
 
-		$warehouseStock = $this->findOrCreate($warehouse, $product);
-		$newReservedQuantity = $this->subtract($warehouseStock->getReservedQuantity(), $quantity);
+			$warehouseStock = $this->findOrCreate($warehouse, $product);
+			$this->lockPersisted($warehouseStock);
+			$newReservedQuantity = $this->subtract($warehouseStock->getReservedQuantity(), $quantity);
 
-		if ($this->isNegative($newReservedQuantity)) {
-			throw new StockOperationException('Reserved quantity cannot be negative.');
+			if ($this->isNegative($newReservedQuantity)) {
+				throw new StockOperationException('Reserved quantity cannot be negative.');
+			}
+
+			$warehouseStock->setReservedQuantity($newReservedQuantity);
+			$this->entityManager->flush();
+
+			return $warehouseStock;
+		});
+	}
+
+	private function lockPersisted(WarehouseStock $warehouseStock): void
+	{
+		if ($warehouseStock->getId() !== null) {
+			$this->concurrencyGuard->lock($warehouseStock);
 		}
-
-		$warehouseStock->setReservedQuantity($newReservedQuantity);
-		$this->entityManager->flush();
-
-		return $warehouseStock;
 	}
 
 	private function assertReservationAllowed(WarehouseStock $warehouseStock, string $quantityOnHand, string $reservedQuantity): void

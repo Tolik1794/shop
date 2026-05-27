@@ -17,6 +17,7 @@ use App\Exception\StockOperationException;
 use App\Repository\ProductionOrderRepository;
 use App\Repository\ProductionRecipeRepository;
 use App\Repository\WarehouseStockRepository;
+use App\Service\Concurrency\ConcurrencyGuard;
 use App\Service\InventoryPostingService;
 use App\Service\Production\ProductionOrderFactory;
 use App\Service\WarehouseStockService;
@@ -36,6 +37,7 @@ class ProductionManager extends AbstractManager
 		private readonly WarehouseStockRepository $warehouseStockRepository,
 		private readonly StatusTransitionService $statusTransitionService,
 		private readonly UserManager $userManager,
+		private readonly ConcurrencyGuard $concurrencyGuard,
 	)
 	{
 	}
@@ -106,13 +108,17 @@ class ProductionManager extends AbstractManager
 
 	public function plan(ProductionOrder $order): void
 	{
-		$this->statusTransitionService->apply($order, 'plan', $this->transitionContext());
-		$this->touchAndSaveOrder($order);
+		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->concurrencyGuard->lock($order);
+			$this->statusTransitionService->apply($order, 'plan', $this->transitionContext());
+			$this->touchAndSaveOrder($order);
+		});
 	}
 
 	public function reserveMaterials(ProductionOrder $order): void
 	{
 		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->concurrencyGuard->lock($order);
 			$this->statusTransitionService->apply($order, 'reserve_materials', $this->transitionContext());
 
 			foreach ($order->getMaterials() as $material) {
@@ -125,8 +131,11 @@ class ProductionManager extends AbstractManager
 
 	public function start(ProductionOrder $order): void
 	{
-		$this->statusTransitionService->apply($order, 'start', $this->transitionContext());
-		$this->touchAndSaveOrder($order);
+		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->concurrencyGuard->lock($order);
+			$this->statusTransitionService->apply($order, 'start', $this->transitionContext());
+			$this->touchAndSaveOrder($order);
+		});
 	}
 
 	public function complete(ProductionOrder $order, ?string $completedQuantity = null): InventoryDocument
@@ -134,6 +143,7 @@ class ProductionManager extends AbstractManager
 		$quantity = $completedQuantity ?: $order->getPlannedQuantity();
 
 		return $this->entityManager->wrapInTransaction(function () use ($order, $quantity): InventoryDocument {
+			$this->concurrencyGuard->lock($order);
 			$context = $this->transitionContext();
 			if (!$this->statusTransitionService->can($order, 'complete', $context)) {
 				throw new RuntimeException('Production order cannot be completed from current status.');
@@ -154,6 +164,7 @@ class ProductionManager extends AbstractManager
 	public function cancel(ProductionOrder $order): void
 	{
 		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->concurrencyGuard->lock($order);
 			if (in_array($order->getStatus(), [
 				ProductionOrderStatus::MATERIALS_RESERVED,
 				ProductionOrderStatus::IN_PROGRESS,

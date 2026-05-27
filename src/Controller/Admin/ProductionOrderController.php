@@ -9,11 +9,13 @@ use App\Entity\ProductionRecipe;
 use App\Entity\StatusHistoryEntityType;
 use App\Entity\Store;
 use App\Entity\Warehouse;
+use App\Exception\ConcurrencyConflictException;
 use App\Form\Admin\FilterType\ProductionOrderFilterType;
 use App\Form\Admin\Type\ProductionOrderCreateType;
 use App\Form\Admin\Type\ProductionOrderType;
 use App\Manager\ProductionManager;
 use App\Repository\StatusHistoryRepository;
+use App\Service\Concurrency\ConcurrencyGuard;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
@@ -30,12 +32,14 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class ProductionOrderController extends AbstractAdvancedController
 {
 	use QuickActionResponseTrait;
+	use ConcurrencyFormTrait;
 
 	private const int DEFAULT_PAGE_LIMIT = 20;
 
 	public function __construct(
 		private readonly ProductionManager $productionManager,
 		private readonly StatusHistoryRepository $statusHistoryRepository,
+		private readonly ConcurrencyGuard $concurrencyGuard,
 	)
 	{
 	}
@@ -116,6 +120,8 @@ class ProductionOrderController extends AbstractAdvancedController
 					$data['comment'],
 				);
 				$this->productionManager->saveOrder($order);
+			} catch (ConcurrencyConflictException $exception) {
+				$form->addError(new FormError($exception->getMessage()));
 			} catch (RuntimeException $exception) {
 				$form->addError(new FormError($exception->getMessage()));
 			}
@@ -175,6 +181,15 @@ class ProductionOrderController extends AbstractAdvancedController
 		$form = $this->createOrderForm($order, $store);
 		$form->handleRequest($request);
 
+		if ($form->isSubmitted() && $this->rejectStaleForm($form, $order, $this->concurrencyGuard)) {
+			return $this->renderForm(
+				$order,
+				$form,
+				$this->productionManager->getRepository()->getIndexPage($order, self::DEFAULT_PAGE_LIMIT),
+				Response::HTTP_CONFLICT,
+			);
+		}
+
 		if ($form->isSubmitted() && $form->isValid()) {
 			$removedMaterials = array_filter(
 				$originalMaterials,
@@ -183,6 +198,15 @@ class ProductionOrderController extends AbstractAdvancedController
 
 			try {
 				$this->productionManager->saveOrder($order, $removedMaterials);
+			} catch (ConcurrencyConflictException $exception) {
+				$form->addError(new FormError($exception->getMessage()));
+
+				return $this->renderForm(
+					$order,
+					$form,
+					$this->productionManager->getRepository()->getIndexPage($order, self::DEFAULT_PAGE_LIMIT),
+					Response::HTTP_CONFLICT,
+				);
 			} catch (RuntimeException $exception) {
 				$form->addError(new FormError($exception->getMessage()));
 			}
@@ -281,6 +305,10 @@ class ProductionOrderController extends AbstractAdvancedController
 		try {
 			$action();
 			$this->addFlash('success', 'Production order action completed.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_CONFLICT);
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 

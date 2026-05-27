@@ -42,6 +42,7 @@ entity ProductionRecipeItem {
 
 entity ProductionOrder {
     * id: int
+    * version: int
     --
     * status: ProductionOrderStatus
     * plannedQuantity: decimal(14, 4)

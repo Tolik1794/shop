@@ -14,6 +14,8 @@ use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\TelType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\NotBlank;
@@ -29,6 +31,10 @@ class OrderType extends AbstractType
 		$order = $builder->getData();
 
 		$builder
+			->add('version', HiddenType::class, [
+				'mapped' => false,
+				'data' => (string) ($order?->getVersion() ?? 1),
+			])
 			->add('customer', EntityType::class, [
 				'class' => Customer::class,
 				'query_builder' => fn(CustomerRepository $repository) => $store instanceof Store
@@ -122,6 +128,15 @@ class OrderType extends AbstractType
 				'required' => false,
 				'label' => false,
 			]);
+
+		$builder->addEventListener(FormEvents::POST_SET_DATA, static function (FormEvent $event): void {
+			$order = $event->getData();
+			$form = $event->getForm();
+
+			if ($order instanceof Order && $form->has('version')) {
+				$form->get('version')->setData((string) $order->getVersion());
+			}
+		});
 	}
 
 	public function configureOptions(OptionsResolver $resolver): void

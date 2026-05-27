@@ -73,6 +73,11 @@ admin:
     warehouse: 'Склад'
     document: 'Документ'
     load_error: 'Не вдалося завантажити дані.'
+  concurrency:
+    conflict: 'Документ змінив інший користувач. Оновіть сторінку і спробуйте ще раз.'
+    active_transaction_required: 'Для захисту від одночасного запису потрібна активна транзакція.'
+    order_shipment_draft_exists: 'Замовлення вже має чернетку відвантаження. Перевірте або проведіть її перед створенням нової.'
+    purchase_receipt_draft_exists: 'Закупівля вже має чернетку приймання. Перевірте або проведіть її перед створенням нової.'
   dashboard:
     title: 'Аналітика магазину'
     filters:
@@ -234,6 +239,10 @@ auth:
     title: 'Реєстрація'
     submit: 'Зареєструватися'
 Password: 'Пароль'
+Document was changed by another user. Refresh and try again.: 'Документ змінив інший користувач. Оновіть сторінку і спробуйте ще раз.'
+Concurrent write protection requires an active transaction.: 'Для захисту від одночасного запису потрібна активна транзакція.'
+Order already has a draft shipment. Review or post it before creating another one.: 'Замовлення вже має чернетку відвантаження. Перевірте або проведіть її перед створенням нової.'
+Purchase already has a draft receipt. Review or post it before creating another one.: 'Закупівля вже має чернетку приймання. Перевірте або проведіть її перед створенням нової.'
 Stores: 'Магазини'
 Managers: 'Менеджери'
 Orders: 'Замовлення'

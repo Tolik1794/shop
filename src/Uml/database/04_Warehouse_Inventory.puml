@@ -67,6 +67,7 @@ entity Warehouse {
 
 entity WarehouseStock {
     * id: int
+    * version: int
     --
     * quantityOnHand: decimal(14, 4)
     * reservedQuantity: decimal(14, 4)
@@ -79,6 +80,7 @@ entity WarehouseStock {
 
 entity WarehouseStockBatch {
     * id: int
+    * version: int
     --
     * initialQuantity: decimal(14, 4)
     * remainingQuantity: decimal(14, 4)
@@ -93,6 +95,7 @@ entity WarehouseStockBatch {
 
 entity InventoryDocument {
     * id: int
+    * version: int
     --
     * number: string(255)
     * type: InventoryDocumentType

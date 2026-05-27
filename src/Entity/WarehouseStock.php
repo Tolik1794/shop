@@ -19,6 +19,10 @@ class WarehouseStock
     #[ORM\Column]
     private ?int $id = null;
 
+	#[ORM\Version]
+	#[ORM\Column(type: Types::INTEGER)]
+	private int $version = 1;
+
     #[ORM\Column(type: Types::DECIMAL, precision: 14, scale: 4)]
     private ?string $quantityOnHand = null;
 
@@ -83,6 +87,11 @@ class WarehouseStock
     {
         return $this->id;
     }
+
+	public function getVersion(): int
+	{
+		return $this->version;
+	}
 
     public function getQuantityOnHand(): ?string
     {

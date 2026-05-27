@@ -11,6 +11,7 @@ use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -35,6 +36,10 @@ class ProductionOrderType extends AbstractType
 		$this->addPlannedQuantityField($builder, $productionOrder);
 
 		$builder
+			->add('version', HiddenType::class, [
+				'mapped' => false,
+				'data' => (string) ($productionOrder?->getVersion() ?? 1),
+			])
 			->add('warehouse', EntityType::class, [
 				'class' => Warehouse::class,
 				'query_builder' => fn (WarehouseRepository $repository) => $options['store'] instanceof Store
@@ -80,6 +85,15 @@ class ProductionOrderType extends AbstractType
 			}
 
 			$productionOrder->setPlannedQuantity($this->quantityFormatter->formatForStorage($form->get('plannedQuantity')->getData()));
+		});
+
+		$builder->addEventListener(FormEvents::POST_SET_DATA, static function (FormEvent $event): void {
+			$productionOrder = $event->getData();
+			$form = $event->getForm();
+
+			if ($productionOrder instanceof ProductionOrder && $form->has('version')) {
+				$form->get('version')->setData((string) $productionOrder->getVersion());
+			}
 		});
 	}
 

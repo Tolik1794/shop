@@ -28,6 +28,7 @@ use App\Manager\UserManager;
 use App\Repository\WarehouseStockBatchRepository;
 use App\Repository\WarehouseStockRepository;
 use App\Service\BusinessDocumentStatusSynchronizer;
+use App\Service\Concurrency\ConcurrencyGuard;
 use App\Service\DocumentProgressRecalculator;
 use App\Service\InventoryPostingService;
 use App\Service\StockReservationService;
@@ -49,6 +50,7 @@ class InventoryPostingServiceTest extends TestCase
 	private StockReservationService&MockObject $stockReservationService;
 	private GenericStatusHistoryRecorder&MockObject $statusHistoryRecorder;
 	private OrderHistoryRecorder&MockObject $orderHistoryRecorder;
+	private ConcurrencyGuard&MockObject $concurrencyGuard;
 	private InventoryPostingService $inventoryPostingService;
 
 	protected function setUp(): void
@@ -61,7 +63,10 @@ class InventoryPostingServiceTest extends TestCase
 		$this->stockReservationService = $this->createMock(StockReservationService::class);
 		$this->statusHistoryRecorder = $this->createMock(GenericStatusHistoryRecorder::class);
 		$this->orderHistoryRecorder = $this->createMock(OrderHistoryRecorder::class);
+		$this->concurrencyGuard = $this->createMock(ConcurrencyGuard::class);
 		$this->userManager->method('getCurrentUser')->willReturn(null);
+		$this->concurrencyGuard->method('lock')->willReturnArgument(0);
+		$this->concurrencyGuard->method('lockAll');
 		$this->entityManager->method('persist');
 		$this->entityManager->method('flush');
 		$this->entityManager->method('wrapInTransaction')
@@ -84,11 +89,12 @@ class InventoryPostingServiceTest extends TestCase
 		$this->inventoryPostingService = new InventoryPostingService(
 			$this->entityManager,
 			$this->warehouseStockService,
-			new WarehouseStockBatchPostingService($this->entityManager, $this->warehouseStockBatchRepository),
+			new WarehouseStockBatchPostingService($this->entityManager, $this->warehouseStockBatchRepository, $this->concurrencyGuard),
 			$this->userManager,
 			new DocumentProgressRecalculator(new BusinessDocumentStatusSynchronizer($this->warehouseStockRepository, $this->statusHistoryRecorder, $this->orderHistoryRecorder)),
 			$this->stockReservationService,
 			$this->statusHistoryRecorder,
+			$this->concurrencyGuard,
 		);
 	}
 

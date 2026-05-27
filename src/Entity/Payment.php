@@ -20,6 +20,10 @@ class Payment
 	#[ORM\Column]
 	private ?int $id = null;
 
+	#[ORM\Version]
+	#[ORM\Column(type: Types::INTEGER)]
+	private int $version = 1;
+
 	#[ORM\Column(length: 255, enumType: PaymentDirectionEnum::class)]
 	private PaymentDirectionEnum $direction;
 
@@ -89,6 +93,7 @@ class Payment
 	}
 
 	public function getId(): ?int { return $this->id; }
+	public function getVersion(): int { return $this->version; }
 	public function getDirection(): PaymentDirectionEnum { return $this->direction; }
 	public function setDirection(PaymentDirectionEnum $direction): self { $this->direction = $direction; return $this; }
 	public function getType(): PaymentTypeEnum { return $this->type; }

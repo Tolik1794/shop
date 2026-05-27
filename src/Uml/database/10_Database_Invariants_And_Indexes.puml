@@ -16,6 +16,8 @@ note bottom
   Database constraints / invariants to implement in migrations and services:
 
   Global numeric rules:
+  - Mutable business documents use optimistic version fields to reject stale form submissions.
+  - Status and stock-changing services should lock the current row before changing state.
   - All quantity fields must be >= 0, except StockMovement.quantityChange which can be positive or negative.
   - InventoryDocumentLine.quantity > 0. Direction defines IN/OUT, not the sign.
   - StockMovement.quantityChange != 0.

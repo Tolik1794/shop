@@ -22,6 +22,7 @@ use App\Enum\InventoryReasonType;
 use App\Enum\ProductKindEnum;
 use App\Exception\StockOperationException;
 use App\Manager\UserManager;
+use App\Service\Concurrency\ConcurrencyGuard;
 use App\Workflow\History\GenericStatusHistoryRecorder;
 use App\Workflow\TransitionContext;
 use DateTimeImmutable;
@@ -38,6 +39,7 @@ class InventoryPostingService
 		private readonly DocumentProgressRecalculator $documentProgressRecalculator,
 		private readonly StockReservationService $stockReservationService,
 		private readonly GenericStatusHistoryRecorder $statusHistoryRecorder,
+		private readonly ConcurrencyGuard $concurrencyGuard,
 	)
 	{
 	}
@@ -96,6 +98,9 @@ class InventoryPostingService
 
 	private function postDocument(InventoryDocument $document, bool $allowReversal = false): void
 	{
+		$this->lockPersisted($document);
+		$this->lockRelatedDocuments($document);
+
 		if ($document->getStatus() !== InventoryDocumentStatus::DRAFT) {
 			throw new RuntimeException('Only draft inventory documents can be posted.');
 		}
@@ -130,6 +135,9 @@ class InventoryPostingService
 
 	private function cancelDocument(InventoryDocument $document): ?InventoryDocument
 	{
+		$this->lockPersisted($document);
+		$this->lockRelatedDocuments($document);
+
 		if ($document->getStatus() === InventoryDocumentStatus::CANCELED) {
 			return null;
 		}
@@ -176,6 +184,7 @@ class InventoryPostingService
 		}
 
 		$warehouseStock = $this->warehouseStockService->findOrCreate($warehouse, $product);
+		$this->lockPersisted($warehouseStock);
 		$quantity = $this->numberValue($line->getQuantity());
 		$unitCost = $this->postingUnitCost($line, $warehouseStock);
 		$oldQuantity = $this->numberValue($warehouseStock->getQuantityOnHand());
@@ -237,6 +246,22 @@ class InventoryPostingService
 		}
 
 		$this->stockReservationService->completeForOrderEntry($orderEntry, (string) $line->getQuantity(), false);
+	}
+
+	private function lockPersisted(object $entity): void
+	{
+		if ($this->entityManager->getClassMetadata($entity::class)->getIdentifierValues($entity) !== []) {
+			$this->concurrencyGuard->lock($entity);
+		}
+	}
+
+	private function lockRelatedDocuments(InventoryDocument $document): void
+	{
+		$this->concurrencyGuard->lockAll([
+			$document->getOrder(),
+			$document->getPurchase(),
+			$document->getProductionOrder(),
+		]);
 	}
 
 	/**

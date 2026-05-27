@@ -9,17 +9,36 @@ use App\Entity\PurchaseEntry;
 use App\Entity\PurchaseStatus;
 use App\Enum\InventoryDirection;
 use App\Enum\InventoryDocumentType;
+use App\Repository\InventoryDocumentRepository;
+use App\Service\Concurrency\ConcurrencyGuard;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
 
 class PurchaseReceiptUseCase
 {
-	public function __construct(private readonly EntityManagerInterface $entityManager)
+	public function __construct(
+		private readonly EntityManagerInterface $entityManager,
+		private readonly ConcurrencyGuard $concurrencyGuard,
+		private readonly InventoryDocumentRepository $inventoryDocumentRepository,
+	)
 	{
 	}
 
 	public function createDraft(Purchase $purchase, ?string $number = null): InventoryDocument
+	{
+		return $this->entityManager->wrapInTransaction(function () use ($purchase, $number): InventoryDocument {
+			$this->concurrencyGuard->lock($purchase);
+
+			if ($this->inventoryDocumentRepository->hasDraftForPurchase($purchase, InventoryDocumentType::PURCHASE_RECEIPT)) {
+				throw new RuntimeException('Purchase already has a draft receipt. Review or post it before creating another one.');
+			}
+
+			return $this->createDraftLocked($purchase, $number);
+		});
+	}
+
+	private function createDraftLocked(Purchase $purchase, ?string $number = null): InventoryDocument
 	{
 		if (!in_array($purchase->getStatus(), [
 			PurchaseStatus::ORDERED,

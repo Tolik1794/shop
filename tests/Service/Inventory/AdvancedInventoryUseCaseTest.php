@@ -19,6 +19,8 @@ use App\Enum\InventoryDocumentType;
 use App\Enum\InventoryReasonType;
 use App\Enum\ProductKindEnum;
 use App\Repository\WarehouseStockRepository;
+use App\Repository\InventoryDocumentRepository;
+use App\Service\Concurrency\ConcurrencyGuard;
 use App\Service\Inventory\CustomerReturnUseCase;
 use App\Service\Inventory\InventoryTransferUseCase;
 use App\Service\Inventory\OrderShipmentUseCase;
@@ -114,7 +116,7 @@ class AdvancedInventoryUseCaseTest extends TestCase
 		$order
 			->addOrderEntry($firstEntry)
 			->addOrderEntry($secondEntry);
-		$useCase = new OrderShipmentUseCase($this->entityManagerExpectingDraftPersist());
+		$useCase = $this->orderShipmentUseCase($this->entityManagerExpectingDraftPersist());
 
 		$document = $useCase->createDraft($order, 'SHP-1');
 		$line = $document->getLines()->first();
@@ -147,7 +149,7 @@ class AdvancedInventoryUseCaseTest extends TestCase
 			->setWarehouse($warehouse)
 			->setQuantity('2.0000')
 			->setShippedQuantity('2.0000'));
-		$useCase = new OrderShipmentUseCase($this->entityManagerExpectingNoDraftPersist());
+		$useCase = $this->orderShipmentUseCase($this->entityManagerExpectingNoDraftPersist());
 
 		$this->expectException(\RuntimeException::class);
 		$this->expectExceptionMessage('Order has no remaining quantity to ship.');
@@ -203,7 +205,7 @@ class AdvancedInventoryUseCaseTest extends TestCase
 		$purchase
 			->addPurchaseEntry($firstEntry)
 			->addPurchaseEntry($secondEntry);
-		$useCase = new PurchaseReceiptUseCase($this->entityManagerExpectingDraftPersist());
+		$useCase = $this->purchaseReceiptUseCase($this->entityManagerExpectingDraftPersist());
 
 		$document = $useCase->createDraft($purchase, 'PRC-1');
 		$line = $document->getLines()->first();
@@ -236,7 +238,7 @@ class AdvancedInventoryUseCaseTest extends TestCase
 			->setWarehouse($warehouse)
 			->setQuantity('2.0000')
 			->setReceivedQuantity('2.0000'));
-		$useCase = new PurchaseReceiptUseCase($this->entityManagerExpectingNoDraftPersist());
+		$useCase = $this->purchaseReceiptUseCase($this->entityManagerExpectingNoDraftPersist());
 
 		$this->expectException(\RuntimeException::class);
 		$this->expectExceptionMessage('Purchase has no remaining quantity to receive.');
@@ -305,6 +307,8 @@ class AdvancedInventoryUseCaseTest extends TestCase
 			->method('persist')
 			->with($this->isInstanceOf(InventoryDocument::class));
 		$entityManager->expects($this->exactly($times))->method('flush');
+		$entityManager->method('wrapInTransaction')
+			->willReturnCallback(static fn (callable $callback): mixed => $callback());
 
 		return $entityManager;
 	}
@@ -314,6 +318,8 @@ class AdvancedInventoryUseCaseTest extends TestCase
 		$entityManager = $this->createMock(EntityManagerInterface::class);
 		$entityManager->expects($this->never())->method('persist');
 		$entityManager->expects($this->never())->method('flush');
+		$entityManager->method('wrapInTransaction')
+			->willReturnCallback(static fn (callable $callback): mixed => $callback());
 
 		return $entityManager;
 	}
@@ -345,6 +351,37 @@ class AdvancedInventoryUseCaseTest extends TestCase
 			->onlyMethods(['findOneByProductAndWarehouse'])
 			->getMock();
 		$repository->method('findOneByProductAndWarehouse')->willReturn($warehouseStock);
+
+		return $repository;
+	}
+
+	private function orderShipmentUseCase(EntityManagerInterface $entityManager): OrderShipmentUseCase
+	{
+		return new OrderShipmentUseCase($entityManager, $this->concurrencyGuard(), $this->inventoryDocumentRepository());
+	}
+
+	private function purchaseReceiptUseCase(EntityManagerInterface $entityManager): PurchaseReceiptUseCase
+	{
+		return new PurchaseReceiptUseCase($entityManager, $this->concurrencyGuard(), $this->inventoryDocumentRepository());
+	}
+
+	private function concurrencyGuard(): ConcurrencyGuard
+	{
+		$concurrencyGuard = $this->createMock(ConcurrencyGuard::class);
+		$concurrencyGuard->method('lock')
+			->willReturnArgument(0);
+
+		return $concurrencyGuard;
+	}
+
+	private function inventoryDocumentRepository(): InventoryDocumentRepository
+	{
+		$repository = $this->getMockBuilder(InventoryDocumentRepository::class)
+			->disableOriginalConstructor()
+			->onlyMethods(['hasDraftForOrder', 'hasDraftForPurchase'])
+			->getMock();
+		$repository->method('hasDraftForOrder')->willReturn(false);
+		$repository->method('hasDraftForPurchase')->willReturn(false);
 
 		return $repository;
 	}

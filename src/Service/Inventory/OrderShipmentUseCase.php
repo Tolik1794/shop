@@ -9,17 +9,36 @@ use App\Entity\OrderEntry;
 use App\Entity\OrderStatus;
 use App\Enum\InventoryDirection;
 use App\Enum\InventoryDocumentType;
+use App\Repository\InventoryDocumentRepository;
+use App\Service\Concurrency\ConcurrencyGuard;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
 
 class OrderShipmentUseCase
 {
-	public function __construct(private readonly EntityManagerInterface $entityManager)
+	public function __construct(
+		private readonly EntityManagerInterface $entityManager,
+		private readonly ConcurrencyGuard $concurrencyGuard,
+		private readonly InventoryDocumentRepository $inventoryDocumentRepository,
+	)
 	{
 	}
 
 	public function createDraft(Order $order, ?string $number = null): InventoryDocument
+	{
+		return $this->entityManager->wrapInTransaction(function () use ($order, $number): InventoryDocument {
+			$this->concurrencyGuard->lock($order);
+
+			if ($this->inventoryDocumentRepository->hasDraftForOrder($order, InventoryDocumentType::SALE_SHIPMENT)) {
+				throw new RuntimeException('Order already has a draft shipment. Review or post it before creating another one.');
+			}
+
+			return $this->createDraftLocked($order, $number);
+		});
+	}
+
+	private function createDraftLocked(Order $order, ?string $number = null): InventoryDocument
 	{
 		if (!in_array($order->getStatus(), [
 			OrderStatus::READY_TO_SHIP,

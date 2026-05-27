@@ -10,6 +10,7 @@ use App\Entity\WarehouseStock;
 use App\Entity\WarehouseStockBatch;
 use App\Exception\StockOperationException;
 use App\Repository\StockReservationRepository;
+use App\Service\Concurrency\ConcurrencyGuard;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -18,15 +19,24 @@ class StockReservationService
 	public function __construct(
 		private readonly EntityManagerInterface $entityManager,
 		private readonly StockReservationRepository $stockReservationRepository,
+		private readonly ConcurrencyGuard $concurrencyGuard,
 	)
 	{
 	}
 
 	public function reserve(OrderEntry $orderEntry, WarehouseStock $warehouseStock, string $quantity, ?DateTimeImmutable $expiresAt = null): StockReservation
 	{
+		if (!$this->entityManager->getConnection()->isTransactionActive()) {
+			return $this->entityManager->wrapInTransaction(fn (): StockReservation => $this->reserve($orderEntry, $warehouseStock, $quantity, $expiresAt));
+		}
+
 		$this->assertPositiveQuantity($quantity);
 		$this->assertReservationMatchesOrderEntry($orderEntry, $warehouseStock);
+		$this->lockPersisted($warehouseStock);
 		$batch = $this->validatedBatch($orderEntry, $warehouseStock);
+		if ($batch instanceof WarehouseStockBatch) {
+			$this->lockPersisted($batch);
+		}
 
 		if ((float) $quantity > (float) $this->getAvailableQuantity($warehouseStock)) {
 			throw new StockOperationException('Reserved quantity cannot be greater than available quantity.');
@@ -128,6 +138,14 @@ class StockReservationService
 
 	private function close(StockReservation $reservation, StockReservationStatus $status, bool $flush = true): void
 	{
+		if (!$this->entityManager->getConnection()->isTransactionActive()) {
+			$this->entityManager->wrapInTransaction(function () use ($reservation, $status, $flush): void {
+				$this->close($reservation, $status, $flush);
+			});
+
+			return;
+		}
+
 		if ($reservation->getStatus() !== StockReservationStatus::ACTIVE) {
 			return;
 		}
@@ -135,6 +153,11 @@ class StockReservationService
 		$warehouseStock = $reservation->getWarehouseStock();
 		if (!$warehouseStock instanceof WarehouseStock) {
 			throw new StockOperationException('Reservation has no warehouse stock.');
+		}
+		$this->lockPersisted($warehouseStock);
+		$batch = $reservation->getWarehouseStockBatch();
+		if ($batch instanceof WarehouseStockBatch) {
+			$this->lockPersisted($batch);
 		}
 
 		$newReservedQuantity = $this->subtract($warehouseStock->getReservedQuantity(), $reservation->getQuantity());
@@ -191,6 +214,13 @@ class StockReservationService
 
 		if ($orderEntry->getWarehouse() !== $warehouseStock->getWarehouse()) {
 			throw new StockOperationException('Reservation warehouse must match order entry warehouse.');
+		}
+	}
+
+	private function lockPersisted(object $entity): void
+	{
+		if ($this->entityManager->getClassMetadata($entity::class)->getIdentifierValues($entity) !== []) {
+			$this->concurrencyGuard->lock($entity);
 		}
 	}
 
