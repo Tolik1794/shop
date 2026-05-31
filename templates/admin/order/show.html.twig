@@ -97,8 +97,6 @@
                                 >
                                     <i class="fa-solid fa-circle-info"></i>
                                 </button>
-                                {# TODO виправити роботу модалки #}
-{#                                {{ include('admin/order/_product_details_modal.html.twig', {entry: entry, entity: entity, modal_id: modal_id}) }}#}
                                 <div class="text-muted small">
                                     <span>{{ entry.productCodeSnapshot }}</span>
                                     {{ include('admin/order/_copy_button.html.twig', {
@@ -112,6 +110,10 @@
                     </tbody>
                 </table>
             </div>
+            {% for entry in entity.orderEntries %}
+                {% set modal_id = 'order-product-details-' ~ entity.id ~ '-' ~ entry.id %}
+                {{ include('admin/order/_product_details_modal.html.twig', {entry: entry, entity: entity, modal_id: modal_id}) }}
+            {% endfor %}
         {% else %}
             <p class="text-muted">{{ 'admin.order.empty.products'|trans }}</p>
         {% endif %}

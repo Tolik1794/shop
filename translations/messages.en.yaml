@@ -206,6 +206,14 @@ admin:
       placeholder: 'Product name or code'
       available: 'Available'
       price: 'Price'
+      details: 'Product details'
+      copy_name: 'Copy product name'
+      copy_code: 'Copy product code'
+      category: 'Category'
+      kind: 'Product kind'
+      base_sale_price: 'Base sale price'
+      batch: 'Batch'
+      batch_received_at: 'Batch received at'
     validation:
       insufficient_stock: 'Insufficient stock'
   purchase:
