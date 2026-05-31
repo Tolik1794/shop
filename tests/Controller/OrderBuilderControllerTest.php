@@ -109,8 +109,12 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSelectorTextContains('.order-show-card', 'Actions');
 		self::assertSelectorTextContains('.order-show-card', 'Not specified');
 		self::assertSelectorTextContains('.order-show-money-list', '10 000.00 UAH');
-		self::assertSelectorTextContains('.order-show-product', 'Show card desk');
-		self::assertSelectorExists('.order-show-copyable .order-copy-action');
+		self::assertSelectorTextContains('.order-show-product-card', 'Show card desk');
+		self::assertSelectorTextContains('.order-show-product-card', '1 pc');
+		self::assertSelectorTextContains('.order-show-product-card', '10 000.00 UAH');
+		self::assertSelectorExists('.order-show-product-card .order-copy-action[data-copy-feedback="Copied"]');
+		self::assertSelectorExists('.order-show-product-card [data-copy-feedback][aria-live="polite"]');
+		self::assertSelectorExists('.order-show-product-action[aria-label="Open product"]');
 	}
 
 	public function testNewOrderBuilderFormCanBeSubmitted(): void

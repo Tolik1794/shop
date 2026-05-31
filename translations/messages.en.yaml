@@ -175,8 +175,10 @@ admin:
       availability: 'Availability'
     actions:
       confirm: 'Confirm'
+      copy_product: 'Copy'
       return_to_draft: 'Return to draft'
       rollback_status: 'Rollback status'
+      open_product: 'Open product'
       ship: 'Ship'
       mark_delivered: 'Mark delivered'
       complete: 'Complete'
@@ -245,3 +247,4 @@ auth:
     title: 'Register'
     submit: 'Register'
 Not specified: 'Not specified'
+Copied: 'Copied'

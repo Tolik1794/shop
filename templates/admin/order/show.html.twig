@@ -166,7 +166,7 @@
                 <p class="mb-0">{{ delivery_address is not empty ? delivery_address : empty_text }}</p>
             </section>
 
-            <section class="order-show-section">
+            <section class="order-show-section order-show-section-wide">
                 <h6>{{ 'admin.order.sections.products'|trans }}</h6>
                 {% if entity.orderEntries|length > 0 %}
                     <div class="order-show-products">
@@ -174,39 +174,41 @@
                             {% set modal_id = 'order-product-details-' ~ entity.id ~ '-' ~ entry.id %}
                             {% set product_name = entry.productNameSnapshot|default('')|trim %}
                             {% set product_code = entry.productCodeSnapshot|default('')|trim %}
-                            <div class="order-show-product">
+                            {% set unit_code = entry.unitCodeSnapshot|default('')|trim %}
+                            {% set quantity_label = entry.quantity|quantity(entry.product) ~ (unit_code is not empty ? ' ' ~ unit_code : '') %}
+                            {% set product_copy_text = (product_name is not empty ? product_name : empty_text) ~ '\n' ~ ('admin.common.quantity'|trans) ~ ': ' ~ quantity_label %}
+                            <div class="order-show-product-card">
                                 <div class="order-show-product-main">
-                                    <div class="order-show-copyable">
-                                        <strong>{{ product_name is not empty ? product_name : empty_text }}</strong>
-                                        {% if product_name is not empty %}
-                                            {{ include('admin/order/_copy_button.html.twig', {
-                                                value: product_name,
-                                                title: 'admin.order.product.copy_name'|trans
-                                            }) }}
-                                        {% endif %}
+                                    <div class="order-show-product-heading order-show-copyable">
+                                        <strong class="order-show-product-name">{{ product_name is not empty ? product_name : empty_text }}</strong>
                                         <button
                                                 type="button"
-                                                class="btn btn-link btn-sm order-icon-action"
+                                                class="btn btn-link btn-sm order-icon-action order-show-product-action"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#{{ modal_id }}"
-                                                title="{{ 'admin.order.product.details'|trans }}"
-                                                aria-label="{{ 'admin.order.product.details'|trans }}"
+                                                title="{{ 'admin.order.actions.open_product'|trans }}"
+                                                aria-label="{{ 'admin.order.actions.open_product'|trans }}"
                                         >
                                             <i class="fa-solid fa-circle-info"></i>
                                         </button>
-                                    </div>
-                                    <div class="text-muted small order-show-copyable">
-                                        <span>{{ product_code is not empty ? product_code : dash_text }}</span>
-                                        {% if product_code is not empty %}
+                                        {% if product_name is not empty %}
                                             {{ include('admin/order/_copy_button.html.twig', {
-                                                value: product_code,
-                                                title: 'admin.order.product.copy_code'|trans
+                                                value: product_copy_text,
+                                                title: 'admin.order.product.copy_name'|trans,
+                                                feedback: 'Copied'|trans
                                             }) }}
+                                            <span class="order-copy-feedback" data-copy-feedback aria-live="polite"></span>
                                         {% endif %}
                                     </div>
+                                    <div class="text-muted small order-show-product-meta">
+                                        <span>{{ quantity_label }}</span>
+                                        <span class="mx-1">·</span>
+                                        <span class="order-show-product-total">{{ entry.totalPrice|money }} {{ currency_code }}</span>
+                                    </div>
+                                    {% if product_code is not empty %}
+                                        <div class="text-muted small">{{ product_code }}</div>
+                                    {% endif %}
                                 </div>
-                                <div class="order-show-product-qty">× {{ entry.quantity|quantity(entry.product) }}</div>
-                                <div class="order-show-product-total">{{ entry.totalPrice|money }} {{ currency_code }}</div>
                             </div>
                         {% endfor %}
                     </div>
