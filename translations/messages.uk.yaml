@@ -47,6 +47,7 @@ admin:
     empty: 'Записів немає.'
     error: 'Помилка'
     filter: 'Фільтр'
+    filters: 'Фільтри'
     reset_filters: 'Скинути фільтри'
     history: 'Історія'
     loading: 'Завантаження...'
@@ -169,6 +170,11 @@ admin:
       summary: 'Підсумки'
       products: 'Товари'
       inventory_documents: 'Складські документи'
+    filters:
+      active_filters: 'Активні фільтри'
+      clear_filter: 'Скинути фільтр %label%'
+      quick_search: 'Швидкий пошук'
+      quick_search_placeholder: 'Пошук за номером замовлення'
     fields:
       customer: 'Клієнт'
       delivery_address: 'Адреса доставки'

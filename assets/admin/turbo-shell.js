@@ -126,6 +126,15 @@ const markFormDirty = event => {
     formIsDirty = true
 }
 
+const markFormSubmitting = event => {
+    if (event.defaultPrevented || !isTrackableFormElement(event.target)) {
+        return
+    }
+
+    formIsSubmitting = true
+    formIsDirty = false
+}
+
 const confirmNavigationIfDirty = event => {
     if (!formIsDirty || formIsSubmitting) {
         return
@@ -154,6 +163,7 @@ const handleBeforeRender = event => {
 
 document.addEventListener('input', markFormDirty, true)
 document.addEventListener('change', markFormDirty, true)
+document.addEventListener('submit', markFormSubmitting)
 
 window.addEventListener('beforeunload', event => {
     if (!formIsDirty || formIsSubmitting) {

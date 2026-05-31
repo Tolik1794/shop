@@ -17,6 +17,89 @@
     {% endfor %}
 {% endset %}
 
+{% set order_filter_params = app.request.query.all(filter_form.vars.name) %}
+{% set active_order_filters = {} %}
+{% for filter_name, filter_value in order_filter_params %}
+    {% if filter_value is not iterable and filter_value is not same as('') and filter_value is not null %}
+        {% set active_order_filters = active_order_filters|merge({(filter_name): filter_value}) %}
+    {% endif %}
+{% endfor %}
+{% set order_filter_labels = {
+    number: 'Number'|trans,
+    customer: 'Customer'|trans,
+    status: 'Status'|trans
+} %}
+{% set order_filter_collapse_id = filter_form.vars.id ~ '-advanced-filters' %}
+{% set order_filters_open = filter_form.vars.errors|length > 0 %}
+
+{% set order_list_controls %}
+    <div class="order-list-toolbar">
+        <div class="order-list-toolbar__row">
+            <div class="order-list-toolbar__title">
+                <h5 class="card-title mb-0">{{ 'Orders'|trans }}</h5>
+                <span class="text-muted small">{{ 'admin.pagination.records'|trans({'%count%': pagination.getTotalItemCount}) }}</span>
+            </div>
+            <div class="order-list-toolbar__controls">
+                <form class="order-list-toolbar__search" method="get" action="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')) }}">
+                    {% for filter_name, filter_value in active_order_filters %}
+                        {% if filter_name != 'number' %}
+                            <input type="hidden" name="{{ filter_form.vars.full_name }}[{{ filter_name }}]" value="{{ filter_value }}">
+                        {% endif %}
+                    {% endfor %}
+                    <label class="visually-hidden" for="order-quick-search">{{ 'admin.order.filters.quick_search'|trans }}</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input id="order-quick-search"
+                               class="form-control"
+                               type="search"
+                               name="{{ filter_form.number.vars.full_name }}"
+                               value="{{ filter_form.number.vars.value|default('') }}"
+                               placeholder="{{ 'admin.order.filters.quick_search_placeholder'|trans }}">
+                    </div>
+                </form>
+                <button class="btn btn-light btn-sm"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#{{ order_filter_collapse_id }}"
+                        aria-expanded="{{ order_filters_open ? 'true' : 'false' }}"
+                        aria-controls="{{ order_filter_collapse_id }}">
+                    <i class="fa-solid fa-filter me-1"></i>{{ 'admin.common.filters'|trans }}
+                    {% if active_order_filters %}
+                        <span class="badge bg-danger ms-1">{{ active_order_filters|length }}</span>
+                    {% endif %}
+                </button>
+                {{ table_actions }}
+            </div>
+        </div>
+
+        {% if active_order_filters %}
+            <div class="order-filter-chips" aria-label="{{ 'admin.order.filters.active_filters'|trans }}">
+                {% for filter_name, filter_value in active_order_filters %}
+                    {% set filter_label = order_filter_labels[filter_name]|default(filter_name|replace({'_': ' '})|capitalize) %}
+                    {% set filter_display_value = filter_name == 'status' ? filter_value|replace({'_': ' '})|title : filter_value %}
+                    {% set next_filter_params = order_filter_params|merge({(filter_name): ''}) %}
+                    <a class="order-filter-chip"
+                       href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge({(filter_form.vars.name): next_filter_params})) }}"
+                       aria-label="{{ 'admin.order.filters.clear_filter'|trans({'%label%': filter_label}) }}">
+                        <span>{{ filter_label }}: {{ filter_display_value }}</span>
+                        <i class="fa-solid fa-xmark"></i>
+                    </a>
+                {% endfor %}
+                <a class="order-filter-chip order-filter-chip--reset"
+                   href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')) }}">
+                    {{ 'admin.common.reset_filters'|trans }}
+                </a>
+            </div>
+        {% endif %}
+
+        {{ include('admin/_components/filter/_accordion_panel.html.twig', {
+            form: filter_form,
+            collapse_id: order_filter_collapse_id,
+            is_open: order_filters_open
+        }) }}
+    </div>
+{% endset %}
+
 {% block main_content %}
     <main class="content" {{ stimulus_controller('reload-card') }}>
         <div class="container-fluid p-0">
@@ -56,12 +139,13 @@
                 </div>
                 <div class="col-xxl-8 col-xl-7 col-lg-6">
                     {{ include('admin/_components/card/_table_card.html.twig', {
-                        actions: table_actions,
                         table_title: 'Orders',
                         table_class: 'document-list-table order-index-table',
                         table_head: table_head,
                         table_body: table_body,
-                        filter_form: filter_form
+                        filter_form: null,
+                        show_header: false,
+                        before_table: order_list_controls
                     }) }}
                 </div>
             </div>

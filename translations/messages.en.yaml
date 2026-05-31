@@ -47,6 +47,7 @@ admin:
     empty: 'No records.'
     error: 'Error'
     filter: 'Filter'
+    filters: 'Filters'
     reset_filters: 'Reset filters'
     history: 'History'
     loading: 'Loading...'
@@ -164,6 +165,11 @@ admin:
       summary: 'Summary'
       products: 'Products'
       inventory_documents: 'Inventory documents'
+    filters:
+      active_filters: 'Active filters'
+      clear_filter: 'Clear %label% filter'
+      quick_search: 'Quick search'
+      quick_search_placeholder: 'Search by order number'
     fields:
       customer: 'Customer'
       delivery_address: 'Delivery address'
