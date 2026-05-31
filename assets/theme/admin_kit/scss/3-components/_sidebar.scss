@@ -251,6 +251,29 @@ a.sidebar-link {
   margin-right: $spacer;
 }
 
+.sidebar-hover-label {
+  position: fixed;
+  z-index: 1050;
+  max-width: 240px;
+  padding: .35rem .55rem;
+  color: $gray-100;
+  pointer-events: none;
+  background: $gray-900;
+  border-radius: .25rem;
+  box-shadow: 0 .35rem 1rem rgba($black, .18);
+  font-size: $font-size-sm;
+  line-height: 1.2;
+  opacity: 0;
+  transform: translateY(-50%) translateX(-.25rem);
+  transition: opacity .12s ease-in-out, transform .12s ease-in-out;
+  white-space: nowrap;
+}
+
+.sidebar-hover-label.show {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
 // Sidebar header
 .sidebar-header {
   background: transparent;

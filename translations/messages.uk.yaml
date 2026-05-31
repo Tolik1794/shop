@@ -36,6 +36,7 @@ admin:
     comment: 'Коментар'
     completed_at: 'Завершено'
     confirm: 'Підтвердити'
+    copy: 'Копіювати'
     created_at: 'Створено'
     currency: 'Валюта'
     date: 'Дата'
@@ -211,6 +212,16 @@ admin:
       placeholder: 'Назва або артикул товару'
       available: 'Доступно'
       price: 'Ціна'
+      details: 'Деталі товару'
+      copy_name: 'Копіювати назву товару'
+      copy_code: 'Копіювати код товару'
+      category: 'Категорія'
+      kind: 'Тип товару'
+      base_sale_price: 'Базова ціна продажу'
+      batch: 'Партія'
+      batch_received_at: 'Дата отримання партії'
+    customer:
+      copy_phone: 'Копіювати телефон клієнта'
     validation:
       insufficient_stock: 'Недостатньо на складі'
   purchase:

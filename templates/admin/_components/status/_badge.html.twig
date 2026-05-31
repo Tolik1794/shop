@@ -1,0 +1,39 @@
+{% set context = context|default('default') %}
+{% set status_classes = {
+    order: {
+        draft: 'bg-secondary',
+        confirmed: 'bg-primary',
+        awaiting_stock: 'bg-warning text-dark',
+        ready_to_ship: 'bg-info text-dark',
+        partially_shipped: 'bg-info text-dark',
+        shipped: 'bg-primary',
+        delivered: 'bg-success',
+        completed: 'bg-success',
+        canceled: 'bg-danger',
+        partially_returned: 'bg-warning text-dark',
+        returned: 'bg-dark'
+    },
+    payment: {
+        unpaid: 'bg-danger',
+        partially_paid: 'bg-warning text-dark',
+        paid: 'bg-success',
+        overpaid: 'bg-info text-dark',
+        refunded: 'bg-secondary'
+    },
+    inventory: {
+        draft: 'bg-secondary',
+        posted: 'bg-success',
+        canceled: 'bg-danger'
+    },
+    catalog: {
+        active: 'bg-success',
+        inactive: 'bg-secondary',
+        deleted: 'bg-danger'
+    }
+} %}
+{% set value = value|default('') %}
+{% set label = label|default(value|replace({'_': ' '})|capitalize) %}
+{% set context_classes = status_classes[context]|default({}) %}
+{% set badge_class = context_classes[value]|default('bg-light text-dark border') %}
+
+<span class="badge rounded-pill order-status-badge {{ badge_class }}">{{ label }}</span>

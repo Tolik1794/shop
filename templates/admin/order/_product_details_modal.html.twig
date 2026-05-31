@@ -1,0 +1,78 @@
+{% set product = entry.product %}
+{% set warehouse = entry.warehouse %}
+{% set warehouseStockBatch = entry.warehouseStockBatch %}
+
+<div class="modal fade" id="{{ modal_id }}" tabindex="-1" aria-labelledby="{{ modal_id }}-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="{{ modal_id }}-label">{{ 'admin.order.product.details'|trans }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ 'admin.common.close'|trans }}"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-sm mb-0 order-product-details-table">
+                    <tbody>
+                    <tr>
+                        <th>{{ 'admin.common.name'|trans }}</th>
+                        <td>{{ entry.productNameSnapshot }}</td>
+                    </tr>
+                    <tr>
+                        <th>{{ 'admin.common.code'|trans }}</th>
+                        <td>{{ entry.productCodeSnapshot }}</td>
+                    </tr>
+                    {% if product %}
+                        <tr>
+                            <th>{{ 'admin.common.status'|trans }}</th>
+                            <td>{{ include('admin/_components/status/_badge.html.twig', {context: 'catalog', value: product.status.value}) }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'admin.order.product.kind'|trans }}</th>
+                            <td>{{ product.productKind.value|replace({'_': ' '})|capitalize }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'admin.order.product.category'|trans }}</th>
+                            <td>{{ product.category }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'admin.order.product.base_sale_price'|trans }}</th>
+                            <td>{{ product.baseSalePrice is not empty ? product.baseSalePrice|money : '' }}</td>
+                        </tr>
+                    {% endif %}
+                    <tr>
+                        <th>{{ 'admin.common.quantity'|trans }}</th>
+                        <td>{{ entry.quantity|quantity(entry.product) }} {{ entry.unitCodeSnapshot }}</td>
+                    </tr>
+                    <tr>
+                        <th>{{ 'admin.common.price'|trans }}</th>
+                        <td>{{ entry.unitPrice|money }} {{ entity.currency.code }}</td>
+                    </tr>
+                    <tr>
+                        <th>{{ 'admin.order.fields.discount'|trans }}</th>
+                        <td>{{ entry.discountAmount ? entry.discountAmount|money ~ ' ' ~ entity.currency.code : '' }}</td>
+                    </tr>
+                    <tr>
+                        <th>{{ 'admin.common.total'|trans }}</th>
+                        <td>{{ entry.totalPrice|money }} {{ entity.currency.code }}</td>
+                    </tr>
+                    {% if warehouse %}
+                        <tr>
+                            <th>{{ 'admin.common.warehouse'|trans }}</th>
+                            <td>{{ warehouse.name }}</td>
+                        </tr>
+                    {% endif %}
+                    {% if warehouseStockBatch %}
+                        <tr>
+                            <th>{{ 'admin.order.product.batch'|trans }}</th>
+                            <td>#{{ warehouseStockBatch.id }}</td>
+                        </tr>
+                        <tr>
+                            <th>{{ 'admin.order.product.batch_received_at'|trans }}</th>
+                            <td>{{ warehouseStockBatch.receivedAt ? warehouseStockBatch.receivedAt|date('Y-m-d') : '' }}</td>
+                        </tr>
+                    {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

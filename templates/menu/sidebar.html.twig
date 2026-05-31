@@ -24,8 +24,12 @@
             'class': is_expanded ? 'sidebar-link' : 'sidebar-link collapsed'
         }) %}
     {% endif %}
-    {% if item.extra('icon') and linkAttributes.title is not defined %}
-        {% set linkAttributes = linkAttributes|merge({'title': item.label|striptags}) %}
+    {% if item.extra('icon') %}
+        {% set sidebar_label = item.label|striptags %}
+        {% set linkAttributes = linkAttributes|merge({
+            'aria-label': linkAttributes['aria-label']|default(sidebar_label),
+            'data-sidebar-label': sidebar_label
+        }) %}
     {% endif %}
     <a href="{{ item.uri }}"{{ knp_menu.attributes(linkAttributes) }}>{{ block('label') }}</a>
 {% endblock %}

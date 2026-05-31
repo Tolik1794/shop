@@ -5,7 +5,9 @@ const storageKey = "admin.sidebar.collapsed";
 const desktopQuery = "(min-width: 992px)";
 const sidebarToggleReadyKey = "adminSidebarToggleReady";
 const sidebarRailReadyKey = "adminSidebarRailReady";
+const sidebarLabelReadyKey = "adminSidebarLabelReady";
 const submenuOpenClass = "sidebar-submenu-open";
+const labelClass = "sidebar-hover-label";
 
 const initialize = () => {
   restoreSidebarState();
@@ -50,6 +52,45 @@ const closeSidebarSubmenus = () => {
       link.setAttribute("aria-expanded", "false");
     }
   });
+}
+
+const getSidebarLabelElement = () => {
+  let labelElement = document.getElementsByClassName(labelClass)[0];
+
+  if(!labelElement) {
+    labelElement = document.createElement("div");
+    labelElement.className = labelClass;
+    labelElement.setAttribute("role", "tooltip");
+    document.body.appendChild(labelElement);
+  }
+
+  return labelElement;
+}
+
+const hideSidebarLabel = () => {
+  const labelElement = document.getElementsByClassName(labelClass)[0];
+
+  if(labelElement) {
+    labelElement.classList.remove("show");
+  }
+}
+
+const showSidebarLabel = link => {
+  const sidebarElement = document.getElementsByClassName("js-sidebar")[0];
+  const label = link.dataset.sidebarLabel;
+
+  if(!sidebarElement || !isDesktop() || !sidebarElement.classList.contains("collapsed") || !label) {
+    hideSidebarLabel();
+    return;
+  }
+
+  const linkBounds = link.getBoundingClientRect();
+  const labelElement = getSidebarLabelElement();
+
+  labelElement.textContent = label;
+  labelElement.style.left = `${linkBounds.right + 10}px`;
+  labelElement.style.top = `${linkBounds.top + (linkBounds.height / 2)}px`;
+  labelElement.classList.add("show");
 }
 
 const initializeSimplebar = () => {
@@ -152,11 +193,43 @@ const initializeSidebarCollapse = () => {
     window.addEventListener("resize", closeSidebarSubmenus);
     window.addEventListener("scroll", closeSidebarSubmenus, true);
   }
+
+  if(document.documentElement.dataset[sidebarLabelReadyKey] !== "1") {
+    document.documentElement.dataset[sidebarLabelReadyKey] = "1";
+    document.addEventListener("mouseover", event => {
+      const link = event.target.closest && event.target.closest(".js-sidebar [data-sidebar-label]");
+
+      if(link) {
+        showSidebarLabel(link);
+      }
+    });
+    document.addEventListener("focusin", event => {
+      const link = event.target.closest && event.target.closest(".js-sidebar [data-sidebar-label]");
+
+      if(link) {
+        showSidebarLabel(link);
+      }
+    });
+    document.addEventListener("mouseout", event => {
+      if(event.target.closest && event.target.closest(".js-sidebar [data-sidebar-label]")) {
+        hideSidebarLabel();
+      }
+    });
+    document.addEventListener("focusout", event => {
+      if(event.target.closest && event.target.closest(".js-sidebar [data-sidebar-label]")) {
+        hideSidebarLabel();
+      }
+    });
+    document.addEventListener("click", hideSidebarLabel);
+    window.addEventListener("resize", hideSidebarLabel);
+    window.addEventListener("scroll", hideSidebarLabel, true);
+  }
 }
 
 // Wait until page is loaded
 document.addEventListener("DOMContentLoaded", () => initialize());
 document.addEventListener("admin:shell-refreshed", () => {
+  hideSidebarLabel();
   closeSidebarSubmenus();
   restoreSidebarState();
   initializeSimplebar();

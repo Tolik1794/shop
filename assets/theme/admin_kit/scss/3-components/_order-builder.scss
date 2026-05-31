@@ -292,6 +292,48 @@
 	}
 }
 
+.order-status-badge {
+	font-weight: 600;
+	line-height: 1.1;
+	white-space: nowrap;
+}
+
+.order-icon-action {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 1.75rem;
+	min-height: 1.75rem;
+	padding: 0;
+	margin-left: .25rem;
+	text-decoration: none;
+	vertical-align: middle;
+
+	&:hover,
+	&:focus {
+		text-decoration: none;
+	}
+}
+
+.order-show-products {
+	td {
+		vertical-align: middle;
+	}
+}
+
+.order-product-details-table {
+	th {
+		width: 38%;
+		color: $text-muted;
+		font-weight: 600;
+	}
+
+	td,
+	th {
+		vertical-align: top;
+	}
+}
+
 @keyframes order-search-spin {
 	to {
 		transform: rotate(360deg);

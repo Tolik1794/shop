@@ -24,9 +24,9 @@
 			<tr>
 				<td><strong>{{ entity.number }}</strong></td>
 				<td><strong>{{ entity.customerNameSnapshot }}</strong></td>
-				<td>{{ entity.status.value }}</td>
+				<td>{{ include('admin/_components/status/_badge.html.twig', {context: 'order', value: entity.status.value}) }}</td>
 				<td><strong>{{ entity.totalAmount|money }} {{ entity.currency.code }}</strong></td>
-				<td>{{ entity.paymentStatus.value }}</td>
+				<td>{{ include('admin/_components/status/_badge.html.twig', {context: 'payment', value: entity.paymentStatus.value}) }}</td>
 			</tr>
 			</tbody>
 		</table>
