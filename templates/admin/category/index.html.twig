@@ -2,6 +2,9 @@
 
 {% block title %}Category list{% endblock %}
 
+{% set category_filter_params = app.request.query.all(filter_form.vars.name) %}
+{% set category_filter_collapse_id = filter_form.vars.id ~ '-filters' %}
+
 {% set table_actions %}
     {% if is_granted('category.manage') %}
         <a class="btn btn-light btn-sm"
@@ -41,18 +44,14 @@
             <div class="row">
                 <div class="col-xxl-4 col-xl-5 col-lg-6">
                     {{ include('admin/_components/card/_tab_card.html.twig', {
-                        tab_search_key: 1,
                         tab_head: [
-                            include('admin/_components/tab_icon/_show.html.twig'),
-                            include('admin/_components/tab_icon/_filter.html.twig')
-                            ~ (app.request.query.get(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
+                            include('admin/_components/tab_icon/_show.html.twig')
                         ],
                         tab_body: [
                             first_entity ? render(controller(
                                 'App\\Controller\\Admin\\CategoryController::show',
                                 { store_id: app.request.attributes.get('store_id'), category: first_entity, 'request': app.request }
-                            )) : '<div class="card"><div class="card-body">' ~ 'Nothing to show...'|trans ~ '</div></div>',
-                            include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
+                            )) : '<div class="card"><div class="card-body">' ~ 'Nothing to show...'|trans ~ '</div></div>'
                         ]
                     }) }}
                 </div>
@@ -60,12 +59,32 @@
 
                     <div class="card">
                         <div class="card-header pb-0">
-                            {% if table_actions|trim %}
-                                {{ include('admin/_components/card/_actions.html.twig', {actions: table_actions}) }}
+                            {% set category_header_actions %}
+                                <button class="btn btn-light btn-sm"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#{{ category_filter_collapse_id }}"
+                                        aria-expanded="{{ category_filter_params ? 'true' : 'false' }}"
+                                        aria-controls="{{ category_filter_collapse_id }}">
+                                    <i class="fa-solid fa-filter me-1"></i>{{ 'admin.common.filter'|trans }}
+                                    {% if category_filter_params %}
+                                        <span class="badge bg-danger ms-1">{{ category_filter_params|length }}</span>
+                                    {% endif %}
+                                </button>
+                                {{ table_actions }}
+                            {% endset %}
+                            {% if category_header_actions|trim %}
+                                {{ include('admin/_components/card/_actions.html.twig', {actions: category_header_actions}) }}
                             {% endif %}
                             <h5 class="card-title mb-0">{{ 'Categories'|trans }}</h5>
                         </div>
                         <div class="card-body">
+                            {{ include('admin/_components/filter/_accordion_panel.html.twig', {
+                                form: filter_form,
+                                collapse_id: category_filter_collapse_id,
+                                is_open: category_filter_params ? true : false
+                            }) }}
+
                             {{ include('admin/_components/card/_collapse_table_card.html.twig', {
                                 items: pagination,
                                 first_entity: first_entity

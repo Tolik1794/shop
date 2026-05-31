@@ -1,11 +1,44 @@
+{% set card_filter_form = filter_form|default(null) %}
+{% set card_filter_params = card_filter_form ? app.request.query.all(card_filter_form.vars.name) : {} %}
+{% set card_filter_collapse_id = card_filter_form ? card_filter_form.vars.id ~ '-filters' : '' %}
+
 <div class="card">
     <div class="card-header pb-0">
-        {% if actions|trim %}
-            {{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
+        {% set header_actions %}
+            {% if card_filter_form %}
+                <button class="btn btn-light btn-sm"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#{{ card_filter_collapse_id }}"
+                        aria-expanded="{{ card_filter_params ? 'true' : 'false' }}"
+                        aria-controls="{{ card_filter_collapse_id }}">
+                    <i class="fa-solid fa-filter me-1"></i>{{ 'admin.common.filter'|trans }}
+                    {% if card_filter_params %}
+                        <span class="badge bg-danger ms-1">{{ card_filter_params|length }}</span>
+                    {% endif %}
+                </button>
+            {% endif %}
+            {{ actions|default('') }}
+        {% endset %}
+        {% if header_actions|trim %}
+            {{ include('admin/_components/card/_actions.html.twig', {actions: header_actions}) }}
         {% endif %}
         <h5 class="card-title mb-0">{{ table_title|trans }}</h5>
     </div>
     <div class="card-body">
+        {% if card_filter_form %}
+            {{ include('admin/_components/filter/_accordion_panel.html.twig', {
+                form: card_filter_form,
+                collapse_id: card_filter_collapse_id,
+                is_open: card_filter_params ? true : false,
+                quick_filters: quick_filters|default('')
+            }) }}
+        {% endif %}
+
+        {% if before_table|default('')|trim %}
+            {{ before_table|raw }}
+        {% endif %}
+
         <table class="table table-hover {{ table_class|default('') }}">
             <thead>
             {{ table_head }}

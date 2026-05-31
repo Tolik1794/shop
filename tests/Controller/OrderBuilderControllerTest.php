@@ -49,6 +49,20 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSelectorExists('[data-order-form-target="prototype"]');
 	}
 
+	public function testOrderIndexShowsFiltersAboveListWithoutFilterTab(): void
+	{
+		$this->client->loginUser($this->createUser('order-index-filter-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-index-filter-store-' . uniqid());
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/?order_filter%%5Bnumber%%5D=SO', $store->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorExists('button[data-bs-target="#order_filter-filters"]');
+		self::assertSelectorExists('#order_filter-filters.show');
+		self::assertSelectorExists('#order_filter-filters form[name="order_filter"]');
+		self::assertSelectorNotExists('.tab-search-link');
+	}
+
 	public function testNewOrderBuilderFormCanBeSubmitted(): void
 	{
 		$this->client->loginUser($this->createUser('order-builder-submit-admin-' . uniqid() . '@example.com'));

@@ -39,18 +39,14 @@
             <div class="row">
                 <div class="col-xxl-4 col-xl-5 col-lg-6">
                     {{ include('admin/_components/card/_tab_card.html.twig', {
-                        tab_search_key: 1,
                         tab_head: [
                             include('admin/_components/tab_icon/_show.html.twig'),
-                            include('admin/_components/tab_icon/_filter.html.twig')
-                            ~ (app.request.query.all(filter_form.vars.name) ? '<span style="color: red">*</span>' : '')
                         ],
                         tab_body: [
                             first_entity ? render(controller(
                                 'App\\Controller\\Admin\\InventoryReasonController::show',
                                 { store_id: app.request.attributes.get('store_id'), id: first_entity.id, 'request': app.request }
                             )) : '<div class="card"><div class="card-body">' ~ 'Nothing to show...'|trans ~ '</div></div>',
-                            include('admin/_components/card/_filter_card.html.twig', {form: filter_form})
                         ]
                     }) }}
                 </div>
@@ -59,7 +55,8 @@
                         actions: table_actions,
                         table_title: 'Inventory reasons',
                         table_head: table_head,
-                        table_body: table_body
+                        table_body: table_body,
+                        filter_form: filter_form
                     }) }}
                 </div>
             </div>

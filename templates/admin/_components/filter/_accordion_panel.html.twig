@@ -1,0 +1,32 @@
+{% set quick_filters_content = quick_filters|default('') %}
+{% set is_open = is_open|default(false) %}
+
+<div class="collapse{{ is_open ? ' show' : '' }} mb-3" id="{{ collapse_id }}">
+    <div class="border rounded bg-light p-3">
+        {% if quick_filters_content|trim %}
+            <div class="mb-3">
+                {{ quick_filters_content|raw }}
+            </div>
+        {% endif %}
+
+        {{ form_start(form) }}
+        {% if form.vars.errors|length > 0 %}
+            <div class="form-error">
+                {{ form_errors(form) }}
+            </div>
+        {% endif %}
+
+        {{ include('admin/_components/_form_widgets.html.twig', {form: form}) }}
+
+        <div class="row">
+            <div class="form-control-lg">
+                <button type="submit" class="btn btn-primary btn mb-1 me-2">
+                    {{ 'admin.common.filter'|trans }}
+                </button>
+                <a href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')) }}" class="btn btn-secondary mb-1">{{ 'admin.common.reset_filters'|trans }}</a>
+            </div>
+        </div>
+
+        {{ form_end(form, {'render_rest': false}) }}
+    </div>
+</div>
