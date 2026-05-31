@@ -10,47 +10,50 @@
 	</div>
 	<div class="card-body" data-controller="select-two">
 		{% if payments|length > 0 %}
-			<div class="table-responsive">
-				<table class="table table-sm mb-3">
-					<thead>
-					<tr>
-						<th>{{ 'Date'|trans }}</th>
-						<th>{{ 'Direction'|trans }}</th>
-						<th>{{ 'Type'|trans }}</th>
-						<th>{{ 'Amount'|trans }}</th>
-						<th>{{ 'Amount base'|trans }}</th>
-						<th>{{ 'Correction'|trans }}</th>
-						<th>{{ 'Reason'|trans }}</th>
-					</tr>
-					</thead>
-					<tbody>
-					{% for payment in payments %}
-						{% set correction = payment.reversesPayment
-							? 'Reversal of #' ~ payment.reversesPayment.id
-							: (payment.reversedByPayment ? 'Reversed by #' ~ payment.reversedByPayment.id : '') %}
-						{% set reversalReason = payment.reversesPayment
-							? payment.comment
-							: (payment.reversedByPayment ? payment.reversedByPayment.comment : '') %}
-						<tr>
-							<td>{{ payment.paidAt|date('Y-m-d H:i') }}</td>
-							<td>{{ payment.direction.value }}</td>
-							<td>{{ payment.type.value }}</td>
-							<td>{{ payment.amount|money }} {{ payment.currency.code }}</td>
-							<td>{{ payment.amountBase|money }}</td>
-							<td>{{ correction ?: '—' }}</td>
-							<td>{{ reversalReason ?: '—' }}</td>
-						</tr>
-					{% endfor %}
-					</tbody>
-				</table>
+			<div class="document-payment-list">
+				{% for payment in payments %}
+					{% set correction = payment.reversesPayment
+						? 'Reversal of #' ~ payment.reversesPayment.id
+						: (payment.reversedByPayment ? 'Reversed by #' ~ payment.reversedByPayment.id : '') %}
+					{% set reversalReason = payment.reversesPayment
+						? payment.comment
+						: (payment.reversedByPayment ? payment.reversedByPayment.comment : payment.comment) %}
+					<article class="document-payment-card">
+						<div class="document-payment-card-header">
+							<strong>{{ 'Payment'|trans }} #{{ loop.index }}</strong>
+							<span class="text-muted small">{{ payment.paidAt|date('d.m.Y H:i') }}</span>
+						</div>
+						<div class="text-muted small mb-2">
+							{{ payment.direction.value|trans }} · {{ payment.type.value|trans }}
+						</div>
+						<dl class="document-payment-fields">
+							<div>
+								<dt>{{ 'Amount'|trans }}</dt>
+								<dd>{{ payment.amount|money }} {{ payment.currency.code }}</dd>
+							</div>
+							<div>
+								<dt>{{ 'Amount base'|trans }}</dt>
+								<dd>{{ payment.amountBase|money }}</dd>
+							</div>
+							<div>
+								<dt>{{ 'Correction'|trans }}</dt>
+								<dd>{{ correction ?: '—' }}</dd>
+							</div>
+							<div>
+								<dt>{{ 'Comment'|trans }}</dt>
+								<dd>{{ reversalReason ?: '—' }}</dd>
+							</div>
+						</dl>
+					</article>
+				{% endfor %}
 			</div>
 		{% else %}
 			<p class="text-muted">{{ 'No payments.'|trans }}</p>
 		{% endif %}
 
 		{% if is_fully_paid %}
-			<div class="alert alert-success mb-0">
-				This document is fully paid.
+			<div class="alert alert-success mb-0 document-payment-status">
+				{{ 'This document is fully paid.'|trans }}
 			</div>
 		{% else %}
 			<h6 class="mb-2">{{ 'Add payment'|trans }}</h6>

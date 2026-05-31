@@ -9,6 +9,7 @@ use App\Entity\ExchangeRate;
 use App\Entity\Order;
 use App\Entity\OrderComment;
 use App\Entity\OrderEntry;
+use App\Entity\Payment;
 use App\Entity\Product;
 use App\Entity\Store;
 use App\Entity\Unit;
@@ -17,6 +18,9 @@ use App\Entity\User\User;
 use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
 use App\Entity\WarehouseStockBatch;
+use App\Enum\PaymentDirectionEnum;
+use App\Enum\PaymentStatusEnum;
+use App\Enum\PaymentTypeEnum;
 use App\Enum\ProductKindEnum;
 use DateTime;
 use DateTimeImmutable;
@@ -115,6 +119,49 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSelectorExists('.order-show-product-card .order-copy-action[data-copy-feedback="Copied"]');
 		self::assertSelectorExists('.order-show-product-card [data-copy-feedback][aria-live="polite"]');
 		self::assertSelectorExists('.order-show-product-action[aria-label="Open product"]');
+	}
+
+	public function testOrderPaymentsTabUsesPaymentCardsInsteadOfTable(): void
+	{
+		$this->client->loginUser($this->createUser('order-payment-cards-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-payment-cards-store-' . uniqid());
+		$order = (new Order())
+			->setStore($store)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber('SO-payments-' . uniqid())
+			->setCustomerNameSnapshot('Paid Customer')
+			->setTotalAmount('10000.0000')
+			->setTotalAmountBase('10000.0000')
+			->setPaidAmountBase('10000.0000')
+			->setPaymentStatus(PaymentStatusEnum::PAID);
+		$payment = (new Payment())
+			->setStore($store)
+			->setOrder($order)
+			->setCurrency($store->getBaseCurrency())
+			->setDirection(PaymentDirectionEnum::INCOMING)
+			->setType(PaymentTypeEnum::CASH)
+			->setAmount('10000.0000')
+			->setAmountBase('10000.0000')
+			->setPaidAt(new DateTimeImmutable('2026-05-30 17:14:00'));
+		$order->addPayment($payment);
+
+		$this->entityManager->persist($order);
+		$this->entityManager->persist($payment);
+		$this->entityManager->flush();
+
+		$this->client->request('GET', sprintf('/admin/store/%d/payment/order/%d/document', $store->getId(), $order->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorExists('a', 'Full form');
+		self::assertSelectorNotExists('.table-responsive table');
+		self::assertSelectorExists('.document-payment-list');
+		self::assertSelectorTextContains('.document-payment-card', 'Payment #1');
+		self::assertSelectorTextContains('.document-payment-card', '30.05.2026 17:14');
+		self::assertSelectorTextContains('.document-payment-card', 'Incoming · Cash');
+		self::assertSelectorTextContains('.document-payment-card', '10 000.00 UAH');
+		self::assertSelectorTextContains('.document-payment-card', 'Correction');
+		self::assertSelectorTextContains('.document-payment-card', '—');
+		self::assertSelectorTextContains('.document-payment-status', 'This document is fully paid.');
 	}
 
 	public function testNewOrderBuilderFormCanBeSubmitted(): void

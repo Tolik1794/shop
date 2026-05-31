@@ -487,6 +487,60 @@
 	}
 }
 
+.document-payment-list {
+	display: grid;
+	gap: .75rem;
+	margin-bottom: 1rem;
+}
+
+.document-payment-card {
+	padding: .75rem;
+	border: 1px solid $gray-200;
+	border-radius: .375rem;
+	background: $white;
+}
+
+.document-payment-card-header {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .35rem .75rem;
+	justify-content: space-between;
+	align-items: baseline;
+	margin-bottom: .15rem;
+}
+
+.document-payment-fields {
+	display: grid;
+	gap: .45rem;
+	margin: 0;
+
+	div {
+		display: grid;
+		gap: .5rem;
+		grid-template-columns: minmax(0, 1fr) max-content;
+		align-items: baseline;
+	}
+
+	dt {
+		color: $text-muted;
+		font-weight: 500;
+	}
+
+	dd {
+		margin-bottom: 0;
+		text-align: right;
+		overflow-wrap: anywhere;
+	}
+
+	dd:nth-child(2) {
+		font-variant-numeric: tabular-nums;
+	}
+}
+
+.document-payment-status {
+	font-weight: 600;
+}
+
 @keyframes order-search-spin {
 	to {
 		transform: rotate(360deg);
