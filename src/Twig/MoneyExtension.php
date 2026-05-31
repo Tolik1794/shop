@@ -20,6 +20,8 @@ class MoneyExtension extends AbstractExtension
 			return '0.00';
 		}
 
-		return number_format((float) str_replace(',', '.', (string) $value), 2, '.', '');
+		$normalizedValue = str_replace([' ', ','], ['', '.'], (string) $value);
+
+		return number_format((float) $normalizedValue, 2, '.', ' ');
 	}
 }

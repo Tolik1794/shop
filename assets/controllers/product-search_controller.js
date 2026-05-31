@@ -212,7 +212,7 @@ export default class extends Controller {
             product: product,
             sourceType: 'stock',
             label: `${trans('order.source.stock', 'Stock')}: ${option.warehouseName || ''}${batchLabel}`,
-            meta: `${trans('order.product.available', 'Available')}: ${available} · ${trans('order.product.price', 'Price')}: ${option.price || product.price || '0.00'}${receivedMeta}`,
+            meta: `${trans('order.product.available', 'Available')}: ${available} · ${trans('order.product.price', 'Price')}: ${this.formatMoney(option.price || product.price || '0.00')}${receivedMeta}`,
             available: option.available,
             price: option.price || product.price,
             warehouseId: option.warehouseId || '',
@@ -231,7 +231,7 @@ export default class extends Controller {
             product: product,
             sourceType: 'production',
             label: option.label || productionLabel,
-            meta: `${trans('order.product.price', 'Price')}: ${option.price || product.price || '0.00'}`,
+            meta: `${trans('order.product.price', 'Price')}: ${this.formatMoney(option.price || product.price || '0.00')}`,
             available: '0.0000',
             price: option.price || product.price,
             warehouseId: '',
@@ -250,7 +250,7 @@ export default class extends Controller {
             product: product,
             sourceType: 'stock',
             label: unavailableLabel,
-            meta: `${trans('order.product.price', 'Price')}: ${product.price || '0.00'}`,
+            meta: `${trans('order.product.price', 'Price')}: ${this.formatMoney(product.price || '0.00')}`,
             available: '0.0000',
             price: product.price,
             warehouseId: '',
@@ -376,9 +376,15 @@ export default class extends Controller {
     }
 
     numberValue(value) {
-        const number = Number.parseFloat(String(value || '').replace(',', '.'))
+        const number = Number.parseFloat(String(value || '').replace(/\s/g, '').replace(',', '.'))
 
         return Number.isFinite(number) ? number : 0
+    }
+
+    formatMoney(value) {
+        const number = this.numberValue(value)
+
+        return number.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
     }
 
     formatQuantity(value, precision) {

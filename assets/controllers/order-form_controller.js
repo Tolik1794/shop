@@ -589,16 +589,16 @@ export default class extends Controller {
 
     applySummary(data) {
         this.summaryCountTarget.textContent = String(data.count || 0)
-        this.summarySubtotalTarget.textContent = data.subtotal || '0.00'
-        this.summaryDiscountTarget.textContent = data.discount || '0.00'
-        this.summaryTotalTarget.textContent = data.total || '0.00'
+        this.summarySubtotalTarget.textContent = this.formatMoney(data.subtotal || '0.00')
+        this.summaryDiscountTarget.textContent = this.formatMoney(data.discount || '0.00')
+        this.summaryTotalTarget.textContent = this.formatMoney(data.total || '0.00')
 
         Object.entries(data.lineTotals || {}).forEach(([index, total]) => {
             const row = this.entriesTarget.querySelector(`[data-index="${index}"]`)
             const totalTarget = row ? row.querySelector('[data-order-entry-target~="lineTotal"]') : null
 
             if (totalTarget) {
-                totalTarget.textContent = total
+                totalTarget.textContent = this.formatMoney(total)
             }
         })
     }
@@ -744,13 +744,19 @@ export default class extends Controller {
     }
 
     numberValue(value) {
-        const number = Number.parseFloat(String(value || '').replace(',', '.'))
+        const number = Number.parseFloat(String(value || '').replace(/\s/g, '').replace(',', '.'))
 
         return Number.isFinite(number) ? number : 0
     }
 
     format(value) {
         return value.toFixed(4)
+    }
+
+    formatMoney(value) {
+        const number = this.numberValue(value)
+
+        return number.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
     }
 
     formatQuantity(value, precision) {
