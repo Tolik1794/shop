@@ -1,7 +1,7 @@
 {% if value is not empty %}
     <button
             type="button"
-            class="btn btn-link btn-sm order-icon-action"
+            class="btn btn-link btn-sm order-icon-action order-copy-action"
             data-copy-text="{{ value|e('html_attr') }}"
             onclick="event.stopPropagation(); navigator.clipboard.writeText(this.dataset.copyText)"
             title="{{ title|default('admin.common.copy'|trans) }}"

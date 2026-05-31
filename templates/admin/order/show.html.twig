@@ -1,227 +1,255 @@
-{% set actions %}
+{% set empty_text = 'Not specified'|trans %}
+{% set dash_text = '—' %}
+{% set currency_code = entity.currency ? entity.currency.code : dash_text %}
+{% set customer_name = entity.customerNameSnapshot|default('')|trim %}
+{% set customer_phone = entity.customerPhoneSnapshot|default('')|trim %}
+{% set customer_email = entity.customerEmailSnapshot|default('')|trim %}
+{% set delivery_address = entity.deliveryAddress|default('')|trim %}
+
+{% set quick_actions %}
     {% if entity.status.value == 'draft' %}
         <a class="btn btn-light btn-sm"
-           href="{{ path('app_admin_order_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i
+           href="{{ path('app_admin_order_edit', query_params|default({})|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i
                     class="fa-solid fa-pen me-1"></i>{{ 'admin.common.edit'|trans }}</a>
+    {% endif %}
+
+    {% if entity.status.value == 'draft' %}
+        <form method="post"
+              action="{{ path('app_admin_order_confirm', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+              class="d-inline" data-action="submit->reload-card#submitQuickAction">
+            <input type="hidden" name="_token" value="{{ csrf_token('confirm_order_' ~ entity.id) }}">
+            <button class="btn btn-success btn-sm"
+                    type="submit" {{ entity.orderEntries|length == 0 ? 'disabled' : '' }}>{{ 'admin.order.actions.confirm'|trans }}</button>
+        </form>
+    {% endif %}
+
+    {% set rollback_target_status = rollback_target_status|default(null) %}
+    {% set return_to_draft_duplicates_rollback = can_rollback_status|default(false) and rollback_target_status == 'draft' %}
+
+    {% if entity.status.value in ['confirmed', 'awaiting_stock', 'ready_to_ship'] and not return_to_draft_duplicates_rollback %}
+        <form method="post"
+              action="{{ path('app_admin_order_return_to_draft', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+              class="d-inline" data-action="submit->reload-card#submitQuickAction"
+              data-confirm-message="{{ 'admin.order.confirm.return_to_draft'|trans }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('return_to_draft_order_' ~ entity.id) }}">
+            <button class="btn btn-light btn-sm"
+                    type="submit">{{ 'admin.order.actions.return_to_draft'|trans }}</button>
+        </form>
+    {% endif %}
+
+    {% if can_rollback_status|default(false) %}
+        <form method="post"
+              action="{{ path('app_admin_order_rollback_status', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+              class="d-inline" data-action="submit->reload-card#submitQuickAction"
+              data-confirm-message="{{ 'admin.order.confirm.rollback_status'|trans }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('rollback_status_order_' ~ entity.id) }}">
+            <button class="btn btn-light btn-sm"
+                    type="submit">{{ 'admin.order.actions.rollback_status'|trans }}</button>
+        </form>
+    {% endif %}
+
+    {% if can_ship|default(false) %}
+        <form method="post"
+              action="{{ path('app_admin_order_ship', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+              class="d-inline">
+            <input type="hidden" name="_token" value="{{ csrf_token('ship_order_' ~ entity.id) }}">
+            <button class="btn btn-success btn-sm" type="submit"><i
+                        class="fa-solid fa-truck me-1"></i>{{ 'admin.order.actions.ship'|trans }}</button>
+        </form>
+    {% endif %}
+
+    {% if entity.status.value == 'shipped' %}
+        <form method="post"
+              action="{{ path('app_admin_order_mark_delivered', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+              class="d-inline" data-action="submit->reload-card#submitQuickAction">
+            <input type="hidden" name="_token" value="{{ csrf_token('mark_delivered_order_' ~ entity.id) }}">
+            <button class="btn btn-success btn-sm"
+                    type="submit">{{ 'admin.order.actions.mark_delivered'|trans }}</button>
+        </form>
+    {% endif %}
+
+    {% if entity.status.value == 'delivered' %}
+        <form method="post"
+              action="{{ path('app_admin_order_complete', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+              class="d-inline" data-action="submit->reload-card#submitQuickAction"
+              data-confirm-message="{{ 'admin.order.confirm.complete'|trans }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('complete_order_' ~ entity.id) }}">
+            <button class="btn btn-success btn-sm" type="submit">{{ 'admin.order.actions.complete'|trans }}</button>
+        </form>
+    {% endif %}
+
+    {% if entity.status.value not in ['canceled', 'completed'] %}
+        <form method="post"
+              action="{{ path('app_admin_order_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+              class="d-inline" data-action="submit->reload-card#submitQuickAction"
+              data-confirm-message="{{ 'admin.order.confirm.cancel'|trans }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('cancel_order_' ~ entity.id) }}">
+            <button class="btn btn-danger btn-sm" type="submit">{{ 'admin.order.actions.cancel'|trans }}</button>
+        </form>
     {% endif %}
 {% endset %}
 
-<div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+<div class="card order-show-card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
     <div class="card-header">
-        {% if actions|trim %}
-            {{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
-        {% endif %}
-        <h5 class="card-title mb-0">{{ entity.number }}</h5>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <h5 class="card-title mb-0 me-auto">{{ entity.number }}</h5>
+            {{ include('admin/_components/status/_badge.html.twig', {context: 'order', value: entity.status.value}) }}
+            {{ include('admin/_components/status/_badge.html.twig', {context: 'payment', value: entity.paymentStatus.value}) }}
+        </div>
     </div>
     <div class="card-body">
-        <table class="table table-sm mt-2 mb-4">
-            <tbody>
-            <tr>
-                <th>{{ 'admin.common.status'|trans }}</th>
-                <td>{{ include('admin/_components/status/_badge.html.twig', {context: 'order', value: entity.status.value}) }}</td>
-            </tr>
-            <tr>
-                <th>{{ 'admin.order.fields.customer'|trans }}</th>
-                <td>{{ entity.customerNameSnapshot }}</td>
-            </tr>
-            <tr>
-                <th>{{ 'admin.common.phone'|trans }}</th>
-                <td>
-                    <span>{{ entity.customerPhoneSnapshot }}</span>
-                    {{ include('admin/order/_copy_button.html.twig', {
-                        value: entity.customerPhoneSnapshot,
-                        title: 'admin.order.customer.copy_phone'|trans
-                    }) }}
-                </td>
-            </tr>
-            <tr>
-                <th>{{ 'admin.common.email'|trans }}</th>
-                <td>{{ entity.customerEmailSnapshot }}</td>
-            </tr>
-            <tr>
-                <th>{{ 'admin.common.currency'|trans }}</th>
-                <td>{{ entity.currency.code }}</td>
-            </tr>
-            <tr>
-                <th>{{ 'admin.order.fields.exchange_rate'|trans }}</th>
-                <td>{{ entity.exchangeRateToBase }}</td>
-            </tr>
-            <tr>
-                <th>{{ 'admin.common.total'|trans }}</th>
-                <td>{{ entity.totalAmount|money }} {{ entity.currency.code }}</td>
-            </tr>
-            <tr>
-                <th>{{ 'admin.order.fields.total_base'|trans }}</th>
-                <td>{{ entity.totalAmountBase|money }}</td>
-            </tr>
-            <tr>
-                <th>{{ 'admin.order.fields.payment'|trans }}</th>
-                <td>{{ include('admin/_components/status/_badge.html.twig', {context: 'payment', value: entity.paymentStatus.value}) }}</td>
-            </tr>
-            <tr>
-                <th>{{ 'admin.order.fields.paid_amount_base'|trans }}</th>
-                <td>{{ entity.paidAmountBase|money }}</td>
-            </tr>
-            <tr>
-                <th>{{ 'admin.order.fields.paid_at'|trans }}</th>
-                <td>{{ entity.paidAt ? entity.paidAt|date('Y-m-d H:i') : '' }}</td>
-            </tr>
-            <tr>
-                <th>{{ 'admin.order.fields.delivery_address'|trans }}</th>
-                <td>{{ entity.deliveryAddress }}</td>
-            </tr>
-            </tbody>
-        </table>
+        <div class="order-show-grid">
+            <section class="order-show-section">
+                <h6>{{ 'admin.order.sections.customer'|trans }}</h6>
+                <dl class="order-show-fields">
+                    <div>
+                        <dt>{{ 'admin.order.fields.customer'|trans }}</dt>
+                        <dd>{{ customer_name is not empty ? customer_name : empty_text }}</dd>
+                    </div>
+                    <div>
+                        <dt>{{ 'admin.common.phone'|trans }}</dt>
+                        <dd class="order-show-copyable">
+                            {% if customer_phone is not empty %}
+                                <span>{{ customer_phone }}</span>
+                                {{ include('admin/order/_copy_button.html.twig', {
+                                    value: customer_phone,
+                                    title: 'admin.order.customer.copy_phone'|trans
+                                }) }}
+                            {% else %}
+                                {{ empty_text }}
+                            {% endif %}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt>{{ 'admin.common.email'|trans }}</dt>
+                        <dd>{{ customer_email is not empty ? customer_email : empty_text }}</dd>
+                    </div>
+                </dl>
+            </section>
 
-        <h6 class="mb-2">{{ 'admin.order.sections.products'|trans }}</h6>
-        {% if entity.orderEntries|length > 0 %}
-            <div class="table-responsive">
-                <table class="table table-sm mb-3 order-show-products">
-                    <tbody>
+            <section class="order-show-section">
+                <h6>{{ 'admin.order.fields.payment'|trans }}</h6>
+                <dl class="order-show-money-list">
+                    <div>
+                        <dt>{{ 'admin.common.total'|trans }}</dt>
+                        <dd>{{ entity.totalAmount|money }} {{ currency_code }}</dd>
+                    </div>
+                    <div>
+                        <dt>{{ 'admin.order.fields.discount'|trans }}</dt>
+                        <dd>{{ entity.discountAmount is not null ? entity.discountAmount|money ~ ' ' ~ currency_code : dash_text }}</dd>
+                    </div>
+                    <div>
+                        <dt>{{ 'admin.order.fields.paid_amount_base'|trans }}</dt>
+                        <dd>{{ entity.paidAmountBase|money }}</dd>
+                    </div>
+                    <div>
+                        <dt>{{ 'admin.order.fields.paid_at'|trans }}</dt>
+                        <dd>{{ entity.paidAt ? entity.paidAt|date('d.m.Y H:i') : dash_text }}</dd>
+                    </div>
+                    <div class="text-muted">
+                        <dt>{{ 'admin.common.currency'|trans }}</dt>
+                        <dd>{{ currency_code }}</dd>
+                    </div>
+                    <div class="text-muted">
+                        <dt>{{ 'admin.order.fields.exchange_rate'|trans }}</dt>
+                        <dd>{{ entity.exchangeRateToBase ?: dash_text }}</dd>
+                    </div>
+                    <div class="text-muted">
+                        <dt>{{ 'admin.order.fields.total_base'|trans }}</dt>
+                        <dd>{{ entity.totalAmountBase|money }}</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <section class="order-show-section">
+                <h6>{{ 'admin.order.sections.delivery'|trans }}</h6>
+                <p class="mb-0">{{ delivery_address is not empty ? delivery_address : empty_text }}</p>
+            </section>
+
+            <section class="order-show-section">
+                <h6>{{ 'admin.order.sections.products'|trans }}</h6>
+                {% if entity.orderEntries|length > 0 %}
+                    <div class="order-show-products">
+                        {% for entry in entity.orderEntries %}
+                            {% set modal_id = 'order-product-details-' ~ entity.id ~ '-' ~ entry.id %}
+                            {% set product_name = entry.productNameSnapshot|default('')|trim %}
+                            {% set product_code = entry.productCodeSnapshot|default('')|trim %}
+                            <div class="order-show-product">
+                                <div class="order-show-product-main">
+                                    <div class="order-show-copyable">
+                                        <strong>{{ product_name is not empty ? product_name : empty_text }}</strong>
+                                        {% if product_name is not empty %}
+                                            {{ include('admin/order/_copy_button.html.twig', {
+                                                value: product_name,
+                                                title: 'admin.order.product.copy_name'|trans
+                                            }) }}
+                                        {% endif %}
+                                        <button
+                                                type="button"
+                                                class="btn btn-link btn-sm order-icon-action"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#{{ modal_id }}"
+                                                title="{{ 'admin.order.product.details'|trans }}"
+                                                aria-label="{{ 'admin.order.product.details'|trans }}"
+                                        >
+                                            <i class="fa-solid fa-circle-info"></i>
+                                        </button>
+                                    </div>
+                                    <div class="text-muted small order-show-copyable">
+                                        <span>{{ product_code is not empty ? product_code : dash_text }}</span>
+                                        {% if product_code is not empty %}
+                                            {{ include('admin/order/_copy_button.html.twig', {
+                                                value: product_code,
+                                                title: 'admin.order.product.copy_code'|trans
+                                            }) }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="order-show-product-qty">× {{ entry.quantity|quantity(entry.product) }}</div>
+                                <div class="order-show-product-total">{{ entry.totalPrice|money }} {{ currency_code }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
                     {% for entry in entity.orderEntries %}
                         {% set modal_id = 'order-product-details-' ~ entity.id ~ '-' ~ entry.id %}
-                        <tr>
-                            <td>
-                                <span>{{ entry.productNameSnapshot }}</span>
-                                {{ include('admin/order/_copy_button.html.twig', {
-                                    value: entry.productNameSnapshot,
-                                    title: 'admin.order.product.copy_name'|trans
-                                }) }}
-                                <button
-                                        type="button"
-                                        class="btn btn-link btn-sm order-icon-action"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#{{ modal_id }}"
-                                        title="{{ 'admin.order.product.details'|trans }}"
-                                        aria-label="{{ 'admin.order.product.details'|trans }}"
-                                >
-                                    <i class="fa-solid fa-circle-info"></i>
-                                </button>
-                                <div class="text-muted small">
-                                    <span>{{ entry.productCodeSnapshot }}</span>
-                                    {{ include('admin/order/_copy_button.html.twig', {
-                                        value: entry.productCodeSnapshot,
-                                        title: 'admin.order.product.copy_code'|trans
-                                    }) }}
+                        {{ include('admin/order/_product_details_modal.html.twig', {entry: entry, entity: entity, modal_id: modal_id}) }}
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted mb-0">{{ 'admin.order.empty.products'|trans }}</p>
+                {% endif %}
+            </section>
+
+            <section class="order-show-section">
+                <h6>{{ 'admin.order.sections.inventory_documents'|trans }}</h6>
+                {% if entity.inventoryDocuments|length > 0 %}
+                    <div class="order-show-documents">
+                        {% for inventoryDocument in entity.inventoryDocuments %}
+                            <div class="order-show-document">
+                                <div>
+                                    <a href="{{ path('app_admin_inventory_document_index', {store_id: app.request.attributes.get('store_id'), id: inventoryDocument.id}) }}">
+                                        {{ inventoryDocument.number }}
+                                    </a>
+                                    <div class="text-muted small">
+                                        {{ inventoryDocument.documentDate|date('d.m.Y') }} · {{ inventoryDocument.type.value }}
+                                    </div>
                                 </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% for entry in entity.orderEntries %}
-                {% set modal_id = 'order-product-details-' ~ entity.id ~ '-' ~ entry.id %}
-                {{ include('admin/order/_product_details_modal.html.twig', {entry: entry, entity: entity, modal_id: modal_id}) }}
-            {% endfor %}
-        {% else %}
-            <p class="text-muted">{{ 'admin.order.empty.products'|trans }}</p>
+                                {{ include('admin/_components/status/_badge.html.twig', {context: 'inventory', value: inventoryDocument.status.value}) }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">{{ dash_text }}</p>
+                {% endif %}
+            </section>
+        </div>
+
+        {% if quick_actions|trim %}
+            <section class="order-show-section order-show-actions">
+                <h6>{{ 'admin.common.actions'|trans }}</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    {{ quick_actions }}
+                </div>
+            </section>
         {% endif %}
-
-        {% if entity.inventoryDocuments|length > 0 %}
-            <h6 class="mb-2">{{ 'admin.order.sections.inventory_documents'|trans }}</h6>
-            <div class="table-responsive">
-                <table class="table table-sm mb-3">
-                    <thead>
-                    <tr>
-                        <th>{{ 'admin.common.date'|trans }}</th>
-                        <th>{{ 'admin.common.number'|trans }}</th>
-                        <th>{{ 'admin.common.type'|trans }}</th>
-                        <th>{{ 'admin.common.status'|trans }}</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for inventoryDocument in entity.inventoryDocuments %}
-                        <tr>
-                            <td>{{ inventoryDocument.documentDate|date('Y-m-d') }}</td>
-                            <td>
-                                <a href="{{ path('app_admin_inventory_document_index', {store_id: app.request.attributes.get('store_id'), id: inventoryDocument.id}) }}">
-                                    {{ inventoryDocument.number }}
-                                </a>
-                            </td>
-                            <td>{{ inventoryDocument.type.value }}</td>
-                            <td>{{ include('admin/_components/status/_badge.html.twig', {context: 'inventory', value: inventoryDocument.status.value}) }}</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% endif %}
-
-        {% if entity.status.value == 'draft' %}
-            <form method="post"
-                  action="{{ path('app_admin_order_confirm', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
-                  class="d-inline" data-action="submit->reload-card#submitQuickAction">
-                <input type="hidden" name="_token" value="{{ csrf_token('confirm_order_' ~ entity.id) }}">
-                <button class="btn btn-success btn-sm"
-                        type="submit" {{ entity.orderEntries|length == 0 ? 'disabled' : '' }}>{{ 'admin.order.actions.confirm'|trans }}</button>
-            </form>
-        {% endif %}
-
-        {% set rollback_target_status = rollback_target_status|default(null) %}
-        {% set return_to_draft_duplicates_rollback = can_rollback_status|default(false) and rollback_target_status == 'draft' %}
-
-        {% if entity.status.value in ['confirmed', 'awaiting_stock', 'ready_to_ship'] and not return_to_draft_duplicates_rollback %}
-            <form method="post"
-                  action="{{ path('app_admin_order_return_to_draft', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
-                  class="d-inline" data-action="submit->reload-card#submitQuickAction"
-                  data-confirm-message="{{ 'admin.order.confirm.return_to_draft'|trans }}">
-                <input type="hidden" name="_token" value="{{ csrf_token('return_to_draft_order_' ~ entity.id) }}">
-                <button class="btn btn-light btn-sm"
-                        type="submit">{{ 'admin.order.actions.return_to_draft'|trans }}</button>
-            </form>
-        {% endif %}
-
-        {% if can_rollback_status|default(false) %}
-            <form method="post"
-                  action="{{ path('app_admin_order_rollback_status', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
-                  class="d-inline" data-action="submit->reload-card#submitQuickAction"
-                  data-confirm-message="{{ 'admin.order.confirm.rollback_status'|trans }}">
-                <input type="hidden" name="_token" value="{{ csrf_token('rollback_status_order_' ~ entity.id) }}">
-                <button class="btn btn-light btn-sm"
-                        type="submit">{{ 'admin.order.actions.rollback_status'|trans }}</button>
-            </form>
-        {% endif %}
-
-        {% if can_ship|default(false) %}
-            <form method="post"
-                  action="{{ path('app_admin_order_ship', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
-                  class="d-inline">
-                <input type="hidden" name="_token" value="{{ csrf_token('ship_order_' ~ entity.id) }}">
-                <button class="btn btn-success btn-sm" type="submit"><i
-                            class="fa-solid fa-truck me-1"></i>{{ 'admin.order.actions.ship'|trans }}</button>
-            </form>
-        {% endif %}
-
-        {% if entity.status.value == 'shipped' %}
-            <form method="post"
-                  action="{{ path('app_admin_order_mark_delivered', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
-                  class="d-inline" data-action="submit->reload-card#submitQuickAction">
-                <input type="hidden" name="_token" value="{{ csrf_token('mark_delivered_order_' ~ entity.id) }}">
-                <button class="btn btn-success btn-sm"
-                        type="submit">{{ 'admin.order.actions.mark_delivered'|trans }}</button>
-            </form>
-        {% endif %}
-
-        {% if entity.status.value == 'delivered' %}
-            <form method="post"
-                  action="{{ path('app_admin_order_complete', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
-                  class="d-inline" data-action="submit->reload-card#submitQuickAction"
-                  data-confirm-message="{{ 'admin.order.confirm.complete'|trans }}">
-                <input type="hidden" name="_token" value="{{ csrf_token('complete_order_' ~ entity.id) }}">
-                <button class="btn btn-success btn-sm" type="submit">{{ 'admin.order.actions.complete'|trans }}</button>
-            </form>
-        {% endif %}
-
-        {% if entity.status.value not in ['canceled', 'completed'] %}
-            <form method="post"
-                  action="{{ path('app_admin_order_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
-                  class="d-inline" data-action="submit->reload-card#submitQuickAction"
-                  data-confirm-message="{{ 'admin.order.confirm.cancel'|trans }}">
-                <input type="hidden" name="_token" value="{{ csrf_token('cancel_order_' ~ entity.id) }}">
-                <button class="btn btn-danger btn-sm" type="submit">{{ 'admin.order.actions.cancel'|trans }}</button>
-            </form>
-        {% endif %}
-
     </div>
 </div>

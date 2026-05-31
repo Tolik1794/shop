@@ -36,6 +36,7 @@ admin:
     comment: 'Comment'
     completed_at: 'Completed at'
     confirm: 'Confirm'
+    copy: 'Copy'
     created_at: 'Created at'
     currency: 'Currency'
     date: 'Date'
@@ -155,6 +156,8 @@ admin:
       edit: 'Edit order'
     sections:
       general: 'General settings'
+      customer: 'Customer'
+      delivery: 'Delivery'
       entries: 'Order entries'
       summary: 'Summary'
       products: 'Products'
@@ -241,3 +244,4 @@ auth:
   register:
     title: 'Register'
     submit: 'Register'
+Not specified: 'Not specified'

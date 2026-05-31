@@ -8,6 +8,7 @@ use App\Entity\Customer;
 use App\Entity\ExchangeRate;
 use App\Entity\Order;
 use App\Entity\OrderComment;
+use App\Entity\OrderEntry;
 use App\Entity\Product;
 use App\Entity\Store;
 use App\Entity\Unit;
@@ -61,6 +62,55 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSelectorExists('#order_filter-filters.show');
 		self::assertSelectorExists('#order_filter-filters form[name="order_filter"]');
 		self::assertSelectorNotExists('.tab-search-link');
+	}
+
+	public function testOrderShowGroupsDetailsWithFallbacksAndAlignedAmounts(): void
+	{
+		$this->client->loginUser($this->createUser('order-show-details-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-show-details-store-' . uniqid());
+		$product = $this->createProduct($store, 'Show card desk');
+		$order = (new Order())
+			->setStore($store)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber('SO-show-' . uniqid())
+			->setCustomerNameSnapshot('Marina Kurceva')
+			->setCustomerPhoneSnapshot('+380956554307')
+			->setCustomerEmailSnapshot(null)
+			->setDeliveryAddress(null)
+			->setTotalAmount('10000.0000')
+			->setTotalAmountBase('10000.0000')
+			->setPaidAmountBase('0.0000');
+		$entry = (new OrderEntry())
+			->setProduct($product)
+			->setProductNameSnapshot('Show card desk')
+			->setProductCodeSnapshot($product->getCode())
+			->setUnitCodeSnapshot($product->getUnit()?->getCode() ?? 'pc')
+			->setUnitNameSnapshot($product->getUnit()?->getName() ?? 'Piece')
+			->setQuantity('1.0000')
+			->setUnitPrice('10000.0000')
+			->setUnitPriceBase('10000.0000')
+			->setTotalPrice('10000.0000')
+			->setTotalPriceBase('10000.0000');
+		$order->addOrderEntry($entry);
+
+		$this->entityManager->persist($order);
+		$this->entityManager->persist($entry);
+		$this->entityManager->flush();
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/%d/show', $store->getId(), $order->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorExists('.order-show-grid');
+		self::assertSelectorTextContains('.order-show-card', 'Customer');
+		self::assertSelectorTextContains('.order-show-card', 'Payment');
+		self::assertSelectorTextContains('.order-show-card', 'Delivery');
+		self::assertSelectorTextContains('.order-show-card', 'Products');
+		self::assertSelectorTextContains('.order-show-card', 'Inventory documents');
+		self::assertSelectorTextContains('.order-show-card', 'Actions');
+		self::assertSelectorTextContains('.order-show-card', 'Not specified');
+		self::assertSelectorTextContains('.order-show-money-list', '10 000.00 UAH');
+		self::assertSelectorTextContains('.order-show-product', 'Show card desk');
+		self::assertSelectorExists('.order-show-copyable .order-copy-action');
 	}
 
 	public function testNewOrderBuilderFormCanBeSubmitted(): void
