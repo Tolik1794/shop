@@ -9,57 +9,30 @@
 		data-payment-complete="{{ entity.paymentStatus.value in ['paid', 'overpaid'] ? '1' : '0' }}"
 >
 	<td>
-		<table class="table table-sm mb-2">
-			<thead>
-			<tr>
-				<th>{{ 'Number'|trans }}</th>
-				<th>{{ 'Supplier'|trans }}</th>
-				<th>{{ 'Status'|trans }}</th>
-				<th>{{ 'Total'|trans }}</th>
-				<th>{{ 'Payment'|trans }}</th>
-			</tr>
-			</thead>
-			<tbody>
-			<tr>
-				<td><strong>{{ entity.number }}</strong></td>
-				<td><strong>{{ entity.supplierNameSnapshot }}</strong></td>
-				<td>{{ entity.status.value }}</td>
-				<td><strong>{{ entity.totalAmount|money }} {{ entity.currency.code }}</strong></td>
-				<td>{{ entity.paymentStatus.value }}</td>
-			</tr>
-			</tbody>
-		</table>
-
-		{% if entity.purchaseEntries|length > 0 %}
-			<table class="table table-sm mb-0">
-				<thead>
-				<tr>
-					<th>{{ 'Product'|trans }}</th>
-					<th>{{ 'Qty'|trans }}</th>
-					<th>{{ 'Unit'|trans }}</th>
-					<th>{{ 'Unit cost'|trans }}</th>
-					<th>{{ 'Total'|trans }}</th>
-				</tr>
-				</thead>
-				<tbody>
-				{% for entry in entity.purchaseEntries %}
-					<tr>
-						<td>
-							<strong>{{ entry.productNameSnapshot }}</strong>
-							{% if entry.productCodeSnapshot %}
-								<div class="text-muted small">{{ entry.productCodeSnapshot }}</div>
-							{% endif %}
-						</td>
-						<td>{{ entry.quantity|quantity(entry.product) }}</td>
-						<td>{{ entry.unitCodeSnapshot }}</td>
-						<td>{{ entry.unitCost|money }}</td>
-						<td><strong>{{ entry.totalCost|money }} {{ entity.currency.code }}</strong></td>
-					</tr>
-				{% endfor %}
-				</tbody>
-			</table>
-		{% else %}
-			<span class="text-muted small">{{ 'No items'|trans }}</span>
-		{% endif %}
+		{% set entry_count = entity.purchaseEntries|length %}
+		{% set badges %}
+			{{ include('admin/_components/status/_badge.html.twig', {context: 'purchase', value: entity.status.value}) }}
+			{{ include('admin/_components/status/_badge.html.twig', {context: 'payment', value: entity.paymentStatus.value}) }}
+		{% endset %}
+		{% set items %}
+			{% for entry in entity.purchaseEntries %}
+				{{ include('admin/_components/document_list/_item.html.twig', {
+					name: entry.productNameSnapshot,
+					quantity_label: entry.quantity|quantity(entry.product) ~ (entry.unitCodeSnapshot ? ' ' ~ entry.unitCodeSnapshot : ''),
+					total_amount: entry.totalCost|money ~ ' ' ~ entity.currency.code,
+					sku: entry.productCodeSnapshot
+				}) }}
+			{% endfor %}
+		{% endset %}
+		{{ include('admin/_components/document_list/_card.html.twig', {
+			number: entity.number,
+			subject: entity.supplierNameSnapshot,
+			total: entity.totalAmount|money ~ ' ' ~ entity.currency.code,
+			badges: badges,
+			item_count: entry_count,
+			items_title: 'admin.document_list.products_count'|trans({'%count%': entry_count}),
+			items: items,
+			empty_text: 'No items'|trans
+		}) }}
 	</td>
 </tr>

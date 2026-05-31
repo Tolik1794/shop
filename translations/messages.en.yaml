@@ -150,6 +150,8 @@ admin:
     records: '%count% records'
   history:
     empty_status: 'No status history yet.'
+  document_list:
+    products_count: '%count% products'
   order:
     title:
       new: 'New order'

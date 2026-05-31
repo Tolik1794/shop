@@ -265,10 +265,10 @@
 	}
 }
 
-.order-index-table {
+.document-list-table {
 	border-collapse: separate;
-	border-spacing: 0 .75rem;
-	margin-top: -.75rem;
+	border-spacing: 0 .5rem;
+	margin-top: -.5rem;
 
 	> thead > tr > th {
 		border-bottom: 0;
@@ -276,19 +276,208 @@
 	}
 
 	> tbody > tr {
+		-webkit-tap-highlight-color: transparent;
 		background: $white;
 		box-shadow: 0 .125rem .35rem rgba($black, .06);
 		outline: 1px solid $gray-200;
+		transition: box-shadow .15s ease-in-out, outline-color .15s ease-in-out;
 	}
 
 	> tbody > tr.table-active {
-		outline-color: rgba($primary, .35);
-		box-shadow: 0 .125rem .45rem rgba($primary, .12);
+		background: $white;
+		outline-color: rgba($primary, .32);
+		box-shadow: 0 .125rem .45rem rgba($primary, .1);
+	}
+
+	> tbody > tr:hover {
+		outline-color: rgba($primary, .25);
+		box-shadow: 0 .125rem .45rem rgba($black, .08);
+		cursor: pointer;
+	}
+
+	> tbody > tr.table-active:hover {
+		outline-color: rgba($primary, .42);
+		box-shadow: 0 .125rem .5rem rgba($primary, .12);
 	}
 
 	> tbody > tr > td {
+		position: relative;
 		border-top: 0;
-		padding: .875rem;
+		padding: .625rem .75rem;
+		word-break: normal;
+		background-color: $white !important;
+		box-shadow: none !important;
+		transition: background-color .15s ease-in-out, box-shadow .15s ease-in-out;
+	}
+
+	> tbody > tr:hover > td {
+		background-color: mix($gray-100, $white, 35%) !important;
+	}
+
+	> tbody > tr:active > *,
+	> tbody > tr.table-active > *,
+	> tbody > tr.table-active:hover > * {
+		--bs-table-accent-bg: transparent !important;
+		--bs-table-active-bg: transparent !important;
+		--bs-table-hover-bg: transparent !important;
+		--bs-table-active-color: #{$body-color};
+		--bs-table-hover-color: #{$body-color};
+
+		background-color: mix($primary, $white, 3%) !important;
+		box-shadow: none !important;
+		color: $body-color !important;
+	}
+
+	> tbody > tr.table-active > td::before {
+		content: "";
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: 3px;
+		background: rgba($primary, .6);
+		pointer-events: none;
+	}
+}
+
+.document-list-card {
+	display: grid;
+	gap: .45rem;
+	min-width: 0;
+}
+
+.document-list-card__header {
+	display: grid;
+	gap: .5rem;
+	grid-template-columns: minmax(0, 1fr) max-content;
+	align-items: start;
+}
+
+.document-list-card__main,
+.document-list-card__meta {
+	min-width: 0;
+}
+
+.document-list-card__number,
+.document-list-card__total {
+	color: $body-color;
+	font-weight: 700;
+	font-size: 1.025rem;
+	line-height: 1.2;
+}
+
+.document-list-card__number,
+.document-list-card__subject,
+.document-list-card__item-name {
+	overflow-wrap: anywhere;
+	word-break: normal;
+}
+
+.document-list-card__subject {
+	color: $text-muted;
+	font-size: $font-size-sm;
+	line-height: 1.2;
+	margin-top: .05rem;
+}
+
+.document-list-card__meta {
+	text-align: right;
+}
+
+.document-list-card__total {
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.document-list-card__badges {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: .2rem;
+	margin-top: .2rem;
+}
+
+.document-list-card__items {
+	display: grid;
+	gap: .3rem;
+	padding-top: .45rem;
+	border-top: 1px solid rgba($gray-200, .7);
+}
+
+.document-list-card__items-title {
+	color: $text-muted;
+	font-size: $font-size-sm;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.document-list-card__item {
+	display: grid;
+	gap: .05rem;
+}
+
+.document-list-card__item-main {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .25rem;
+	align-items: baseline;
+	line-height: 1.2;
+}
+
+.document-list-card__item-name {
+	color: $gray-700;
+	font-size: .95rem;
+	font-weight: 600;
+}
+
+.document-list-card__item-quantity,
+.document-list-card__item-meta,
+.document-list-card__empty {
+	color: $text-muted;
+	font-size: $font-size-sm;
+}
+
+.document-list-card__item-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .25rem;
+	align-items: baseline;
+	font-variant-numeric: tabular-nums;
+
+	strong {
+		color: $body-color;
+		white-space: nowrap;
+	}
+}
+
+.document-list-card__item-operator {
+	color: $gray-600;
+}
+
+.document-list-card__item-sku {
+	color: $gray-400;
+	font-size: .78rem;
+	line-height: 1.15;
+	overflow-wrap: anywhere;
+	word-break: normal;
+}
+
+.document-list-card__empty {
+	padding-top: .45rem;
+	border-top: 1px solid rgba($gray-200, .7);
+}
+
+@media (max-width: 575.98px) {
+	.document-list-card__header {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.document-list-card__meta {
+		text-align: left;
+	}
+
+	.document-list-card__badges {
+		justify-content: flex-start;
 	}
 }
 

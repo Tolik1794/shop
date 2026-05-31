@@ -1,0 +1,20 @@
+<div class="document-list-card__item">
+	<div class="document-list-card__item-main">
+		<span class="document-list-card__item-name">{{ name }}</span>
+		{% if quantity_label|default('') %}
+			<span class="document-list-card__item-quantity">&times; {{ quantity_label }}</span>
+		{% endif %}
+	</div>
+	<div class="document-list-card__item-meta">
+		{% if show_calculation|default(false) %}
+			<span>{{ unit_amount }}</span>
+			<span class="document-list-card__item-operator">&minus;</span>
+			<span>{{ discount_amount }}</span>
+			<span class="document-list-card__item-operator">=</span>
+		{% endif %}
+		<strong>{{ total_amount }}</strong>
+	</div>
+	{% if sku|default('') %}
+		<div class="document-list-card__item-sku">{{ sku }}</div>
+	{% endif %}
+</div>

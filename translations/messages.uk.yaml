@@ -155,6 +155,8 @@ admin:
     records: '%count% записів'
   history:
     empty_status: 'Історії статусів ще немає.'
+  document_list:
+    products_count: '%count% товари'
   order:
     title:
       new: 'Нове замовлення'

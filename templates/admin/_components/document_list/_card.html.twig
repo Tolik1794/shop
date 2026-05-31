@@ -1,0 +1,31 @@
+{% set item_count = item_count|default(0) %}
+{% set items = items|default('') %}
+{% set empty_text = empty_text|default('No items'|trans) %}
+
+<div class="document-list-card">
+	<div class="document-list-card__header">
+		<div class="document-list-card__main">
+			<div class="document-list-card__number">{{ number }}</div>
+			<div class="document-list-card__subject">{{ subject }}</div>
+		</div>
+		<div class="document-list-card__meta">
+			<div class="document-list-card__total">{{ total }}</div>
+			{% if badges|default('')|trim %}
+				<div class="document-list-card__badges">
+					{{ badges|raw }}
+				</div>
+			{% endif %}
+		</div>
+	</div>
+
+	{% if item_count > 0 %}
+		<div class="document-list-card__items">
+			{% if item_count > 1 and items_title|default('') %}
+				<div class="document-list-card__items-title">{{ items_title }}</div>
+			{% endif %}
+			{{ items|raw }}
+		</div>
+	{% else %}
+		<div class="document-list-card__empty">{{ empty_text }}</div>
+	{% endif %}
+</div>

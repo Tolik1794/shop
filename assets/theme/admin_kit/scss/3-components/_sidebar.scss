@@ -9,6 +9,15 @@
   overflow: hidden;
 }
 
+@media (min-width: #{map-get($grid-breakpoints, 'lg')}) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
+  }
+}
+
 .sidebar-content {
   transition: $sidebar-transition;
   display: flex;
