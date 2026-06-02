@@ -1,7 +1,14 @@
-<div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
-	<div class="card-header">
-		<h5 class="card-title mb-0">{{ entity.direction.value }} {{ 'payment'|trans }}</h5>
-	</div>
+{% set header_badges %}
+	{{ include('admin/_components/status/_badge.html.twig', {value: entity.direction.value}) }}
+	{{ include('admin/_components/status/_badge.html.twig', {value: entity.type.value}) }}
+{% endset %}
+
+<div class="card show-card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+	{{ include('admin/_components/show_card/_header.html.twig', {
+		title: entity.direction.value ~ ' ' ~ ('payment'|trans),
+		subtitle: entity.order ? entity.order.number : entity.purchase.number,
+		badges: header_badges
+	}) }}
 	<div class="card-body">
 		<table class="table table-sm mt-2 mb-0">
 			<tbody>

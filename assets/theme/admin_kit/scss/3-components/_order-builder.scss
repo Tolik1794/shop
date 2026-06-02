@@ -600,12 +600,6 @@
 	}
 }
 
-.order-show-card {
-	.card-header {
-		min-height: 3.25rem;
-	}
-}
-
 .order-show-grid {
 	display: grid;
 	gap: 1rem;
@@ -730,10 +724,6 @@
 
 .order-copy-feedback.is-visible {
 	opacity: 1;
-}
-
-.order-show-actions {
-	margin-top: 1rem;
 }
 
 .order-show-copyable {

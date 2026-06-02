@@ -1,0 +1,45 @@
+{% set subtitle = subtitle|default('') %}
+{% set badges = badges|default('') %}
+{% set primary_action = primary_action|default('') %}
+{% set secondary_actions = secondary_actions|default('') %}
+{% set has_secondary_actions = secondary_actions|trim ? true : false %}
+{% set show_more = has_secondary_actions and show_more|default(true) %}
+
+<div class="card-header">
+	<div class="show-card-header">
+		<div class="show-card-header__main">
+			<div class="show-card-header__title-row">
+				<h5 class="card-title mb-0">{{ title }}</h5>
+				{% if badges|trim %}
+					<div class="show-card-header__badges">
+						{{ badges|raw }}
+					</div>
+				{% endif %}
+			</div>
+			{% if subtitle|trim %}
+				<div class="show-card-header__subtitle">{{ subtitle }}</div>
+			{% endif %}
+		</div>
+
+		{% if primary_action|trim or show_more %}
+			<div class="show-card-header__actions">
+				{{ primary_action|raw }}
+				{% if show_more %}
+					<div class="dropdown">
+						<button class="btn btn-light btn-sm show-card-header__more"
+						        type="button"
+						        data-bs-toggle="dropdown"
+						        aria-expanded="false"
+						        title="{{ 'admin.common.actions'|trans }}"
+						        aria-label="{{ 'admin.common.actions'|trans }}">
+							<i class="fa-solid fa-ellipsis"></i>
+						</button>
+						<div class="dropdown-menu dropdown-menu-end">
+							{{ secondary_actions|raw }}
+						</div>
+					</div>
+				{% endif %}
+			</div>
+		{% endif %}
+	</div>
+</div>

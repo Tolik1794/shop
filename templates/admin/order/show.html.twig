@@ -6,13 +6,7 @@
 {% set customer_email = entity.customerEmailSnapshot|default('')|trim %}
 {% set delivery_address = entity.deliveryAddress|default('')|trim %}
 
-{% set quick_actions %}
-    {% if entity.status.value == 'draft' %}
-        <a class="btn btn-light btn-sm"
-           href="{{ path('app_admin_order_edit', query_params|default({})|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i
-                    class="fa-solid fa-pen me-1"></i>{{ 'admin.common.edit'|trans }}</a>
-    {% endif %}
-
+{% set primary_order_action %}
     {% if entity.status.value == 'draft' %}
         <form method="post"
               action="{{ path('app_admin_order_confirm', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
@@ -20,31 +14,6 @@
             <input type="hidden" name="_token" value="{{ csrf_token('confirm_order_' ~ entity.id) }}">
             <button class="btn btn-success btn-sm"
                     type="submit" {{ entity.orderEntries|length == 0 ? 'disabled' : '' }}>{{ 'admin.order.actions.confirm'|trans }}</button>
-        </form>
-    {% endif %}
-
-    {% set rollback_target_status = rollback_target_status|default(null) %}
-    {% set return_to_draft_duplicates_rollback = can_rollback_status|default(false) and rollback_target_status == 'draft' %}
-
-    {% if entity.status.value in ['confirmed', 'awaiting_stock', 'ready_to_ship'] and not return_to_draft_duplicates_rollback %}
-        <form method="post"
-              action="{{ path('app_admin_order_return_to_draft', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
-              class="d-inline" data-action="submit->reload-card#submitQuickAction"
-              data-confirm-message="{{ 'admin.order.confirm.return_to_draft'|trans }}">
-            <input type="hidden" name="_token" value="{{ csrf_token('return_to_draft_order_' ~ entity.id) }}">
-            <button class="btn btn-light btn-sm"
-                    type="submit">{{ 'admin.order.actions.return_to_draft'|trans }}</button>
-        </form>
-    {% endif %}
-
-    {% if can_rollback_status|default(false) %}
-        <form method="post"
-              action="{{ path('app_admin_order_rollback_status', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
-              class="d-inline" data-action="submit->reload-card#submitQuickAction"
-              data-confirm-message="{{ 'admin.order.confirm.rollback_status'|trans }}">
-            <input type="hidden" name="_token" value="{{ csrf_token('rollback_status_order_' ~ entity.id) }}">
-            <button class="btn btn-light btn-sm"
-                    type="submit">{{ 'admin.order.actions.rollback_status'|trans }}</button>
         </form>
     {% endif %}
 
@@ -77,26 +46,66 @@
             <button class="btn btn-success btn-sm" type="submit">{{ 'admin.order.actions.complete'|trans }}</button>
         </form>
     {% endif %}
+{% endset %}
+
+{% set secondary_order_actions %}
+    {% set rollback_target_status = rollback_target_status|default(null) %}
+    {% set return_to_draft_duplicates_rollback = can_rollback_status|default(false) and rollback_target_status == 'draft' %}
+
+    {% if entity.status.value == 'draft' %}
+        <a class="dropdown-item"
+           href="{{ path('app_admin_order_edit', query_params|default({})|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}">
+            <i class="fa-solid fa-pen me-1"></i>{{ 'admin.common.edit'|trans }}
+        </a>
+    {% endif %}
+
+    {% if entity.status.value in ['confirmed', 'awaiting_stock', 'ready_to_ship'] and not return_to_draft_duplicates_rollback %}
+        <form method="post"
+              action="{{ path('app_admin_order_return_to_draft', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+              class="m-0" data-action="submit->reload-card#submitQuickAction"
+              data-confirm-message="{{ 'admin.order.confirm.return_to_draft'|trans }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('return_to_draft_order_' ~ entity.id) }}">
+            <button class="dropdown-item"
+                    type="submit">{{ 'admin.order.actions.return_to_draft'|trans }}</button>
+        </form>
+    {% endif %}
+
+    {% if can_rollback_status|default(false) %}
+        <form method="post"
+              action="{{ path('app_admin_order_rollback_status', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+              class="m-0" data-action="submit->reload-card#submitQuickAction"
+              data-confirm-message="{{ 'admin.order.confirm.rollback_status'|trans }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('rollback_status_order_' ~ entity.id) }}">
+            <button class="dropdown-item"
+                    type="submit">{{ 'admin.order.actions.rollback_status'|trans }}</button>
+        </form>
+    {% endif %}
 
     {% if entity.status.value not in ['canceled', 'completed'] %}
         <form method="post"
               action="{{ path('app_admin_order_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
-              class="d-inline" data-action="submit->reload-card#submitQuickAction"
+              class="m-0" data-action="submit->reload-card#submitQuickAction"
               data-confirm-message="{{ 'admin.order.confirm.cancel'|trans }}">
             <input type="hidden" name="_token" value="{{ csrf_token('cancel_order_' ~ entity.id) }}">
-            <button class="btn btn-danger btn-sm" type="submit">{{ 'admin.order.actions.cancel'|trans }}</button>
+            <button class="dropdown-item text-danger" type="submit">{{ 'admin.order.actions.cancel'|trans }}</button>
         </form>
     {% endif %}
 {% endset %}
+{% set show_more_actions = secondary_order_actions|trim or not primary_order_action|trim %}
+{% set header_badges %}
+    {{ include('admin/_components/status/_badge.html.twig', {context: 'order', value: entity.status.value}) }}
+    {{ include('admin/_components/status/_badge.html.twig', {context: 'payment', value: entity.paymentStatus.value}) }}
+{% endset %}
 
-<div class="card order-show-card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
-    <div class="card-header">
-        <div class="d-flex flex-wrap align-items-center gap-2">
-            <h5 class="card-title mb-0 me-auto">{{ entity.number }}</h5>
-            {{ include('admin/_components/status/_badge.html.twig', {context: 'order', value: entity.status.value}) }}
-            {{ include('admin/_components/status/_badge.html.twig', {context: 'payment', value: entity.paymentStatus.value}) }}
-        </div>
-    </div>
+<div class="card show-card order-show-card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+    {{ include('admin/_components/show_card/_header.html.twig', {
+        title: entity.number,
+        subtitle: customer_name,
+        badges: header_badges,
+        primary_action: primary_order_action,
+        secondary_actions: secondary_order_actions,
+        show_more: show_more_actions
+    }) }}
     <div class="card-body">
         <div class="order-show-grid">
             <section class="order-show-section">
@@ -244,14 +253,5 @@
                 {% endif %}
             </section>
         </div>
-
-        {% if quick_actions|trim %}
-            <section class="order-show-section order-show-actions">
-                <h6>{{ 'admin.common.actions'|trans }}</h6>
-                <div class="d-flex flex-wrap gap-2">
-                    {{ quick_actions }}
-                </div>
-            </section>
-        {% endif %}
     </div>
 </div>

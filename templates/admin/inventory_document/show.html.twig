@@ -1,7 +1,34 @@
-<div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
-	<div class="card-header">
-		<h5 class="card-title mb-0">{{ entity.number }}</h5>
-	</div>
+{% set primary_action %}
+	{% if entity.status.value == 'draft' %}
+		<form method="post" action="{{ path('app_admin_inventory_document_post', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="{{ 'Post inventory document?'|trans }}">
+			<input type="hidden" name="_token" value="{{ csrf_token('post_inventory_document_' ~ entity.id) }}">
+			<button class="btn btn-success btn-sm" type="submit"><i class="fa-solid fa-check me-1"></i>{{ 'Post'|trans }}</button>
+		</form>
+	{% endif %}
+{% endset %}
+
+{% set secondary_actions %}
+	{% if entity.status.value != 'canceled' %}
+		<form method="post" action="{{ path('app_admin_inventory_document_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="m-0" data-action="submit->reload-card#submitQuickAction" data-confirm-message="{{ 'Cancel inventory document?'|trans }}">
+			<input type="hidden" name="_token" value="{{ csrf_token('cancel_inventory_document_' ~ entity.id) }}">
+			<button class="dropdown-item text-danger" type="submit"><i class="fa-solid fa-ban me-1"></i>{{ 'Cancel'|trans }}</button>
+		</form>
+	{% endif %}
+{% endset %}
+{% set show_more_actions = secondary_actions|trim or not primary_action|trim %}
+{% set header_badges %}
+	{{ include('admin/_components/status/_badge.html.twig', {context: 'inventory', value: entity.status.value}) }}
+{% endset %}
+
+<div class="card show-card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+	{{ include('admin/_components/show_card/_header.html.twig', {
+		title: entity.number,
+		subtitle: entity.type.value,
+		badges: header_badges,
+		primary_action: primary_action,
+		secondary_actions: secondary_actions,
+		show_more: show_more_actions
+	}) }}
 	<div class="card-body">
 		<table class="table table-sm mt-2 mb-4">
 			<tbody>
@@ -33,20 +60,6 @@
 			<tr><th>{{ 'Comment'|trans }}</th><td>{{ entity.comment ?: '—' }}</td></tr>
 			</tbody>
 		</table>
-
-		{% if entity.status.value == 'draft' %}
-			<form method="post" action="{{ path('app_admin_inventory_document_post', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="{{ 'Post inventory document?'|trans }}">
-				<input type="hidden" name="_token" value="{{ csrf_token('post_inventory_document_' ~ entity.id) }}">
-				<button class="btn btn-success btn-sm" type="submit"><i class="fa-solid fa-check me-1"></i>{{ 'Post'|trans }}</button>
-			</form>
-		{% endif %}
-
-		{% if entity.status.value != 'canceled' %}
-			<form method="post" action="{{ path('app_admin_inventory_document_cancel', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="{{ 'Cancel inventory document?'|trans }}">
-				<input type="hidden" name="_token" value="{{ csrf_token('cancel_inventory_document_' ~ entity.id) }}">
-				<button class="btn btn-danger btn-sm" type="submit"><i class="fa-solid fa-ban me-1"></i>{{ 'Cancel'|trans }}</button>
-			</form>
-		{% endif %}
 
 		<h6 class="mt-4 mb-2">{{ 'Lines'|trans }}</h6>
 		<table class="table table-sm mb-4">
