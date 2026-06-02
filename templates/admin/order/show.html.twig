@@ -133,6 +133,12 @@
                         <dt>{{ 'admin.common.email'|trans }}</dt>
                         <dd>{{ customer_email is not empty ? customer_email : empty_text }}</dd>
                     </div>
+                    {% if entity.customer and entity.customer.labels|length > 0 %}
+                        <div>
+                            <dt>{{ 'admin.customer.fields.labels'|trans }}</dt>
+                            <dd>{{ include('admin/_components/customer/_labels.html.twig', {labels: entity.customer.labels}) }}</dd>
+                        </div>
+                    {% endif %}
                 </dl>
             </section>
 

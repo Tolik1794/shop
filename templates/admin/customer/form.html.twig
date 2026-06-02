@@ -3,7 +3,7 @@
 {% block title %}Customer{% endblock %}
 
 {% block main_content %}
-    <main class="content">
+    <main class="content" {{ stimulus_controller('select-two') }}>
         <div class="container-fluid p-0">
             <div class="row">
                 <div class="card">
@@ -11,7 +11,7 @@
                         <h5 class="card-title mb-0">{{ entity.id ? entity.fullName : 'New' }}</h5>
                     </div>
                     <div class="card-body">
-                        {{ form_start(form) }}
+                        {{ form_start(form, {attr: {'data-select-two-target': 'form'}}) }}
                         {% if form.vars.errors|length > 0 %}
                             <div class="form-error">
                                 {{ form_errors(form) }}

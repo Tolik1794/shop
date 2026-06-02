@@ -6,6 +6,32 @@ export default class extends Controller {
         refreshHistoryUrl: String,
     }
 
+    applyTemplate(event) {
+        const button = event.currentTarget
+        const form = button.closest('form')
+
+        if (!form) {
+            return
+        }
+
+        const body = form.querySelector('textarea[name="body"]')
+        const type = form.querySelector('select[name="type"]')
+        const important = form.querySelector('input[name="important"]')
+
+        if (body) {
+            body.value = button.dataset.templateBody || ''
+            body.focus()
+        }
+
+        if (type && button.dataset.templateType) {
+            type.value = button.dataset.templateType
+        }
+
+        if (important) {
+            important.checked = button.dataset.templateImportant === '1'
+        }
+    }
+
     toggleEdit(event) {
         const comment = event.currentTarget.closest('[data-order-discussion-comment]')
         const form = comment ? comment.querySelector('[data-order-discussion-target~="editForm"]') : null

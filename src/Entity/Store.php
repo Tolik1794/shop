@@ -97,6 +97,9 @@ class Store implements AvatarEntityInterface
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: Unit::class)]
 	private Collection $units;
 
+	#[ORM\OneToMany(mappedBy: 'store', targetEntity: CustomerLabel::class)]
+	private Collection $customerLabels;
+
 	#[ORM\OneToMany(mappedBy: 'store', targetEntity: ExchangeRate::class)]
 	private Collection $exchangeRates;
 
@@ -120,6 +123,7 @@ class Store implements AvatarEntityInterface
 		$this->products = new ArrayCollection();
 		$this->productPrices = new ArrayCollection();
 		$this->units = new ArrayCollection();
+		$this->customerLabels = new ArrayCollection();
 		$this->exchangeRates = new ArrayCollection();
 	}
 
@@ -622,6 +626,33 @@ class Store implements AvatarEntityInterface
 			if ($unit->getStore() === $this) {
 				$unit->setStore(null);
 			}
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, CustomerLabel>
+	 */
+	public function getCustomerLabels(): Collection
+	{
+		return $this->customerLabels;
+	}
+
+	public function addCustomerLabel(CustomerLabel $customerLabel): self
+	{
+		if (!$this->customerLabels->contains($customerLabel)) {
+			$this->customerLabels->add($customerLabel);
+			$customerLabel->setStore($this);
+		}
+
+		return $this;
+	}
+
+	public function removeCustomerLabel(CustomerLabel $customerLabel): self
+	{
+		if ($this->customerLabels->removeElement($customerLabel) && $customerLabel->getStore() === $this) {
+			$customerLabel->setStore(null);
 		}
 
 		return $this;

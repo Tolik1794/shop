@@ -43,9 +43,33 @@ entity Supplier {
     updatedBy: User?
 }
 
+entity CustomerLabel {
+    * id: int
+    --
+    * code: string(50)
+    * name: string(255)
+    color: string(32)?
+    * sortOrder: int
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    deletedAt: DateTimeImmutable?
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+}
+
+entity customer_customer_label {
+    * customer_id: int
+    * customer_label_id: int
+}
+
 
 Store ||--o{ Customer : has customers
 Store ||--o{ Supplier : has suppliers
+Store ||--o{ CustomerLabel : has labels
+Customer ||--o{ customer_customer_label
+CustomerLabel ||--o{ customer_customer_label
 Customer |o--o{ Order : places
 Supplier |o--o{ Purchase : supplies
 
@@ -64,6 +88,14 @@ note right of Supplier
 
   Purchase keeps supplier snapshots so old purchase documents do not change
   after editing Supplier data.
+end note
+
+note bottom of CustomerLabel
+  Internal labels (never shown to the customer).
+  Per-store dictionary, many-to-many with Customer.
+
+  Unique:
+  (store_id, code) where deleted_at is null
 end note
 
 @enduml

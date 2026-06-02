@@ -1,0 +1,48 @@
+{% set actions %}
+    {% if is_granted('customer_label.manage') %}
+        <a class="btn btn-light btn-sm" href="{{ path('app_admin_customer_label_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>{{ 'Edit'|trans }}</a>
+    {% endif %}
+{% endset %}
+
+<div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+    <div class="card-header">
+        {% if actions|trim %}
+            {{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
+        {% endif %}
+        <h5 class="card-title mb-0">{{ entity.name }}</h5>
+    </div>
+    <div class="card-body">
+        <table class="table table-sm mt-2 mb-4">
+            <tbody>
+            <tr>
+                <th>{{ 'Name'|trans }}</th>
+                <td><span class="badge rounded-pill {{ entity.color|default('bg-light text-dark border') }}">{{ entity.name }}</span></td>
+            </tr>
+            <tr>
+                <th>{{ 'Code'|trans }}</th>
+                <td>{{ entity.code }}</td>
+            </tr>
+            <tr>
+                <th>{{ 'admin.customer_label.fields.sort_order'|trans }}</th>
+                <td>{{ entity.sortOrder }}</td>
+            </tr>
+            <tr>
+                <th>{{ 'Status'|trans }}</th>
+                <td>{{ entity.status.value }}</td>
+            </tr>
+            <tr>
+                <th>{{ 'Store'|trans }}</th>
+                <td>{{ entity.store }}</td>
+            </tr>
+            </tbody>
+        </table>
+
+        {% if is_granted('customer_label.manage') %}
+            <p class="text-muted small mb-2">{{ 'admin.customer_label.archive_hint'|trans }}</p>
+            <form method="post" action="{{ path('app_admin_customer_label_archive', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" onsubmit="return confirm('{{ 'admin.customer_label.archive_confirm'|trans|e('js') }}');">
+                <input type="hidden" name="_token" value="{{ csrf_token('archive_customer_label_' ~ entity.id) }}">
+                <button class="btn btn-danger btn-sm" type="submit">{{ 'Archive'|trans }}</button>
+            </form>
+        {% endif %}
+    </div>
+</div>

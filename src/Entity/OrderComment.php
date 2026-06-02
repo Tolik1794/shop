@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Entity\User\User;
+use App\Enum\CommentTypeEnum;
 use App\Repository\OrderCommentRepository;
 use DateTimeImmutable;
 use Doctrine\DBAL\Types\Types;
@@ -18,6 +19,12 @@ class OrderComment
 
 	#[ORM\Column(type: Types::TEXT)]
 	private string $body;
+
+	#[ORM\Column(length: 32, enumType: CommentTypeEnum::class)]
+	private CommentTypeEnum $type = CommentTypeEnum::GENERAL;
+
+	#[ORM\Column]
+	private bool $isImportant = false;
 
 	#[ORM\Column]
 	private DateTimeImmutable $createdAt;
@@ -44,6 +51,10 @@ class OrderComment
 	public function getId(): ?int { return $this->id; }
 	public function getBody(): string { return $this->body; }
 	public function setBody(string $body): self { $this->body = $body; return $this; }
+	public function getType(): CommentTypeEnum { return $this->type; }
+	public function setType(CommentTypeEnum $type): self { $this->type = $type; return $this; }
+	public function isImportant(): bool { return $this->isImportant; }
+	public function setIsImportant(bool $isImportant): self { $this->isImportant = $isImportant; return $this; }
 	public function getCreatedAt(): DateTimeImmutable { return $this->createdAt; }
 	public function setCreatedAt(DateTimeImmutable $createdAt): self { $this->createdAt = $createdAt; return $this; }
 	public function getUpdatedAt(): ?DateTimeImmutable { return $this->updatedAt; }

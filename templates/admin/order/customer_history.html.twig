@@ -1,0 +1,13 @@
+<div class="card" {{ stimulus_target('reload-card', 'customerHistoryCard') }} data-card-id="{{ entity.id }}">
+    <div class="card-header">
+        <h5 class="card-title mb-0">{{ entity.number }} · {{ 'admin.customer_history.title'|trans }}</h5>
+    </div>
+    <div class="card-body">
+        {% if customer and history %}
+            <h6 class="mb-3">{{ customer.fullName }}</h6>
+            {{ include('admin/customer/_history.html.twig', {customer: customer, history: history}) }}
+        {% else %}
+            <p class="text-muted mb-0">{{ 'admin.customer_history.no_customer'|trans }}</p>
+        {% endif %}
+    </div>
+</div>

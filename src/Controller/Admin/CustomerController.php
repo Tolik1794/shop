@@ -7,6 +7,7 @@ use App\Entity\Store;
 use App\Form\Admin\FilterType\CustomerFilterType;
 use App\Form\Admin\Type\CustomerType;
 use App\Manager\CustomerManager;
+use App\Service\Customer\CustomerHistoryProvider;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
@@ -19,7 +20,10 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/admin/store/{store_id}/customer', name: 'app_admin_customer_'), IsGranted('customer.view')]
 class CustomerController extends AbstractAdvancedController
 {
-	public function __construct(private readonly CustomerManager $customerManager)
+	public function __construct(
+		private readonly CustomerManager $customerManager,
+		private readonly CustomerHistoryProvider $customerHistoryProvider,
+	)
 	{
 	}
 
@@ -36,7 +40,7 @@ class CustomerController extends AbstractAdvancedController
 			->getRepository()
 			->findAvailableByStoreQB($store);
 
-		$filterForm = $this->createForm(CustomerFilterType::class)->handleRequest($request);
+		$filterForm = $this->createForm(CustomerFilterType::class, null, ['store' => $store])->handleRequest($request);
 
 		if ($filterForm->isSubmitted() && $filterForm->isValid()) {
 			$filterFormHandler->handleFilterForm($filterForm, $queryBuilder);
@@ -79,7 +83,7 @@ class CustomerController extends AbstractAdvancedController
 		$customer = new Customer();
 		$customer->setStore($store);
 
-		$form = $this->createForm(CustomerType::class, $customer, ['method' => 'POST']);
+		$form = $this->createForm(CustomerType::class, $customer, ['method' => 'POST', 'store' => $store]);
 		$form->handleRequest($request);
 
 		if ($form->isSubmitted() && $form->isValid()) {
@@ -109,7 +113,7 @@ class CustomerController extends AbstractAdvancedController
 	): Response {
 		$this->denyCustomerOutsideStore($customer, $store);
 
-		$form = $this->createForm(CustomerType::class, $customer, ['method' => 'POST']);
+		$form = $this->createForm(CustomerType::class, $customer, ['method' => 'POST', 'store' => $store]);
 		$form->handleRequest($request);
 
 		if ($form->isSubmitted() && $form->isValid()) {
@@ -136,6 +140,7 @@ class CustomerController extends AbstractAdvancedController
 		return $this->render('admin/customer/show.html.twig', [
 			'entity' => $customer,
 			'query_params' => $request->query->all(),
+			'history' => $this->customerHistoryProvider->forCustomer($customer),
 		]);
 	}
 

@@ -259,6 +259,36 @@ class OrderManagerTest extends KernelTestCase
 		self::assertNotNull($order->getCanceledAt());
 	}
 
+	public function testCancelSucceedsWhenEntryBatchNoLongerHasAvailableQuantity(): void
+	{
+		$currency = $this->persistCurrency('B' . substr(uniqid(), -2), 'Cancel batch currency');
+		$store = $this->persistStore('order-cancel-batch-' . uniqid(), $currency);
+		$product = $this->persistProduct($store);
+		$warehouse = $this->persistWarehouse($store);
+		$warehouseStock = $this->persistWarehouseStock($warehouse, $product, '3.0000');
+		$batch = $this->persistWarehouseStockBatch($warehouseStock, '3.0000', '14.0000');
+
+		$order = $this->orderManager->createDraft($store);
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setWarehouseStockBatch($batch)
+			->setQuantity('2.0000')
+			->setUnitPrice('14.0000');
+		$order->addOrderEntry($orderEntry);
+		$this->orderManager->saveOrder($order);
+
+		// Simulate the batch being shipped/consumed so it no longer covers the entry quantity.
+		// Cancelling must not re-run the order-entry batch availability validation.
+		$batch->setRemainingQuantity('0.0000');
+		$this->entityManager->flush();
+
+		$this->orderManager->cancel($order);
+
+		self::assertSame(OrderStatus::CANCELED, $order->getStatus());
+		self::assertNotNull($order->getCanceledAt());
+	}
+
 	public function testReturnToDraftMovesAwaitingStockOrderBackToDraft(): void
 	{
 		$currency = $this->persistCurrency('R' . substr(uniqid(), -2), 'Rollback currency');

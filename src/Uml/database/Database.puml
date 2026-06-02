@@ -23,6 +23,8 @@ package "02 Catalog" as Catalog {
 package "03 Parties" as Parties {
     entity Customer
     entity Supplier
+    entity CustomerLabel
+    entity customer_customer_label
 }
 
 package "04 Warehouse and inventory" as Inventory {
@@ -40,6 +42,7 @@ package "05 Sales orders" as Sales {
     entity Order
     entity OrderEntry
     entity OrderComment
+    entity OrderCommentReadState
     entity OrderHistory
 }
 
@@ -96,6 +99,8 @@ Product ||--o{ ProductionRecipe
 Product ||--o{ ProductionOrder
 
 Customer |o--o{ Order
+Customer ||--o{ customer_customer_label
+CustomerLabel ||--o{ customer_customer_label
 Supplier |o--o{ Purchase
 Warehouse ||--o{ WarehouseStock
 Warehouse ||--o{ InventoryDocumentLine

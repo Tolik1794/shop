@@ -151,7 +151,10 @@ class OrderManager extends AbstractManager
 
 			$this->statusTransitionService->apply($order, 'cancel', $this->transitionContext());
 			$this->releaseActiveReservations($order);
-			$this->saveOrder($order);
+			// Cancelling only changes status and releases reservations; it must not re-run the
+			// order-entry batch availability validation (saveOrder()), which fails for already
+			// shipped/consumed batches. The status change history is recorded by the transition service.
+			$this->save($order);
 		});
 	}
 

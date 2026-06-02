@@ -1,0 +1,22 @@
+{% set type = type|default('general') %}
+{% set is_important = is_important|default(false) %}
+{% set type_classes = {
+    general: 'bg-light text-dark border',
+    manager: 'bg-primary',
+    warehouse: 'bg-info text-dark',
+    accounting: 'bg-success',
+    internal: 'bg-secondary',
+    call_result: 'bg-light text-dark border',
+    callback_needed: 'bg-warning text-dark',
+    complaint: 'bg-danger'
+} %}
+{% set type_class = type_classes[type]|default('bg-light text-dark border') %}
+
+<span class="comment-meta d-inline-flex align-items-center gap-1">
+    {% if is_important %}
+        <span class="badge rounded-pill bg-danger" title="{{ 'Important'|trans }}">
+            <i class="fa-solid fa-triangle-exclamation me-1"></i>{{ 'Important'|trans }}
+        </span>
+    {% endif %}
+    <span class="badge rounded-pill {{ type_class }}">{{ ('comment_type.' ~ type)|trans }}</span>
+</span>

@@ -3,7 +3,11 @@
 namespace App\Form\Admin\Type;
 
 use App\Entity\Customer;
+use App\Entity\CustomerLabel;
+use App\Entity\Store;
 use App\Enum\ActiveStatusEnum;
+use App\Repository\CustomerLabelRepository;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\TelType;
@@ -46,6 +50,18 @@ class CustomerType extends AbstractType
 			->add('comment', TextareaType::class, [
 				'required' => false,
 			]);
+
+		$store = $options['store'];
+
+		$builder->add('labels', EntityType::class, [
+			'class' => CustomerLabel::class,
+			'choice_label' => 'name',
+			'multiple' => true,
+			'required' => false,
+			'label' => 'admin.customer.fields.labels',
+			'attr' => ['class' => 'select2'],
+			'query_builder' => static fn(CustomerLabelRepository $repository) => $repository->activeByStoreQB($store),
+		]);
 	}
 
 	public function configureOptions(OptionsResolver $resolver): void
@@ -53,5 +69,8 @@ class CustomerType extends AbstractType
 		$resolver->setDefaults([
 			'data_class' => Customer::class,
 		]);
+
+		$resolver->setRequired('store');
+		$resolver->setAllowedTypes('store', Store::class);
 	}
 }

@@ -1,0 +1,9 @@
+{# Renders internal customer labels as badges. Expects `labels` (iterable of CustomerLabel). #}
+{% set labels = labels|default([]) %}
+{% if labels|length > 0 %}
+    <span class="customer-labels d-inline-flex flex-wrap gap-1">
+        {% for label in labels %}
+            <span class="badge rounded-pill {{ label.color|default('bg-light text-dark border') }}">{{ label.name }}</span>
+        {% endfor %}
+    </span>
+{% endif %}

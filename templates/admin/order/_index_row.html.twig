@@ -5,13 +5,20 @@
 		data-action="click->reload-card#reloadOrderCards click->reload-card#tableActivate"
 		data-show-link="{{ path('app_admin_order_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
 		data-comments-link="{{ path('app_admin_order_comments', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+		data-customer-history-link="{{ path('app_admin_order_customer_history', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
 		data-history-link="{{ path('app_admin_order_history', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
 		data-payments-link="{{ path('app_admin_payment_order_document', {store_id: app.request.attributes.get('store_id'), order_id: entity.id}) }}"
 		data-payment-complete="{{ entity.paymentStatus.value in ['paid', 'overpaid'] ? '1' : '0' }}"
 >
 	<td>
 		{% set entry_count = entity.orderEntries|length %}
+		{% set unread_count = (unread_comment_counts|default({}))[entity.id]|default(0) %}
 		{% set badges %}
+			{% if unread_count > 0 %}
+				<span class="badge rounded-pill bg-danger order-comment-unread-badge" title="{{ 'Unread comments'|trans }}" data-order-comment-unread>
+					<i class="fa-solid fa-comment-dots me-1"></i>{{ unread_count }}
+				</span>
+			{% endif %}
 			{{ include('admin/_components/status/_badge.html.twig', {context: 'order', value: entity.status.value}) }}
 			{{ include('admin/_components/status/_badge.html.twig', {context: 'payment', value: entity.paymentStatus.value}) }}
 		{% endset %}

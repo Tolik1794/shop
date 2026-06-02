@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Entity\Customer;
 use App\Entity\InventoryDocument;
 use App\Entity\InventoryReason;
 use App\Entity\Order;
@@ -39,6 +40,28 @@ class InventoryDocumentRepository extends ServiceEntityRepository
 			->addSelect('purchase')
 			->andWhere('inventoryDocument.store = :store')
 			->setParameter('store', $store);
+	}
+
+	/**
+	 * Customer return documents across all of a customer's orders, newest first.
+	 * Used by the quick customer history panel.
+	 *
+	 * @return InventoryDocument[]
+	 */
+	public function findCustomerReturnsByCustomer(Customer $customer, int $limit = 10): array
+	{
+		return $this->createQueryBuilder('inventoryDocument')
+			->innerJoin('inventoryDocument.order', 'orders')
+			->addSelect('orders')
+			->andWhere('orders.customer = :customer')
+			->andWhere('inventoryDocument.type = :customerReturnType')
+			->setParameter('customer', $customer)
+			->setParameter('customerReturnType', InventoryDocumentType::CUSTOMER_RETURN)
+			->orderBy('inventoryDocument.documentDate', 'DESC')
+			->addOrderBy('inventoryDocument.id', 'DESC')
+			->setMaxResults($limit)
+			->getQuery()
+			->getResult();
 	}
 
 	public function findOneForStoreWithDetails(Store $store, int $id): ?InventoryDocument

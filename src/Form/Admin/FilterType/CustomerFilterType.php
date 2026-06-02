@@ -2,8 +2,13 @@
 
 namespace App\Form\Admin\FilterType;
 
+use App\Entity\CustomerLabel;
+use App\Entity\Store;
 use App\Enum\ActiveStatusEnum;
+use App\Repository\CustomerLabelRepository;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\QueryBuilder;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\SearchType;
@@ -69,6 +74,30 @@ class CustomerFilterType extends AbstractType
 					}
 				},
 			])
+			->add('labels', EntityType::class, [
+				'class' => CustomerLabel::class,
+				'choice_label' => 'name',
+				'multiple' => true,
+				'required' => false,
+				'label' => 'admin.customer.fields.labels',
+				'attr' => ['class' => 'select2'],
+				'mapped' => false,
+				'query_builder' => static fn(CustomerLabelRepository $repository) => $repository->activeByStoreQB($options['store']),
+				'query_callback' => function (QueryBuilder $qb, mixed $value) {
+					if ($value instanceof Collection) {
+						$value = $value->toArray();
+					}
+
+					if (is_array($value) && $value !== []) {
+						$rootAlias = current($qb->getRootAliases());
+
+						$qb->distinct()
+							->join(sprintf('%s.labels', $rootAlias), 'filterLabel')
+							->andWhere('filterLabel IN (:filterLabels)')
+							->setParameter('filterLabels', $value);
+					}
+				},
+			])
 			->setMethod('GET');
 	}
 
@@ -77,5 +106,8 @@ class CustomerFilterType extends AbstractType
 		$resolver->setDefaults([
 			'csrf_protection' => false,
 		]);
+
+		$resolver->setRequired('store');
+		$resolver->setAllowedTypes('store', Store::class);
 	}
 }

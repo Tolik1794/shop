@@ -4,6 +4,7 @@ namespace App\Service\Lifecycle;
 
 use App\Entity\Category;
 use App\Entity\Customer;
+use App\Entity\CustomerLabel;
 use App\Entity\InventoryReason;
 use App\Entity\Product;
 use App\Entity\ProductPrice;
@@ -43,6 +44,7 @@ class ReferenceArchivePolicy
 			|| $reference instanceof Unit
 			|| $reference instanceof Warehouse
 			|| $reference instanceof Customer
+			|| $reference instanceof CustomerLabel
 			|| $reference instanceof Supplier
 			|| $reference instanceof InventoryReason
 			|| $reference instanceof ProductPrice;

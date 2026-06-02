@@ -1,0 +1,71 @@
+{# Quick customer history. Expects `customer` (Customer) and `history` (from CustomerHistoryProvider::forCustomer). #}
+{% set store_id = app.request.attributes.get('store_id') %}
+
+<div class="customer-history">
+    <div class="mb-3">
+        <h6 class="text-muted text-uppercase small mb-2">{{ 'admin.customer.fields.labels'|trans }}</h6>
+        {% if history.labels|length > 0 %}
+            {{ include('admin/_components/customer/_labels.html.twig', {labels: history.labels}) }}
+        {% else %}
+            <span class="text-muted">{{ 'admin.customer_history.no_labels'|trans }}</span>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        <h6 class="text-muted text-uppercase small mb-2">{{ 'admin.customer_history.recent_orders'|trans }}</h6>
+        {% if history.recent_orders|length > 0 %}
+            <ul class="list-unstyled mb-0">
+                {% for order in history.recent_orders %}
+                    <li class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <a href="{{ path('app_admin_order_index', {store_id: store_id, id: order.id}) }}" class="fw-semibold">{{ order.number }}</a>
+                        {{ include('admin/_components/status/_badge.html.twig', {context: 'order', value: order.status.value}) }}
+                        {{ include('admin/_components/status/_badge.html.twig', {context: 'payment', value: order.paymentStatus.value}) }}
+                        <span class="text-muted small">{{ order.createdAt|date('Y-m-d') }}</span>
+                        <span class="ms-auto">{{ order.totalAmount|money }} {{ order.currency ? order.currency.code : '' }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <span class="text-muted">{{ 'admin.customer_history.no_orders'|trans }}</span>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        <h6 class="text-muted text-uppercase small mb-2">{{ 'admin.customer_history.important_notes'|trans }}</h6>
+        {% if history.important_comments|length > 0 %}
+            <ul class="list-unstyled mb-0">
+                {% for comment in history.important_comments %}
+                    <li class="border-start border-danger border-2 ps-2 mb-2">
+                        <div>{{ comment.body|nl2br }}</div>
+                        <div class="text-muted small">
+                            <a href="{{ path('app_admin_order_index', {store_id: store_id, id: comment.order.id}) }}">{{ comment.order.number }}</a>
+                            · {{ comment.author }} · {{ comment.createdAt|date('Y-m-d H:i') }}
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <span class="text-muted">{{ 'admin.customer_history.no_important_notes'|trans }}</span>
+        {% endif %}
+    </div>
+
+    <div>
+        <h6 class="text-muted text-uppercase small mb-2">{{ 'admin.customer_history.returns'|trans }}</h6>
+        {% if history.returns|length > 0 %}
+            <ul class="list-unstyled mb-0">
+                {% for document in history.returns %}
+                    <li class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <span class="fw-semibold">{{ document.number }}</span>
+                        {{ include('admin/_components/status/_badge.html.twig', {context: 'inventory', value: document.status.value}) }}
+                        {% if document.order %}
+                            <a href="{{ path('app_admin_order_index', {store_id: store_id, id: document.order.id}) }}" class="small">{{ document.order.number }}</a>
+                        {% endif %}
+                        <span class="text-muted small ms-auto">{{ document.documentDate|date('Y-m-d') }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <span class="text-muted">{{ 'admin.customer_history.no_returns'|trans }}</span>
+        {% endif %}
+    </div>
+</div>

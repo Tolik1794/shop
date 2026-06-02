@@ -77,6 +77,7 @@ final class MenuBuilder
 		$this->addSidebarLink($settings, 'product.view', 'admin.menu.products', 'admin_product_index', $routeParameters, 'fa-box-open');
 		$this->addSidebarLink($settings, 'product_discount.view', 'admin.menu.discounts', 'app_admin_product_discount_index', $routeParameters, 'fa-percent');
 		$this->addSidebarLink($settings, 'unit.manage', 'admin.menu.units', 'app_admin_unit_index', $routeParameters, 'fa-ruler-combined');
+		$this->addSidebarLink($settings, 'customer_label.view', 'admin.menu.customer_labels', 'app_admin_customer_label_index', $routeParameters, 'fa-tags');
 		$this->addSidebarLink($settings, 'warehouse.view', 'admin.menu.warehouses', 'app_admin_warehouse_index', $routeParameters, 'fa-warehouse');
 		$this->addSidebarLink($settings, 'inventory_reason.manage', 'admin.menu.inventory_reasons', 'app_admin_inventory_reason_index', $routeParameters, 'fa-circle-question');
 		$this->addSidebarLink($settings, 'exchange_rate.manage', 'admin.menu.exchange_rates', 'app_admin_exchange_rate_index', $routeParameters, 'fa-money-bill-transfer');

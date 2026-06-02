@@ -38,6 +38,17 @@ enum OrderDiscountModeEnum {
     manual_override
 }
 
+enum CommentTypeEnum {
+    general
+    manager
+    warehouse
+    accounting
+    internal
+    call_result
+    callback_needed
+    complaint
+}
+
 entity Order {
     * id: int
     * version: int
@@ -98,11 +109,23 @@ entity OrderComment {
     * id: int
     --
     * body: text
+    * type: CommentTypeEnum
+    * isImportant: bool
     * createdAt: DateTimeImmutable
     updatedAt: DateTimeImmutable?
     deletedAt: DateTimeImmutable?
     * order: Order
     * author: User
+}
+
+entity OrderCommentReadState {
+    * id: int
+    --
+    * lastReadAt: DateTimeImmutable
+    * order: Order
+    * user: User
+    --
+    unique (order, user)
 }
 
 entity OrderHistory {
@@ -128,6 +151,7 @@ Currency ||--o{ Order : order currency
 Customer |o--o{ Order : places
 OrderStatus ||--o{ Order : controls
 PaymentStatusEnum ||--o{ Order : payment state
+CommentTypeEnum ||--o{ OrderComment : classifies
 Order ||--o{ OrderEntry : has
 Order |o--o{ Payment : paid by
 Order ||--o{ InventoryDocument : generates stock docs
@@ -136,9 +160,11 @@ Warehouse |o--o{ OrderEntry : ships from
 WarehouseStockBatch |o--o{ OrderEntry : priced/reserved from
 ProductDiscountRule |o--o{ OrderEntry : discount source
 Order ||--o{ OrderComment : has comments
+Order ||--o{ OrderCommentReadState : tracks read state
 Order ||--o{ OrderHistory : has timeline
 Order |o--o{ PaymentHistory : shows payment events
 User ||--o{ OrderComment : authors
+User ||--o{ OrderCommentReadState : reads comments
 User |o--o{ OrderHistory : performs
 OrderHistorySource ||--o{ OrderHistory : classifies source
 OrderEntry |o--o{ InventoryDocumentLine : ships/returns
@@ -168,6 +194,18 @@ note right of OrderComment
 
   deletedAt is optional soft delete so the UI can hide a comment
   without destroying the audit trail.
+
+  type classifies the comment (general, manager, warehouse, accounting,
+  internal, call_result, callback_needed, complaint) so departmental
+  comments are easy to spot. isImportant is an independent flag that
+  visually highlights a comment regardless of its type.
+
+  OrderCommentReadState stores one row per (order, user) with the last
+  time that user viewed the order's comments. It powers the per-user
+  unread indicator in the order list (no realtime; read on view).
+  A comment counts as unread for a user when it is newer than their
+  lastReadAt, authored by someone else, and either important or of a
+  type relevant to that user's role/permissions.
 end note
 
 note right of OrderHistory

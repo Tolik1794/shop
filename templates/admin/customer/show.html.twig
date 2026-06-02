@@ -36,8 +36,24 @@
                 <th>{{ 'Comment'|trans }}</th>
                 <td>{{ entity.comment }}</td>
             </tr>
+            <tr>
+                <th>{{ 'admin.customer.fields.labels'|trans }}</th>
+                <td>
+                    {% if entity.labels|length > 0 %}
+                        {{ include('admin/_components/customer/_labels.html.twig', {labels: entity.labels}) }}
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </td>
+            </tr>
             </tbody>
         </table>
+
+        {% if history is defined %}
+            <h6 class="card-title mb-3">{{ 'admin.customer_history.title'|trans }}</h6>
+            {{ include('admin/customer/_history.html.twig', {customer: entity, history: history}) }}
+            <hr>
+        {% endif %}
 
         <p class="text-muted small mb-2">{{ 'Archived customers are hidden from new operations, but historical documents remain readable.'|trans }}</p>
         <form method="post" action="{{ path('app_admin_customer_delete', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" onsubmit="return confirm('{{ 'Archive customer? Historical documents will remain readable.'|trans|e('js') }}');">

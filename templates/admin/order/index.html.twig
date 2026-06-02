@@ -13,7 +13,11 @@
 
 {% set table_body %}
     {% for entity in pagination %}
-        {{ include('admin/order/_index_row.html.twig', {entity: entity, first_entity: first_entity}) }}
+        {{ include('admin/order/_index_row.html.twig', {
+            entity: entity,
+            first_entity: first_entity,
+            unread_comment_counts: unread_comment_counts|default({})
+        }) }}
     {% endfor %}
 {% endset %}
 
@@ -115,6 +119,7 @@
                                 is_paid: first_entity and first_entity.paymentStatus.value in ['paid', 'overpaid']
                             }),
                             include('admin/_components/tab_icon/_comments.html.twig'),
+                            include('admin/_components/tab_icon/_customer.html.twig'),
                             include('admin/_components/tab_icon/_history.html.twig')
                         ],
                         tab_body: [
@@ -128,6 +133,10 @@
                             )) : '<div class="card"><div class="card-body">' ~ 'Nothing to show...'|trans ~ '</div></div>',
                             first_entity ? render(controller(
                                 'App\\Controller\\Admin\\OrderController::comments',
+                                { store_id: app.request.attributes.get('store_id'), id: first_entity.id }
+                            )) : '<div class="card"><div class="card-body">' ~ 'Nothing to show...'|trans ~ '</div></div>',
+                            first_entity ? render(controller(
+                                'App\\Controller\\Admin\\OrderController::customerHistory',
                                 { store_id: app.request.attributes.get('store_id'), id: first_entity.id }
                             )) : '<div class="card"><div class="card-body">' ~ 'Nothing to show...'|trans ~ '</div></div>',
                             first_entity ? render(controller(

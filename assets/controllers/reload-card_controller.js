@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['card', 'commentsCard', 'historyCard', 'paymentsCard', 'paymentTabIcon', 'flashContainer']
+    static targets = ['card', 'commentsCard', 'customerHistoryCard', 'historyCard', 'paymentsCard', 'paymentTabIcon', 'flashContainer']
 
     connect() {
         if (!this.hasFlashContainerTarget) {
@@ -38,6 +38,7 @@ export default class extends Controller {
             this.replaceCard(this.hasCardTarget ? this.cardTarget : null, eventTarget.dataset.showLink),
             this.replaceCard(this.hasPaymentsCardTarget ? this.paymentsCardTarget : null, eventTarget.dataset.paymentsLink),
             this.replaceCard(this.hasCommentsCardTarget ? this.commentsCardTarget : null, eventTarget.dataset.commentsLink),
+            this.replaceCard(this.hasCustomerHistoryCardTarget ? this.customerHistoryCardTarget : null, eventTarget.dataset.customerHistoryLink),
             this.replaceCard(this.hasHistoryCardTarget ? this.historyCardTarget : null, eventTarget.dataset.historyLink),
         ])
 

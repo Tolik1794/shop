@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Entity\Customer;
 use App\Entity\Order;
 use App\Entity\Store;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -52,6 +53,25 @@ class OrderRepository extends ServiceEntityRepository
 			->addSelect('orderEntry')
 			->andWhere('orders.store = :store')
 			->setParameter('store', $store);
+	}
+
+	/**
+	 * Recent orders for a customer, newest first. Used by the quick customer history panel.
+	 *
+	 * @return Order[]
+	 */
+	public function findRecentByCustomer(Customer $customer, int $limit = 10): array
+	{
+		return $this->createQueryBuilder('orders')
+			->innerJoin('orders.currency', 'currency')
+			->addSelect('currency')
+			->andWhere('orders.customer = :customer')
+			->setParameter('customer', $customer)
+			->orderBy('orders.createdAt', 'DESC')
+			->addOrderBy('orders.id', 'DESC')
+			->setMaxResults($limit)
+			->getQuery()
+			->getResult();
 	}
 
 	public function getNextNumber(Store $store): string

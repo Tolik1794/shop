@@ -14,6 +14,7 @@
         <th>{{ 'Last name'|trans }}</th>
         <th>{{ 'Phone'|trans }}</th>
         <th>{{ 'Email'|trans }}</th>
+        <th>{{ 'admin.customer.fields.labels'|trans }}</th>
         <th>{{ 'Status'|trans }}</th>
     </tr>
 {% endset %}
@@ -32,6 +33,7 @@
             <td>{{ entity.lastName }}</td>
             <td>{{ entity.phone }}</td>
             <td>{{ entity.email }}</td>
+            <td>{{ include('admin/_components/customer/_labels.html.twig', {labels: entity.labels}) }}</td>
             <td>{{ entity.status.value }}</td>
         </tr>
     {% endfor %}

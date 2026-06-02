@@ -61,12 +61,23 @@ class Customer
 	#[ORM\OneToMany(mappedBy: 'customer', targetEntity: Order::class)]
 	private Collection $orders;
 
+	/**
+	 * @var Collection<int, CustomerLabel>
+	 */
+	#[ORM\ManyToMany(targetEntity: CustomerLabel::class, inversedBy: 'customers')]
+	#[ORM\JoinTable(name: 'customer_customer_label')]
+	#[ORM\JoinColumn(name: 'customer_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+	#[ORM\InverseJoinColumn(name: 'customer_label_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+	#[ORM\OrderBy(['sortOrder' => 'ASC', 'name' => 'ASC'])]
+	private Collection $labels;
+
 	public function __construct()
 	{
 		$this->status = ActiveStatusEnum::ACTIVE;
 		$this->createdAt = new DateTimeImmutable();
 		$this->updatedAt = new DateTimeImmutable();
 		$this->orders = new ArrayCollection();
+		$this->labels = new ArrayCollection();
 	}
 
 	public function __toString(): string
@@ -279,6 +290,30 @@ class Customer
 		if ($this->orders->removeElement($order) && $order->getCustomer() === $this) {
 			$order->setCustomer(null);
 		}
+
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, CustomerLabel>
+	 */
+	public function getLabels(): Collection
+	{
+		return $this->labels;
+	}
+
+	public function addLabel(CustomerLabel $label): self
+	{
+		if (!$this->labels->contains($label)) {
+			$this->labels->add($label);
+		}
+
+		return $this;
+	}
+
+	public function removeLabel(CustomerLabel $label): self
+	{
+		$this->labels->removeElement($label);
 
 		return $this;
 	}
