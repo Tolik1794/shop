@@ -1,19 +1,23 @@
 <div class="sticky-top tab tab-vertical tab-card">
     {% set active_tab_key = active_tab_key|default(0) %}
+    {% set tab_keys = tab_keys|default([]) %}
     <ul class="nav nav-tabs" role="tablist">
         {% for key, name in tab_head %}
             <li class="nav-item" role="presentation">
                 {% set is_search_tab = tab_search_key is defined and key == tab_search_key %}
                 {% set is_active_tab = key == active_tab_key %}
+                {% set tab_key = tab_keys[key]|default(null) %}
                 {% if key == 0 %}
                     <a class="nav-link{{ is_active_tab ? ' active' : '' }}{{ is_search_tab ? ' tab-search-link' : '' }}" href="#tab-1"
                        data-bs-toggle="tab" role="tab"
+                       {% if tab_key %}data-tab-key="{{ tab_key }}" data-action="click->reload-card#tabActivate"{% endif %}
                        id="first-tab" aria-selected="{{ is_active_tab ? 'true' : 'false' }}"{{ is_active_tab ? '' : ' tabindex="-1"' }}>
                         {{ name|raw }}
                     </a>
                 {% else %}
                     <a class="nav-link{{ is_active_tab ? ' active' : '' }}{{ is_search_tab ? ' tab-search-link' : '' }}" href="#tab-{{ key + 1 }}"
                        data-bs-toggle="tab" role="tab"
+                       {% if tab_key %}data-tab-key="{{ tab_key }}" data-action="click->reload-card#tabActivate"{% endif %}
                        aria-selected="{{ is_active_tab ? 'true' : 'false' }}"{{ is_active_tab ? '' : ' tabindex="-1"' }}>
                         {{ name|raw }}
                     </a>

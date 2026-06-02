@@ -73,6 +73,92 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSelectorNotExists('.tab-search-link');
 	}
 
+	public function testOrderIndexRestoresActiveTabFromQuery(): void
+	{
+		$this->client->loginUser($this->createUser('order-index-active-tab-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-index-active-tab-store-' . uniqid());
+		$order = (new Order())
+			->setStore($store)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber('SO-active-tab-' . uniqid())
+			->setCustomerNameSnapshot('Active Tab Customer')
+			->setTotalAmount('100.0000')
+			->setTotalAmountBase('100.0000')
+			->setPaidAmountBase('0.0000');
+
+		$this->entityManager->persist($order);
+		$this->entityManager->flush();
+
+		foreach ([
+			'show' => 'tab-1',
+			'payments' => 'tab-2',
+			'comments' => 'tab-3',
+			'customer' => 'tab-4',
+			'history' => 'tab-5',
+		] as $tabKey => $paneId) {
+			$this->client->request('GET', sprintf('/admin/store/%d/order/?id=%d&active_tab=%s', $store->getId(), $order->getId(), $tabKey));
+
+			self::assertResponseIsSuccessful();
+			self::assertSelectorExists(sprintf('.nav-link.active[data-tab-key="%s"]', $tabKey));
+			self::assertSelectorExists(sprintf('#%s.tab-pane.active', $paneId));
+		}
+	}
+
+	public function testOrderIndexFallsBackToShowTabForInvalidActiveTab(): void
+	{
+		$this->client->loginUser($this->createUser('order-index-invalid-tab-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-index-invalid-tab-store-' . uniqid());
+		$order = (new Order())
+			->setStore($store)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber('SO-invalid-tab-' . uniqid())
+			->setCustomerNameSnapshot('Invalid Tab Customer')
+			->setTotalAmount('100.0000')
+			->setTotalAmountBase('100.0000')
+			->setPaidAmountBase('0.0000');
+
+		$this->entityManager->persist($order);
+		$this->entityManager->flush();
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/?id=%d&active_tab=bad-tab', $store->getId(), $order->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorExists('.nav-link.active[data-tab-key="show"]');
+		self::assertSelectorExists('#tab-1.tab-pane.active');
+	}
+
+	public function testOrderIndexRestoresSelectedOrderFromQuery(): void
+	{
+		$this->client->loginUser($this->createUser('order-index-selected-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-index-selected-store-' . uniqid());
+		$firstOrder = (new Order())
+			->setStore($store)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber('SO-selected-first-' . uniqid())
+			->setCustomerNameSnapshot('First Customer')
+			->setTotalAmount('100.0000')
+			->setTotalAmountBase('100.0000')
+			->setPaidAmountBase('0.0000');
+		$secondOrder = (new Order())
+			->setStore($store)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber('SO-selected-second-' . uniqid())
+			->setCustomerNameSnapshot('Second Customer')
+			->setTotalAmount('100.0000')
+			->setTotalAmountBase('100.0000')
+			->setPaidAmountBase('0.0000');
+
+		$this->entityManager->persist($firstOrder);
+		$this->entityManager->persist($secondOrder);
+		$this->entityManager->flush();
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/?id=%d', $store->getId(), $firstOrder->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorExists(sprintf('tr.table-active[id="%d"]', $firstOrder->getId()));
+		self::assertSelectorTextContains('.order-show-card', 'First Customer');
+	}
+
 	public function testOrderShowGroupsDetailsWithFallbacksAndAlignedAmounts(): void
 	{
 		$this->client->loginUser($this->createUser('order-show-details-admin-' . uniqid() . '@example.com'));

@@ -35,6 +35,10 @@
 } %}
 {% set order_filter_collapse_id = filter_form.vars.id ~ '-advanced-filters' %}
 {% set order_filters_open = filter_form.vars.errors|length > 0 %}
+{% set order_tab_keys = ['show', 'payments', 'comments', 'customer', 'history'] %}
+{% set order_tab_key_map = {show: 0, payments: 1, comments: 2, customer: 3, history: 4} %}
+{% set active_order_tab = app.request.query.get('active_tab')|default('show') %}
+{% set active_order_tab_key = order_tab_key_map[active_order_tab]|default(0) %}
 
 {% set order_list_controls %}
     <div class="order-list-toolbar">
@@ -112,7 +116,8 @@
             <div class="row">
                 <div class="col-xxl-4 col-xl-5 col-lg-6">
                     {{ include('admin/_components/card/_tab_card.html.twig', {
-                        active_tab_key: app.request.query.get('active_tab') == 'payments' ? 1 : 0,
+                        active_tab_key: active_order_tab_key,
+                        tab_keys: order_tab_keys,
                         tab_head: [
                             include('admin/_components/tab_icon/_show.html.twig'),
                             include('admin/_components/tab_icon/_payment.html.twig', {

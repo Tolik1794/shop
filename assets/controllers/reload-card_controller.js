@@ -4,13 +4,20 @@ export default class extends Controller {
     static targets = ['card', 'commentsCard', 'customerHistoryCard', 'historyCard', 'paymentsCard', 'paymentTabIcon', 'flashContainer']
 
     connect() {
-        if (!this.hasFlashContainerTarget) {
-            return
-        }
+        this.popStateHandler = this.popStateHandler || (() => this.syncFromLocation())
+        window.addEventListener('popstate', this.popStateHandler)
 
-        this.flashContainerTarget
-            .querySelectorAll('.quick-action-flash')
-            .forEach((flash) => this.prepareFlash(flash))
+        if (this.hasFlashContainerTarget) {
+            this.flashContainerTarget
+                .querySelectorAll('.quick-action-flash')
+                .forEach((flash) => this.prepareFlash(flash))
+        }
+    }
+
+    disconnect() {
+        if (this.popStateHandler) {
+            window.removeEventListener('popstate', this.popStateHandler)
+        }
     }
 
     async reloadCard(event) {
@@ -18,12 +25,7 @@ export default class extends Controller {
 
         if (this.cardTarget.dataset.cardId === eventTarget.id) return
 
-        let card = await $.ajax(eventTarget.dataset.link + $(location).attr('search'))
-        let div = document.createElement('div')
-
-        div.innerHTML = card
-
-        this.cardTarget.replaceWith(div.firstElementChild)
+        await this.replaceCard(this.cardTarget, eventTarget.dataset.link)
     }
 
     async reloadOrderCards(event) {
@@ -34,14 +36,7 @@ export default class extends Controller {
             return
         }
 
-        await Promise.all([
-            this.replaceCard(this.hasCardTarget ? this.cardTarget : null, eventTarget.dataset.showLink),
-            this.replaceCard(this.hasPaymentsCardTarget ? this.paymentsCardTarget : null, eventTarget.dataset.paymentsLink),
-            this.replaceCard(this.hasCommentsCardTarget ? this.commentsCardTarget : null, eventTarget.dataset.commentsLink),
-            this.replaceCard(this.hasCustomerHistoryCardTarget ? this.customerHistoryCardTarget : null, eventTarget.dataset.customerHistoryLink),
-            this.replaceCard(this.hasHistoryCardTarget ? this.historyCardTarget : null, eventTarget.dataset.historyLink),
-        ])
-
+        await this.reloadCardsForRow(eventTarget)
         this.updatePaymentTabIcon(eventTarget)
     }
 
@@ -53,13 +48,26 @@ export default class extends Controller {
             return
         }
 
-        await Promise.all([
-            this.replaceCard(this.hasCardTarget ? this.cardTarget : null, eventTarget.dataset.showLink),
-            this.replaceCard(this.hasPaymentsCardTarget ? this.paymentsCardTarget : null, eventTarget.dataset.paymentsLink),
-            this.replaceCard(this.hasHistoryCardTarget ? this.historyCardTarget : null, eventTarget.dataset.historyLink),
-        ])
-
+        await this.reloadCardsForRow(eventTarget)
         this.updatePaymentTabIcon(eventTarget)
+    }
+
+    async reloadCardsForRow(row) {
+        if (row.dataset.showLink) {
+            await Promise.all([
+                this.replaceCard(this.hasCardTarget ? this.cardTarget : null, row.dataset.showLink),
+                this.replaceCard(this.hasPaymentsCardTarget ? this.paymentsCardTarget : null, row.dataset.paymentsLink),
+                this.replaceCard(this.hasCommentsCardTarget ? this.commentsCardTarget : null, row.dataset.commentsLink),
+                this.replaceCard(this.hasCustomerHistoryCardTarget ? this.customerHistoryCardTarget : null, row.dataset.customerHistoryLink),
+                this.replaceCard(this.hasHistoryCardTarget ? this.historyCardTarget : null, row.dataset.historyLink),
+            ])
+
+            return
+        }
+
+        if (row.dataset.link) {
+            await this.replaceCard(this.hasCardTarget ? this.cardTarget : null, row.dataset.link)
+        }
     }
 
     async replaceCard(target, url) {
@@ -67,7 +75,7 @@ export default class extends Controller {
             return
         }
 
-        const card = await $.ajax(url + $(location).attr('search'))
+        const card = await $.ajax(url + window.location.search)
         const div = document.createElement('div')
 
         div.innerHTML = card
@@ -226,18 +234,102 @@ export default class extends Controller {
     }
 
     async tableActivate(event) {
-        let eventTarget = event.currentTarget,
-            tableActive = document.getElementsByClassName('table-active')
+        let eventTarget = event.currentTarget
 
         var urlParams = new URLSearchParams(window.location.search)
+        const idColumn = eventTarget.dataset.idColumn
+        const idValue = eventTarget.id.toString()
 
-        urlParams.set(eventTarget.dataset.idColumn, eventTarget.id.toString())
+        urlParams.set(idColumn, idValue)
 
-        history.pushState({}, '', window.location.href.split('?')[0] + '?' + urlParams.toString());
+        if (new URLSearchParams(window.location.search).get(idColumn) !== idValue) {
+            history.pushState({}, '', this.urlWithParams(urlParams))
+        }
+
+        this.activateTableRow(eventTarget)
+    }
+
+    tabActivate(event) {
+        const tabKey = event.currentTarget.dataset.tabKey
+
+        if (!tabKey) {
+            return
+        }
+
+        const urlParams = new URLSearchParams(window.location.search)
+
+        urlParams.set('active_tab', tabKey)
+        history.replaceState({}, '', this.urlWithParams(urlParams))
+    }
+
+    async syncFromLocation() {
+        const row = this.rowFromLocation()
+
+        if (!row) {
+            window.location.reload()
+            return
+        }
+
+        if (!this.hasCardTarget || this.cardTarget.dataset.cardId !== row.id) {
+            await this.reloadCardsForRow(row)
+        }
+
+        this.activateTableRow(row)
+        this.updatePaymentTabIcon(row)
+        this.activateTabFromLocation()
+    }
+
+    rowFromLocation() {
+        const firstRow = this.element.querySelector('[data-id-column]')
+        const activeRow = this.element.querySelector('.table-active[data-id-column]')
+
+        if (!firstRow && !activeRow) {
+            return null
+        }
+
+        const idColumn = (activeRow || firstRow).dataset.idColumn
+        const idValue = new URLSearchParams(window.location.search).get(idColumn)
+
+        if (!idValue) {
+            return firstRow
+        }
+
+        return document.getElementById(idValue)
+    }
+
+    activateTableRow(row) {
+        const tableActive = document.getElementsByClassName('table-active')
 
         if (tableActive[0]) tableActive[0].classList.remove('table-active')
 
-        eventTarget.classList.add('table-active')
+        row.classList.add('table-active')
+    }
+
+    activateTabFromLocation() {
+        const tabs = Array.from(this.element.querySelectorAll('[data-tab-key]'))
+
+        if (tabs.length === 0) {
+            return
+        }
+
+        const urlParams = new URLSearchParams(window.location.search)
+        const tabKey = urlParams.get('active_tab') || 'show'
+        const tab = tabs.find((candidate) => candidate.dataset.tabKey === tabKey)
+            || tabs.find((candidate) => candidate.dataset.tabKey === 'show')
+            || tabs[0]
+
+        if (window.bootstrap && window.bootstrap.Tab) {
+            window.bootstrap.Tab.getOrCreateInstance(tab).show()
+            return
+        }
+
+        tab.click()
+    }
+
+    urlWithParams(urlParams) {
+        const query = urlParams.toString()
+
+        return window.location.pathname + (query ? '?' + query : '') + window.location.hash
     }
 
     updatePaymentTabIcon(row) {
