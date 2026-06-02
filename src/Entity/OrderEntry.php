@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Enum\OrderDiscountModeEnum;
 use App\Repository\OrderEntryRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -40,6 +41,15 @@ class OrderEntry
 	#[ORM\Column(type: Types::DECIMAL, precision: 14, scale: 4, nullable: true)]
 	private ?string $discountAmountBase = null;
 
+	#[ORM\Column(type: Types::DECIMAL, precision: 7, scale: 4, nullable: true)]
+	private ?string $discountPercent = null;
+
+	#[ORM\Column(length: 32, enumType: OrderDiscountModeEnum::class, nullable: true)]
+	private ?OrderDiscountModeEnum $discountMode = null;
+
+	#[ORM\Column(length: 255, nullable: true)]
+	private ?string $discountRuleNameSnapshot = null;
+
 	#[ORM\Column(type: Types::DECIMAL, precision: 14, scale: 4)]
 	private ?string $totalPrice = null;
 
@@ -71,6 +81,9 @@ class OrderEntry
 
 	#[ORM\ManyToOne]
 	private ?WarehouseStockBatch $warehouseStockBatch = null;
+
+	#[ORM\ManyToOne(inversedBy: 'orderEntries')]
+	private ?ProductDiscountRule $discountRule = null;
 
 	/**
 	 * @var Collection<int, InventoryDocumentLine>
@@ -128,6 +141,12 @@ class OrderEntry
 	public function setDiscountAmount(?string $discountAmount): self { $this->discountAmount = $discountAmount; return $this; }
 	public function getDiscountAmountBase(): ?string { return $this->discountAmountBase; }
 	public function setDiscountAmountBase(?string $discountAmountBase): self { $this->discountAmountBase = $discountAmountBase; return $this; }
+	public function getDiscountPercent(): ?string { return $this->discountPercent; }
+	public function setDiscountPercent(?string $discountPercent): self { $this->discountPercent = $discountPercent; return $this; }
+	public function getDiscountMode(): ?OrderDiscountModeEnum { return $this->discountMode; }
+	public function setDiscountMode(?OrderDiscountModeEnum $discountMode): self { $this->discountMode = $discountMode; return $this; }
+	public function getDiscountRuleNameSnapshot(): ?string { return $this->discountRuleNameSnapshot; }
+	public function setDiscountRuleNameSnapshot(?string $discountRuleNameSnapshot): self { $this->discountRuleNameSnapshot = $discountRuleNameSnapshot; return $this; }
 	public function getTotalPrice(): ?string { return $this->totalPrice; }
 	public function setTotalPrice(string $totalPrice): self { $this->totalPrice = $totalPrice; return $this; }
 	public function getTotalPriceBase(): ?string { return $this->totalPriceBase; }
@@ -146,6 +165,8 @@ class OrderEntry
 	public function setWarehouse(?Warehouse $warehouse): self { $this->warehouse = $warehouse; return $this; }
 	public function getWarehouseStockBatch(): ?WarehouseStockBatch { return $this->warehouseStockBatch; }
 	public function setWarehouseStockBatch(?WarehouseStockBatch $warehouseStockBatch): self { $this->warehouseStockBatch = $warehouseStockBatch; return $this; }
+	public function getDiscountRule(): ?ProductDiscountRule { return $this->discountRule; }
+	public function setDiscountRule(?ProductDiscountRule $discountRule): self { $this->discountRule = $discountRule; return $this; }
 
 	/**
 	 * @return Collection<int, InventoryDocumentLine>

@@ -24,5 +24,7 @@ Symfony integration:
 - Store and user object checks use voters with object-aware permissions such as `store.edit` and `user.edit`.
 - `AdminStoreAccessSubscriber` protects admin/API routes with `store_id` by checking `store.view` against the concrete store object.
 - Services should use `PermissionChecker` when a business action needs a permission check outside HTTP controllers.
+- Product discount settings are protected by `product_discount.view` and `product_discount.manage`.
+- Manual order discounts and below-cost discounted order lines require `order.discount.override`; normal order editors can only use configured product/category discount rules.
 
 The legacy `users.roles` JSON column remains only for compatibility with existing data and tests. New authorization decisions should use permission codes and groups.

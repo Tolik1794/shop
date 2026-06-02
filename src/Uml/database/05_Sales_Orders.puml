@@ -32,6 +32,12 @@ enum OrderStatus {
     returned
 }
 
+enum OrderDiscountModeEnum {
+    none
+    rule
+    manual_override
+}
+
 entity Order {
     * id: int
     * version: int
@@ -72,6 +78,9 @@ entity OrderEntry {
     * unitPriceBase: decimal(14, 4)
     discountAmount: decimal(14, 4)?
     discountAmountBase: decimal(14, 4)?
+    discountPercent: decimal(7, 4)?
+    discountMode: OrderDiscountModeEnum?
+    discountRuleNameSnapshot: string(255)?
     * totalPrice: decimal(14, 4)
     * totalPriceBase: decimal(14, 4)
     * productNameSnapshot: string(255)
@@ -82,6 +91,7 @@ entity OrderEntry {
     * product: Product
     warehouse: Warehouse?
     warehouseStockBatch: WarehouseStockBatch?
+    discountRule: ProductDiscountRule?
 }
 
 entity OrderComment {
@@ -124,6 +134,7 @@ Order ||--o{ InventoryDocument : generates stock docs
 Product ||--o{ OrderEntry : ordered as
 Warehouse |o--o{ OrderEntry : ships from
 WarehouseStockBatch |o--o{ OrderEntry : priced/reserved from
+ProductDiscountRule |o--o{ OrderEntry : discount source
 Order ||--o{ OrderComment : has comments
 Order ||--o{ OrderHistory : has timeline
 Order |o--o{ PaymentHistory : shows payment events
@@ -204,6 +215,9 @@ note right of OrderEntry
   warehouseStockBatch is optional and identifies the FIFO batch used for stock-backed pricing/reservation.
   Search should expose different batches as separate stock options, ordered oldest first.
   Each stock-backed OrderEntry should keep one selected batch and one sale price snapshot.
+  discountRule/discountPercent/discountMode record the configured or manual discount source.
+  discountAmount remains the money snapshot used by totals.
+  Manual override and below-cost discounted lines require order.discount.override.
 
   shippedQuantity, returnedQuantity and canceledQuantity are denormalized progress/cache fields
   for fast UI and filtering. Source of truth is InventoryDocumentLine + posted StockMovement.

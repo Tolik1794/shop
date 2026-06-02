@@ -69,6 +69,26 @@ entity ProductPrice {
 	updatedBy: User?
 }
 
+entity ProductDiscountRule {
+	* id: int
+	--
+	* name: string(255)
+	* percent: decimal(7,4)
+	* isDefault: bool
+	* status: ActiveStatusEnum
+	* store: Store
+}
+
+entity ProductDiscountTarget {
+	* id: int
+	--
+	* targetType: product|category
+	* includeDescendants: bool
+	* rule: ProductDiscountRule
+	product: Product?
+	category: Category?
+}
+
 entity ProductParameterName
 entity ProductParameter
 entity CategoryProductParameterName
@@ -79,6 +99,9 @@ Category ||--o{ Product : classifies
 ProductKindEnum ||--o{ Product : classifies
 Unit ||--o{ Product : measures
 Product ||--o{ ProductPrice : has price history
+ProductDiscountRule ||--o{ ProductDiscountTarget : targets
+Product |o--o{ ProductDiscountTarget : product target
+Category |o--o{ ProductDiscountTarget : category target
 Currency ||--o{ ProductPrice : price currency
 ProductPriceType ||--o{ ProductPrice : classifies
 Product ||--o{ ProductParameter : has
@@ -93,6 +116,8 @@ note right of Product
   - Category entity and CRUD exist.
   - Product entity and CRUD exist.
   - Unit relation, productKind, flags and baseSalePrice exist.
+  - ProductDiscountRule and ProductDiscountTarget exist.
+  - Product discount CRUD exists under store Settings.
   - Product parameter generation from category definitions exists.
   - Product performance fixture creates many products.
 
@@ -105,6 +130,8 @@ note right of Product
     no overlapping active intervals for
     (store, product, type, currency).
   - Add UI for current price and price history.
+  - Extend discount cost basis with delivery/payment fees
+    when those costs become attributable to order rows.
 end note
 
 note bottom
@@ -119,6 +146,8 @@ note bottom
   4. Add product show tab: Prices.
   5. Add fixtures for regular product prices.
   6. Add tests for overlap prevention and priceBase calculation.
+  7. Maintain discount resolver tests for product/category/default
+     discount selection.
 
   Do this after 01_Core_Store_User_Reference_Data,
   because ProductPrice needs Currency and ExchangeRate.

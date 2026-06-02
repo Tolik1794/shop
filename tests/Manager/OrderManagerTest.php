@@ -11,6 +11,8 @@ use App\Entity\OrderHistory;
 use App\Entity\OrderHistorySource;
 use App\Entity\OrderStatus;
 use App\Entity\Product;
+use App\Entity\ProductDiscountRule;
+use App\Entity\ProductDiscountTarget;
 use App\Entity\StockReservation;
 use App\Entity\StockReservationStatus;
 use App\Entity\Store;
@@ -19,6 +21,8 @@ use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
 use App\Entity\WarehouseStockBatch;
 use App\Enum\PaymentStatusEnum;
+use App\Enum\OrderDiscountModeEnum;
+use App\Enum\ProductDiscountTargetTypeEnum;
 use App\Enum\ProductKindEnum;
 use App\Manager\OrderManager;
 use DateTimeImmutable;
@@ -55,16 +59,15 @@ class OrderManagerTest extends KernelTestCase
 		$orderEntry = (new OrderEntry())
 			->setProduct($product)
 			->setQuantity('2.0000')
-			->setUnitPrice('15.0000')
-			->setDiscountAmount('5.0000');
+			->setUnitPrice('15.0000');
 		$order->addOrderEntry($orderEntry);
 
 		$this->orderManager->saveOrder($order);
 		$this->entityManager->refresh($order);
 
-		self::assertSame('25.0000', $order->getTotalAmount());
-		self::assertSame('25.0000', $order->getTotalAmountBase());
-		self::assertSame('5.0000', $order->getDiscountAmount());
+		self::assertSame('30.0000', $order->getTotalAmount());
+		self::assertSame('30.0000', $order->getTotalAmountBase());
+		self::assertNull($order->getDiscountAmount());
 		self::assertSame($product->getName(), $orderEntry->getProductNameSnapshot());
 		self::assertSame($product->getUnit()?->getCode(), $orderEntry->getUnitCodeSnapshot());
 
@@ -92,6 +95,51 @@ class OrderManagerTest extends KernelTestCase
 		$this->orderManager->saveOrder($order);
 
 		self::assertSame('5.0000', $order->getOrderEntries()->first()->getUnitPrice());
+	}
+
+	public function testSaveOrderAppliesDefaultProductDiscountRule(): void
+	{
+		$currency = $this->persistCurrency('G' . substr(uniqid(), -2), 'Discount currency');
+		$store = $this->persistStore('order-discount-' . uniqid(), $currency);
+		$product = $this->persistProduct($store);
+		$this->persistProductDiscountRule($store, $product, '10.0000', true);
+		$order = $this->orderManager->createDraft($store);
+		$order->addOrderEntry((new OrderEntry())
+			->setProduct($product)
+			->setQuantity('2.0000')
+			->setUnitPrice('10.0000'));
+
+		$this->orderManager->saveOrder($order);
+		$orderEntry = $order->getOrderEntries()->first();
+
+		self::assertSame('18.0000', $order->getTotalAmount());
+		self::assertSame('2.0000', $orderEntry->getDiscountAmount());
+		self::assertSame('10.0000', $orderEntry->getDiscountPercent());
+		self::assertSame(OrderDiscountModeEnum::RULE, $orderEntry->getDiscountMode());
+		self::assertSame('Default discount', $orderEntry->getDiscountRuleNameSnapshot());
+	}
+
+	public function testSaveOrderBlocksDiscountBelowCostWithoutOverridePermission(): void
+	{
+		$currency = $this->persistCurrency('H' . substr(uniqid(), -2), 'Below cost currency');
+		$store = $this->persistStore('order-below-cost-' . uniqid(), $currency);
+		$product = $this->persistProduct($store);
+		$warehouse = $this->persistWarehouse($store);
+		$warehouseStock = $this->persistWarehouseStock($warehouse, $product, '3.0000');
+		$warehouseStock->setAverageCost('9.0000');
+		$this->entityManager->flush();
+		$this->persistProductDiscountRule($store, $product, '20.0000', true);
+		$order = $this->orderManager->createDraft($store);
+		$order->addOrderEntry((new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('1.0000')
+			->setUnitPrice('10.0000'));
+
+		$this->expectException(RuntimeException::class);
+		$this->expectExceptionMessage('Discounted order line total is below cost');
+
+		$this->orderManager->saveOrder($order);
 	}
 
 	public function testConfirmMovesDraftOrderWithoutStockToAwaitingStock(): void
@@ -533,14 +581,11 @@ class OrderManagerTest extends KernelTestCase
 		$orderEntry = (new OrderEntry())
 			->setProduct($product)
 			->setQuantity('1.0000')
-			->setUnitPrice('99.0000')
-			->setDiscountAmount('0.0000');
+			->setUnitPrice('99.0000');
 		$order->addOrderEntry($orderEntry);
 		$this->orderManager->saveOrder($order);
 
-		$orderEntry
-			->setUnitPrice('99')
-			->setDiscountAmount('0');
+		$orderEntry->setUnitPrice('99');
 		$this->orderManager->saveOrder($order);
 
 		self::assertCount(0, $this->entityManager->getRepository(OrderHistory::class)->findBy([
@@ -683,6 +728,23 @@ class OrderManagerTest extends KernelTestCase
 		$this->entityManager->flush();
 
 		return $batch;
+	}
+
+	private function persistProductDiscountRule(Store $store, Product $product, string $percent, bool $isDefault): ProductDiscountRule
+	{
+		$rule = (new ProductDiscountRule())
+			->setStore($store)
+			->setName('Default discount')
+			->setPercent($percent)
+			->setIsDefault($isDefault);
+		$rule->addTarget((new ProductDiscountTarget())
+			->setTargetType(ProductDiscountTargetTypeEnum::PRODUCT)
+			->setProduct($product));
+
+		$this->entityManager->persist($rule);
+		$this->entityManager->flush();
+
+		return $rule;
 	}
 
 	private function persistExchangeRate(Currency $fromCurrency, Currency $toCurrency, Store $store, string $rate): ExchangeRate

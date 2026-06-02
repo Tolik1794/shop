@@ -58,6 +58,9 @@ entity OrderEntry {
 	* unitPriceBase: decimal(14,4)
 	discountAmount: decimal(14,4)?
 	discountAmountBase: decimal(14,4)?
+	discountPercent: decimal(7,4)?
+	discountMode: none|rule|manual_override?
+	discountRuleNameSnapshot: string(255)?
 	* totalPrice: decimal(14,4)
 	* totalPriceBase: decimal(14,4)
 	* productNameSnapshot: string(255)
@@ -67,12 +70,14 @@ entity OrderEntry {
 	* order: Order
 	* product: Product
 	warehouse: Warehouse?
+	discountRule: ProductDiscountRule?
 }
 
 Customer |o--o{ Order : places
 Order ||--o{ OrderEntry : has
 Product ||--o{ OrderEntry : ordered as
 Warehouse |o--o{ OrderEntry : ships from
+ProductDiscountRule |o--o{ OrderEntry : discount source
 Currency ||--o{ Order : order currency
 PaymentStatusEnum ||--o{ Order : payment state
 Order ||--o{ InventoryDocument : generates shipment/return docs
@@ -92,6 +97,9 @@ note right of Order
   - Order number is generated per store.
   - Currency and exchangeRateToBase are financial snapshots.
   - Totals are recalculated from entries, not typed manually.
+  - Normal discounts come from configured product/category rules.
+  - Manual discounts and below-cost discounted lines require
+    order.discount.override.
   - Customer snapshot fields remain stable after customer edits.
   - Only draft orders are freely editable.
   - Business status transitions are controlled by services,
@@ -127,6 +135,7 @@ note right of OrderEntry
   - shippedQuantity, returnedQuantity and canceledQuantity are progress caches.
   - posted InventoryDocumentLine + StockMovement are the source of truth.
   - Entry can specify warehouse or stay backordered.
+  - Entry stores discount rule/percent/mode snapshots.
   - OrderEntry never changes stock directly.
 end note
 
@@ -139,11 +148,13 @@ note bottom
      with explicit confirmed -> draft rollback.
   3. Freeze or explicitly guard post-confirm edits.
   4. Integrate payment recalculation after Payments stage.
-  5. Integrate reservation creation after Reservations stage.
-  6. Integrate shipment/return status updates after InventoryDocuments
+  5. Apply ProductDiscountRule through OrderEntryDiscountService
+     before OrderCalculator totals.
+  6. Integrate reservation creation after Reservations stage.
+  7. Integrate shipment/return status updates after InventoryDocuments
      and 08.1 progress synchronization stages.
-  7. Continue with 05.1 for comments and order timeline.
-  8. Add tests for:
+  8. Continue with 05.1 for comments and order timeline.
+  9. Add tests for:
      snapshots, totals, editable states, status transitions,
      backorders and cancellation rules.
 end note

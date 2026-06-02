@@ -94,6 +94,16 @@ note bottom
   - receivedQuantity should not exceed PurchaseEntry.quantity.
   - PurchaseEntry.returnedQuantity should not exceed receivedQuantity.
   - Snapshot fields should be filled at creation and not overwritten automatically when Product changes.
+  - OrderEntry.discountPercent must be null or between 0 and 100.
+  - Normal order users can apply only configured ProductDiscountRule values allowed for the row product/category.
+  - Manual discount overrides and discounted net totals below calculated cost require order.discount.override.
+
+  ProductDiscountRule / ProductDiscountTarget:
+  - ProductDiscountRule.percent > 0 and <= 100.
+  - ProductDiscountTarget must point to exactly one subject: product or category.
+  - Product targets must belong to the same store as the rule.
+  - Category targets must belong to the same store as the rule.
+  - Category targets include descendants when includeDescendants=true.
 
   OrderComment:
   - body must not be blank.
@@ -194,6 +204,10 @@ note bottom
   InventoryReason(store_id, type, name)
   ProductPrice(store_id, product_id, type, currency_code, valid_from)
   ProductPrice(store_id, product_id, type, valid_from, valid_to)
+  ProductDiscountRule(store_id, status)
+  ProductDiscountTarget(rule_id)
+  ProductDiscountTarget(product_id)
+  ProductDiscountTarget(category_id)
   ExchangeRate(from_currency_code, to_currency_code, valid_from)
   ExchangeRate(store_id, from_currency_code, to_currency_code, valid_from)
   StatusHistory(store_id, entity_type, entity_id, changed_at)

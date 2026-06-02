@@ -17,6 +17,7 @@ Snapshot і ціноутворення мають різні причини дл
 - `OrderEntrySnapshotter` — копіює поточні назву, артикул і одиницю товару в snapshot-поля `OrderEntry`.
 - `OrderEntryPricingService` — початково заповнює `unitPrice`, якщо в позиції ще немає введеної ціни.
 - `OrderBatchPricingService` — читає FIFO-партії залишку для пошуку, застосовує продажну ціну вибраної партії і перевіряє, що позиція замовлення відповідає цій партії.
+- `OrderEntryDiscountService` — застосовує дозволену відсоткову знижку або ручний override, рахує snapshot `discountAmount` і блокує продаж нижче собівартості без permission `order.discount.override`.
 
 ## Важливі правила
 
@@ -26,6 +27,8 @@ Snapshot і ціноутворення мають різні причини дл
 - `OrderBatchPricingService` працює тільки для позицій із конкретним складом і вибраною партією. Production/service/backorder fallback лишаються на каталожній ціні.
 - Якщо `OrderEntry.warehouseStockBatch` заповнений, бронювання і відвантаження мають використовувати цю ж партію.
 - Саме визначення каталожної ціни делегується в `src/Service/Pricing/CatalogPriceResolver.php`.
+- Дозволені знижки визначаються `ProductDiscountRule`; дефолтне правило автоматично підставляється для нового рядка, а ручна знижка не дозволена без `order.discount.override`.
+- Собівартість для перевірки знижки бере unit cost вибраної партії або середньозважену `WarehouseStock.averageCost`; доставка, комісії оплати й інші витрати зарезервовані як майбутні компоненти в `DiscountCostBasisCalculator`.
 
 ## Потік використання
 
@@ -36,10 +39,12 @@ Snapshot і ціноутворення мають різні причини дл
 3. передає позицію в `OrderEntrySnapshotter`;
 4. застосовує batch-ціну через `OrderBatchPricingService`;
 5. передає позицію в `OrderEntryPricingService` для каталожного fallback;
-6. виконує підсумковий перерахунок через `OrderCalculator`.
+6. застосовує `OrderEntryDiscountService`;
+7. виконує підсумковий перерахунок через `OrderCalculator`.
 
 ## Пов’язані місця
 
 - `src/Manager/OrderManager.php`
 - `src/Service/Pricing/README.md`
 - `src/Service/OrderCalculator.php`
+- `src/Service/Discount/`

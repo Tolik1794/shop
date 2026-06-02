@@ -16,6 +16,7 @@ use App\Manager\OrderManager;
 use App\Manager\OrderCommentManager;
 use App\Repository\CustomerRepository;
 use App\Service\Concurrency\ConcurrencyGuard;
+use App\Service\Discount\OrderEntryDiscountService;
 use App\Service\FilterFormHandler;
 use App\Service\History\DocumentTimelineBuilder;
 use App\Service\Inventory\OrderShipmentUseCase;
@@ -595,6 +596,7 @@ class OrderController extends AbstractAdvancedController
 		return $this->createForm(OrderType::class, $order, [
 			'method' => 'POST',
 			'store' => $store,
+			'can_discount_override' => $this->isGranted(OrderEntryDiscountService::OVERRIDE_PERMISSION),
 			'attr' => [
 				'data-select-two-target' => 'form',
 			],

@@ -22,6 +22,7 @@ admin:
     warehouses: 'Warehouses'
     inventory_reasons: 'Inventory reasons'
     exchange_rates: 'Exchange rates'
+    discounts: 'Discounts'
     profile: 'Profile'
     logout: 'Log out'
   common:
@@ -53,6 +54,7 @@ admin:
     loading: 'Loading...'
     name: 'Name'
     new: 'New'
+    no: 'No'
     no_results: 'No results found.'
     number: 'Number'
     phone: 'Phone'
@@ -73,6 +75,7 @@ admin:
     type: 'Type'
     updated_at: 'Updated at'
     warehouse: 'Warehouse'
+    yes: 'Yes'
     document: 'Document'
     load_error: 'Could not load data.'
   dashboard:
@@ -180,6 +183,8 @@ admin:
       total_base: 'Total base'
       unit: 'Unit'
       discount: 'Discount'
+      discount_amount: 'Discount amount'
+      manual_discount_percent: 'Manual %'
       availability: 'Availability'
     actions:
       confirm: 'Confirm'
@@ -206,6 +211,8 @@ admin:
       subtotal: 'Product subtotal'
       discount: 'Discount'
       total: 'Total amount'
+    discount:
+      none: 'No discount'
     source:
       stock: 'Stock'
       production: 'For production'
@@ -239,6 +246,35 @@ admin:
       summary: 'Summary'
     actions:
       add_entry: 'Add entry'
+  discount:
+    title:
+      index: 'Discounts'
+      new: 'New discount'
+      edit: 'Edit discount'
+    sections:
+      general: 'General settings'
+      targets: 'Products and categories'
+    fields:
+      percent: 'Percent'
+      default: 'Default discount'
+      include_descendants: 'Include subcategories'
+    target:
+      product: 'Product'
+      category: 'Category'
+    actions:
+      add_target: 'Add target'
+    empty:
+      targets: 'No products or categories added yet.'
+    preview:
+      title: 'Price preview'
+      price: 'Sale price'
+      cost: 'Cost'
+      discounted_price: 'After discount'
+      below_cost: 'Below cost'
+  status:
+    active: 'Active'
+    inactive: 'Inactive'
+    deleted: 'Deleted'
   production:
     order: 'Production order'
     recipe: 'Production recipe'
@@ -258,6 +294,16 @@ Not specified: 'Not specified'
 Copied: 'Copied'
 This document is fully paid.: 'This document is fully paid.'
 incoming: 'Incoming'
+Discount percent must be greater than zero.: 'Discount percent must be greater than zero.'
+Discount percent cannot exceed 100.: 'Discount percent cannot exceed 100.'
+Discount cannot be negative.: 'Discount cannot be negative.'
+Enter discount name.: 'Enter discount name.'
+Discount rule must have at least one product or category target.: 'Discount rule must have at least one product or category target.'
+Discount product target must belong to the selected store.: 'Discount product target must belong to the selected store.'
+Discount category target must belong to the selected store.: 'Discount category target must belong to the selected store.'
+Selected discount is not allowed for this product.: 'Selected discount is not allowed for this product.'
+Manual order discount requires discount override permission.: 'Manual order discount requires discount override permission.'
+Discounted order line total is below cost and requires discount override permission.: 'Discounted order line total is below cost and requires discount override permission.'
 outgoing: 'Outgoing'
 cash: 'Cash'
 card: 'Card'

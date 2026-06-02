@@ -106,6 +106,7 @@ class OrderType extends AbstractType
 					'label' => false,
 					'store' => $store,
 					'currency' => $order?->getCurrency(),
+					'can_discount_override' => (bool) $options['can_discount_override'],
 				],
 				'allow_add' => true,
 				'allow_delete' => true,
@@ -144,8 +145,10 @@ class OrderType extends AbstractType
 		$resolver->setDefaults([
 			'data_class' => Order::class,
 			'store' => null,
+			'can_discount_override' => false,
 		]);
 
 		$resolver->setAllowedTypes('store', ['null', Store::class]);
+		$resolver->setAllowedTypes('can_discount_override', ['bool']);
 	}
 }

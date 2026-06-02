@@ -1,4 +1,5 @@
 {% set order_form_id = 'order-form-' ~ (entity.id ?: 'new') %}
+{% set can_discount_override = is_granted('order.discount.override') %}
 
 <main class="content order-builder" {{ stimulus_controller('order-form product-search select-two') }} data-select-two-target="form">
     <div class="container-fluid p-0">

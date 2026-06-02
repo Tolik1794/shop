@@ -25,6 +25,11 @@ enum ProductKindEnum {
     service
 }
 
+enum ProductDiscountTargetTypeEnum {
+    product
+    category
+}
+
 entity Category {
     * id: int
     --
@@ -111,6 +116,30 @@ entity ProductPrice {
     updatedBy: User?
 }
 
+entity ProductDiscountRule {
+    * id: int
+    --
+    * name: string(255)
+    * percent: decimal(7, 4)
+    * isDefault: bool
+    * status: ActiveStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+    * store: Store
+    createdBy: User?
+    updatedBy: User?
+}
+
+entity ProductDiscountTarget {
+    * id: int
+    --
+    * targetType: ProductDiscountTargetTypeEnum
+    * includeDescendants: bool
+    * rule: ProductDiscountRule
+    product: Product?
+    category: Category?
+}
+
 entity ProductParameterName {
     * id: int
     --
@@ -140,6 +169,7 @@ Store ||--o{ Category : owns
 Store ||--o{ CategoryAdditionalName : scopes
 Store ||--o{ Product : owns
 Store ||--o{ ProductPrice : defines prices
+Store ||--o{ ProductDiscountRule : defines discounts
 Store ||--o{ Unit : defines
 Category |o--o{ Category : parent
 Category |o--o{ Category : firstParent
@@ -150,6 +180,11 @@ AdditionalName ||--o{ CategoryAdditionalName : names
 ProductKindEnum ||--o{ Product : classifies
 Unit ||--o{ Product : measures
 Product ||--o{ ProductPrice : has prices
+ProductDiscountRule ||--o{ ProductDiscountTarget : targets
+ProductDiscountTargetTypeEnum ||--o{ ProductDiscountTarget : classifies
+Product |o--o{ ProductDiscountTarget : targeted product
+Category |o--o{ ProductDiscountTarget : targeted category
+ProductDiscountRule |o--o{ OrderEntry : applied snapshot
 ProductPriceTypeEnum ||--o{ ProductPrice : classifies
 Currency ||--o{ ProductPrice : price currency
 Product ||--o{ ProductParameter : has
@@ -219,6 +254,26 @@ note right of ProductPrice
   (store_id, product_id, type, currency_id).
 
   OrderEntry.unitPrice remains the final price snapshot used in a specific order.
+end note
+
+note right of ProductDiscountRule
+  Product/category discount rules define which percent discounts
+  can be selected in sales order rows.
+
+  isDefault means the rule is auto-selected when a new order row
+  matches it. If several defaults match, product target wins over
+  category target; closer category wins over ancestor category;
+  for equal specificity the higher percent wins.
+
+  percent must be > 0 and <= 100.
+end note
+
+note right of ProductDiscountTarget
+  Exactly one target is filled:
+  - targetType=product requires product and no category.
+  - targetType=category requires category and no product.
+
+  Category targets include descendants when includeDescendants=true.
 end note
 
 note right of Unit

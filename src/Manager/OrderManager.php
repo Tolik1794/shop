@@ -17,6 +17,7 @@ use App\Repository\OrderRepository;
 use App\Repository\WarehouseStockRepository;
 use App\Service\BusinessDocumentStatusSynchronizer;
 use App\Service\Concurrency\ConcurrencyGuard;
+use App\Service\Discount\OrderEntryDiscountService;
 use App\Service\ExchangeRateResolver;
 use App\Service\Order\OrderEntryPricingService;
 use App\Service\Order\OrderEntrySnapshotter;
@@ -39,6 +40,7 @@ class OrderManager extends AbstractManager
 		private readonly OrderEntrySnapshotter $orderEntrySnapshotter,
 		private readonly OrderEntryPricingService $orderEntryPricingService,
 		private readonly OrderBatchPricingService $orderBatchPricingService,
+		private readonly OrderEntryDiscountService $orderEntryDiscountService,
 		private readonly OrderCalculator $orderCalculator,
 		private readonly StatusTransitionService $statusTransitionService,
 		private readonly OrderHistoryChangeSetBuilder $orderHistoryChangeSetBuilder,
@@ -285,6 +287,7 @@ class OrderManager extends AbstractManager
 		$this->orderEntrySnapshotter->snapshot($orderEntry);
 		$this->orderBatchPricingService->applyBatchPrice($orderEntry);
 		$this->orderEntryPricingService->initializeUnitPrice($orderEntry, $order);
+		$this->orderEntryDiscountService->apply($orderEntry, $order);
 	}
 
 	private function currentActor(): ?User

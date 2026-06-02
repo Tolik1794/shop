@@ -1,0 +1,52 @@
+{% set actions %}
+	{% if is_granted('product_discount.manage') %}
+		<a class="btn btn-light btn-sm" href="{{ path('app_admin_product_discount_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), id: entity.id})) }}">
+			<i class="fa-solid fa-pen me-1"></i>{{ 'admin.common.edit'|trans }}
+		</a>
+	{% endif %}
+{% endset %}
+
+<div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+	<div class="card-header">
+		{% if actions|trim %}
+			{{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
+		{% endif %}
+		<h5 class="card-title mb-0">{{ entity.name }}</h5>
+	</div>
+	<div class="card-body">
+		<table class="table table-sm mb-4">
+			<tbody>
+			<tr>
+				<th>{{ 'admin.discount.fields.percent'|trans }}</th>
+				<td>{{ entity.percent }}%</td>
+			</tr>
+			<tr>
+				<th>{{ 'admin.discount.fields.default'|trans }}</th>
+				<td>{{ entity.default ? 'admin.common.yes'|trans : 'admin.common.no'|trans }}</td>
+			</tr>
+			<tr>
+				<th>{{ 'admin.common.status'|trans }}</th>
+				<td>{{ ('admin.status.' ~ entity.status.value)|trans }}</td>
+			</tr>
+			</tbody>
+		</table>
+
+		<h6>{{ 'admin.discount.sections.targets'|trans }}</h6>
+		<ul class="list-group list-group-flush">
+			{% for target in entity.targets %}
+				<li class="list-group-item px-0">
+					{% if target.targetType.value == 'product' and target.product %}
+						<strong>{{ 'admin.discount.target.product'|trans }}</strong>: {{ target.product.name }} ({{ target.product.code }})
+					{% elseif target.category %}
+						<strong>{{ 'admin.discount.target.category'|trans }}</strong>: {{ target.category.nameWithParent }}
+						{% if target.includeDescendants %}
+							<span class="text-muted"> · {{ 'admin.discount.fields.include_descendants'|trans }}</span>
+						{% endif %}
+					{% endif %}
+				</li>
+			{% else %}
+				<li class="list-group-item px-0 text-muted">{{ 'admin.discount.empty.targets'|trans }}</li>
+			{% endfor %}
+		</ul>
+	</div>
+</div>

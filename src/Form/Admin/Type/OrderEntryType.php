@@ -5,16 +5,20 @@ namespace App\Form\Admin\Type;
 use App\Entity\Currency;
 use App\Entity\OrderEntry;
 use App\Entity\Product;
+use App\Entity\ProductDiscountRule;
 use App\Entity\Store;
 use App\Entity\Warehouse;
 use App\Entity\WarehouseStockBatch;
+use App\Enum\OrderDiscountModeEnum;
 use App\Repository\ProductRepository;
 use App\Repository\WarehouseStockBatchRepository;
 use App\Repository\WarehouseRepository;
+use App\Service\Discount\ProductDiscountResolver;
 use App\Service\Quantity\QuantityFormatter;
 use App\Validator\Constraints\OrderEntryForStore;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
@@ -26,6 +30,7 @@ use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\GreaterThan;
 use Symfony\Component\Validator\Constraints\GreaterThanOrEqual;
+use Symfony\Component\Validator\Constraints\LessThanOrEqual;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
 class OrderEntryType extends AbstractType
@@ -34,6 +39,7 @@ class OrderEntryType extends AbstractType
 		private readonly ProductRepository $productRepository,
 		private readonly WarehouseStockBatchRepository $warehouseStockBatchRepository,
 		private readonly QuantityFormatter $quantityFormatter,
+		private readonly ProductDiscountResolver $productDiscountResolver,
 	)
 	{
 	}
@@ -72,28 +78,9 @@ class OrderEntryType extends AbstractType
 					]),
 				],
 			])
-			->add('discountAmount', NumberType::class, [
-				'required' => false,
-				'empty_data' => '0.0000',
-				'html5' => true,
-				'scale' => 4,
-				'help' => $currencyCode,
-				'help_attr' => [
-					'data-order-currency-label' => '',
-				],
-				'attr' => [
-					'min' => 0,
-					'step' => '0.0001',
-				],
-				'constraints' => [
-					new GreaterThanOrEqual([
-						'value' => 0,
-						'message' => 'Discount cannot be negative.',
-					]),
-				],
-			]);
+			;
 
-		$builder->addEventListener(FormEvents::PRE_SET_DATA, function (FormEvent $event): void {
+		$builder->addEventListener(FormEvents::PRE_SET_DATA, function (FormEvent $event) use ($options): void {
 			/** @var OrderEntry|null $orderEntry */
 			$orderEntry = $event->getData();
 			$product = $orderEntry?->getProduct();
@@ -101,6 +88,7 @@ class OrderEntryType extends AbstractType
 			$this->addWarehouseStockBatchField($event->getForm(), $orderEntry);
 			$this->addProductField($event->getForm(), $product);
 			$this->addQuantityField($event->getForm(), $product, $orderEntry);
+			$this->addDiscountFields($event->getForm(), $product, $orderEntry, $options['store']);
 		});
 
 		$builder->addEventListener(FormEvents::PRE_SUBMIT, function (FormEvent $event) use ($options): void {
@@ -129,6 +117,7 @@ class OrderEntryType extends AbstractType
 			if ($product instanceof Product) {
 				$this->addProductField($event->getForm(), $product);
 				$this->addQuantityField($event->getForm(), $product, $orderEntry);
+				$this->addDiscountFields($event->getForm(), $product, $orderEntry, $options['store']);
 			}
 		});
 
@@ -217,12 +206,79 @@ class OrderEntryType extends AbstractType
 		]);
 	}
 
+	private function addDiscountFields(FormBuilderInterface|FormInterface $form, ?Product $product = null, ?OrderEntry $orderEntry = null, ?Store $store = null): void
+	{
+		$rules = $this->discountRuleChoices($product, $orderEntry, $store);
+
+		$form
+			->add('discountMode', ChoiceType::class, [
+				'choices' => [
+					'No discount' => OrderDiscountModeEnum::NONE,
+					'Allowed discount' => OrderDiscountModeEnum::RULE,
+					'Manual override' => OrderDiscountModeEnum::MANUAL_OVERRIDE,
+				],
+				'choice_value' => static fn (?OrderDiscountModeEnum $choice): string => $choice?->value ?? '',
+				'required' => false,
+				'placeholder' => false,
+			])
+			->add('discountRule', EntityType::class, [
+				'class' => ProductDiscountRule::class,
+				'choices' => $rules,
+				'choice_label' => static fn (ProductDiscountRule $rule): string => sprintf('%s (%s%%)', $rule->getName(), $rule->getPercent()),
+				'choice_attr' => static fn (ProductDiscountRule $rule): array => [
+					'data-percent' => $rule->getPercent(),
+					'data-name' => $rule->getName(),
+				],
+				'placeholder' => 'No discount',
+				'required' => false,
+			])
+			->add('discountPercent', NumberType::class, [
+				'required' => false,
+				'html5' => true,
+				'scale' => 4,
+				'attr' => [
+					'min' => 0,
+					'max' => 100,
+					'step' => '0.0001',
+				],
+				'constraints' => [
+					new GreaterThanOrEqual([
+						'value' => 0,
+						'message' => 'Discount cannot be negative.',
+					]),
+					new LessThanOrEqual([
+						'value' => 100,
+						'message' => 'Discount percent cannot exceed 100.',
+					]),
+				],
+			]);
+	}
+
+	/**
+	 * @return ProductDiscountRule[]
+	 */
+	private function discountRuleChoices(?Product $product, ?OrderEntry $orderEntry, ?Store $store = null): array
+	{
+		$store ??= $orderEntry?->getOrder()?->getStore();
+		$rules = $product instanceof Product && $store instanceof Store
+			? $this->productDiscountResolver->allowedRules($product, $store)
+			: [];
+		$currentRule = $orderEntry?->getDiscountRule();
+
+		if ($currentRule instanceof ProductDiscountRule && !in_array($currentRule, $rules, true)) {
+			array_unshift($rules, $currentRule);
+		}
+
+		return $rules;
+	}
+
 	public function configureOptions(OptionsResolver $resolver): void
 	{
 		$resolver->setDefaults([
 			'data_class' => OrderEntry::class,
 			'store' => null,
 			'currency' => null,
+			'can_discount_override' => false,
 			'constraints' => static fn(Options $options): array => $options['store'] instanceof Store
 				? [new OrderEntryForStore($options['store'])]
 				: [],
@@ -230,5 +286,6 @@ class OrderEntryType extends AbstractType
 
 		$resolver->setAllowedTypes('store', ['null', Store::class]);
 		$resolver->setAllowedTypes('currency', ['null', Currency::class]);
+		$resolver->setAllowedTypes('can_discount_override', ['bool']);
 	}
 }

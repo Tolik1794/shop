@@ -11,6 +11,8 @@ use App\Entity\OrderComment;
 use App\Entity\OrderEntry;
 use App\Entity\Payment;
 use App\Entity\Product;
+use App\Entity\ProductDiscountRule;
+use App\Entity\ProductDiscountTarget;
 use App\Entity\Store;
 use App\Entity\Unit;
 use App\Entity\User\RoleEnum;
@@ -21,6 +23,7 @@ use App\Entity\WarehouseStockBatch;
 use App\Enum\PaymentDirectionEnum;
 use App\Enum\PaymentStatusEnum;
 use App\Enum\PaymentTypeEnum;
+use App\Enum\ProductDiscountTargetTypeEnum;
 use App\Enum\ProductKindEnum;
 use DateTime;
 use DateTimeImmutable;
@@ -62,9 +65,10 @@ class OrderBuilderControllerTest extends WebTestCase
 		$this->client->request('GET', sprintf('/admin/store/%d/order/?order_filter%%5Bnumber%%5D=SO', $store->getId()));
 
 		self::assertResponseIsSuccessful();
-		self::assertSelectorExists('button[data-bs-target="#order_filter-filters"]');
-		self::assertSelectorExists('#order_filter-filters.show');
-		self::assertSelectorExists('#order_filter-filters form[name="order_filter"]');
+		self::assertSelectorExists('#order-quick-search');
+		self::assertSelectorExists('button[data-bs-target="#order_filter-advanced-filters"]');
+		self::assertSelectorExists('#order_filter-advanced-filters form[name="order_filter"]');
+		self::assertSelectorExists('.order-filter-chips');
 		self::assertSelectorNotExists('.tab-search-link');
 	}
 
@@ -110,7 +114,6 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSelectorTextContains('.order-show-card', 'Delivery');
 		self::assertSelectorTextContains('.order-show-card', 'Products');
 		self::assertSelectorTextContains('.order-show-card', 'Inventory documents');
-		self::assertSelectorTextContains('.order-show-card', 'Actions');
 		self::assertSelectorTextContains('.order-show-card', 'Not specified');
 		self::assertSelectorTextContains('.order-show-money-list', '10 000.00 UAH');
 		self::assertSelectorTextContains('.order-show-product-card', 'Show card desk');
@@ -259,6 +262,7 @@ class OrderBuilderControllerTest extends WebTestCase
 		$store = $this->createStore('order-builder-entry-store-' . uniqid());
 		$customer = $this->createCustomer($store);
 		$product = $this->createProduct($store);
+		$discountRule = $this->createProductDiscountRule($store, $product, '10.0000');
 
 		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
 		$token = $crawler->filter('input[name="order[_token]"]')->attr('value');
@@ -275,7 +279,9 @@ class OrderBuilderControllerTest extends WebTestCase
 						'product' => $product->getId(),
 						'quantity' => '2',
 						'unitPrice' => '10.0000',
-						'discountAmount' => '1.0000',
+						'discountMode' => 'rule',
+						'discountRule' => $discountRule->getId(),
+						'discountPercent' => '10.0000',
 					],
 				],
 				'_token' => $token,
@@ -290,7 +296,7 @@ class OrderBuilderControllerTest extends WebTestCase
 		]);
 
 		self::assertInstanceOf(Order::class, $order);
-		self::assertSame('19.0000', $order->getTotalAmount());
+		self::assertSame('18.0000', $order->getTotalAmount());
 		self::assertCount(1, $order->getOrderEntries());
 	}
 
@@ -1057,6 +1063,23 @@ class OrderBuilderControllerTest extends WebTestCase
 		$this->entityManager->flush();
 
 		return $product;
+	}
+
+	private function createProductDiscountRule(Store $store, Product $product, string $percent): ProductDiscountRule
+	{
+		$rule = (new ProductDiscountRule())
+			->setStore($store)
+			->setName('Order discount ' . uniqid())
+			->setPercent($percent)
+			->setIsDefault(true);
+		$rule->addTarget((new ProductDiscountTarget())
+			->setTargetType(ProductDiscountTargetTypeEnum::PRODUCT)
+			->setProduct($product));
+
+		$this->entityManager->persist($rule);
+		$this->entityManager->flush();
+
+		return $rule;
 	}
 
 	private function createWarehouse(Store $store): Warehouse

@@ -74,6 +74,7 @@ class OrderCalculator
 		$discount = 0.0;
 		$total = 0.0;
 		$lineTotals = [];
+		$lineDiscounts = [];
 		$formatter = $displayMoney ? $this->formatDisplayMoney(...) : $this->formatMoney(...);
 
 		foreach ($entries as $key => $entry) {
@@ -88,6 +89,7 @@ class OrderCalculator
 			$discount += (float) $entrySummary['discount'];
 			$total += (float) $entrySummary['total'];
 			$lineTotals[$key] = $formatter((float) $entrySummary['total']);
+			$lineDiscounts[$key] = $formatter((float) $entrySummary['discount']);
 		}
 
 		return [
@@ -96,6 +98,7 @@ class OrderCalculator
 			'discount' => $formatter($discount),
 			'total' => $formatter($total),
 			'lineTotals' => $lineTotals,
+			'lineDiscounts' => $lineDiscounts,
 		];
 	}
 
@@ -103,8 +106,8 @@ class OrderCalculator
 	{
 		$quantity = $this->numberValue($entry['quantity'] ?? 0);
 		$unitPrice = $this->numberValue($entry['unitPrice'] ?? 0);
-		$discount = max(0, $this->numberValue($entry['discountAmount'] ?? $entry['discount'] ?? 0));
 		$subtotal = max(0, $quantity * $unitPrice);
+		$discount = $this->discountValue($entry, $subtotal);
 		$total = max(0, $subtotal - $discount);
 
 		return [
@@ -121,7 +124,20 @@ class OrderCalculator
 	{
 		return $this->numberValue($entry['quantity'] ?? 0) > 0
 			|| $this->numberValue($entry['unitPrice'] ?? 0) > 0
-			|| $this->numberValue($entry['discountAmount'] ?? $entry['discount'] ?? 0) > 0;
+			|| $this->numberValue($entry['discountAmount'] ?? $entry['discount'] ?? 0) > 0
+			|| $this->numberValue($entry['discountPercent'] ?? 0) > 0;
+	}
+
+	private function discountValue(array $entry, float $subtotal): float
+	{
+		$explicitDiscount = $entry['discountAmount'] ?? $entry['discount'] ?? null;
+		if ($explicitDiscount !== null && $explicitDiscount !== '') {
+			return min($subtotal, max(0, $this->numberValue($explicitDiscount)));
+		}
+
+		$percent = min(100, max(0, $this->numberValue($entry['discountPercent'] ?? 0)));
+
+		return $subtotal * $percent / 100;
 	}
 
 	private function numberValue(mixed $value): float

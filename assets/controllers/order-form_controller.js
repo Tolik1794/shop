@@ -274,6 +274,7 @@ export default class extends Controller {
         this.setWarehouseStockBatch(row, product.batchId || '')
         this.setSource(row, product)
         this.setUnit(row, product.unit || '')
+        this.setDiscountOptions(row, product)
         const available = row.querySelector('[data-order-entry-target~="available"]')
         if (available) {
             available.textContent = this.formatQuantity(this.numberValue(row.dataset.available), row.dataset.unitPrecision)
@@ -356,6 +357,8 @@ export default class extends Controller {
         option.dataset.available = product.available || '0.0000'
         option.dataset.batchId = product.batchId || ''
         option.dataset.batchLayers = JSON.stringify(product.batchLayers || [])
+        option.dataset.discountRules = JSON.stringify(product.discountRules || [])
+        option.dataset.defaultDiscountRuleId = product.defaultDiscountRuleId || ''
 
         if (window.$ && window.$(select).data('select2')) {
             window.$(select).trigger('change')
@@ -451,6 +454,7 @@ export default class extends Controller {
         }
 
         this.setUnit(row, product.unit || '')
+        this.setDiscountOptions(row, product)
     }
 
     getSelectedProductData(select) {
@@ -480,6 +484,52 @@ export default class extends Controller {
             available: option.dataset.available,
             batchId: option.dataset.batchId,
             batchLayers: this.parseJson(option.dataset.batchLayers, []),
+            discountRules: this.parseJson(option.dataset.discountRules, []),
+            defaultDiscountRuleId: option.dataset.defaultDiscountRuleId,
+        }
+    }
+
+    setDiscountOptions(row, product) {
+        const ruleSelect = row.querySelector('[data-order-entry-target~="discountRule"]')
+        const modeInput = row.querySelector('[data-order-entry-target~="discountMode"]')
+        const percentInput = row.querySelector('[data-order-entry-target~="discountPercent"]')
+
+        if (!ruleSelect) {
+            return
+        }
+
+        const rules = Array.isArray(product.discountRules) ? product.discountRules : []
+        const currentValue = ruleSelect.value
+        const defaultRuleId = product.defaultDiscountRuleId ? String(product.defaultDiscountRuleId) : ''
+        ruleSelect.innerHTML = `<option value="">${this.escapeHtml(trans('order.discount.none', 'No discount'))}</option>`
+
+        rules.forEach((rule) => {
+            const option = new Option(`${rule.name} (${rule.percent}%)`, rule.id, false, false)
+            option.dataset.percent = rule.percent || ''
+            option.dataset.name = rule.name || ''
+            ruleSelect.appendChild(option)
+        })
+
+        if (currentValue && Array.from(ruleSelect.options).some((option) => option.value === currentValue)) {
+            ruleSelect.value = currentValue
+        } else if (defaultRuleId && Array.from(ruleSelect.options).some((option) => option.value === defaultRuleId)) {
+            ruleSelect.value = defaultRuleId
+        } else {
+            ruleSelect.value = ''
+        }
+
+        const selected = ruleSelect.selectedOptions[0]
+        if (selected && selected.value) {
+            if (modeInput) modeInput.value = 'rule'
+            if (percentInput) percentInput.value = selected.dataset.percent || ''
+        } else if (modeInput && modeInput.value !== 'manual_override') {
+            modeInput.value = 'none'
+            if (percentInput) percentInput.value = ''
+        }
+
+        const discountMeta = row.querySelector('[data-order-entry-target~="discountMeta"]')
+        if (discountMeta) {
+            discountMeta.textContent = selected && selected.value && selected.dataset.percent ? `${selected.dataset.percent}%` : ''
         }
     }
 
@@ -572,15 +622,23 @@ export default class extends Controller {
 
             const productId = row.dataset.productId
             const quantity = row.querySelector('[data-order-entry-target~="quantity"]')
-            const discount = row.querySelector('[data-order-entry-target~="discount"]')
+            const discountMode = row.querySelector('[data-order-entry-target~="discountMode"]')
+            const discountRule = row.querySelector('[data-order-entry-target~="discountRule"]')
+            const discountPercent = row.querySelector('[data-order-entry-target~="discountPercent"]')
 
             if (!productId || !quantity || !quantity.name) {
                 return
             }
 
             formData.set(quantity.name.replace(/\[quantity\]$/, '[product]'), productId)
-            if (discount && discount.name) {
-                formData.set(discount.name, discount.value)
+            if (discountMode && discountMode.name) {
+                formData.set(discountMode.name, discountMode.value)
+            }
+            if (discountRule && discountRule.name) {
+                formData.set(discountRule.name, discountRule.value)
+            }
+            if (discountPercent && discountPercent.name) {
+                formData.set(discountPercent.name, discountPercent.value)
             }
         })
 
@@ -599,6 +657,15 @@ export default class extends Controller {
 
             if (totalTarget) {
                 totalTarget.textContent = this.formatMoney(total)
+            }
+        })
+
+        Object.entries(data.lineDiscounts || {}).forEach(([index, discount]) => {
+            const row = this.entriesTarget.querySelector(`[data-index="${index}"]`)
+            const discountTarget = row ? row.querySelector('[data-order-entry-target~="discountAmount"]') : null
+
+            if (discountTarget) {
+                discountTarget.textContent = this.formatMoney(discount)
             }
         })
     }

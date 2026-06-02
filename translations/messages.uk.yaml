@@ -22,6 +22,7 @@ admin:
     warehouses: 'Склади'
     inventory_reasons: 'Причини складських операцій'
     exchange_rates: 'Курси валют'
+    discounts: 'Знижки'
     profile: 'Профіль'
     logout: 'Вийти'
   common:
@@ -53,6 +54,7 @@ admin:
     loading: 'Завантаження...'
     name: 'Назва'
     new: 'Новий'
+    no: 'Ні'
     no_results: 'Нічого не знайдено.'
     number: 'Номер'
     phone: 'Телефон'
@@ -73,6 +75,7 @@ admin:
     type: 'Тип'
     updated_at: 'Оновлено'
     warehouse: 'Склад'
+    yes: 'Так'
     document: 'Документ'
     load_error: 'Не вдалося завантажити дані.'
   concurrency:
@@ -185,6 +188,8 @@ admin:
       total_base: 'Сума у базовій валюті'
       unit: 'Одиниця'
       discount: 'Знижка'
+      discount_amount: 'Сума знижки'
+      manual_discount_percent: 'Ручний %'
       availability: 'Наявність'
     actions:
       confirm: 'Підтвердити'
@@ -211,6 +216,8 @@ admin:
       subtotal: 'Сума товарів'
       discount: 'Знижка'
       total: 'Загальна сума'
+    discount:
+      none: 'Без знижки'
     source:
       stock: 'Склад'
       production: 'Під виробництво'
@@ -246,6 +253,35 @@ admin:
       summary: 'Підсумки'
     actions:
       add_entry: 'Додати позицію'
+  discount:
+    title:
+      index: 'Знижки'
+      new: 'Нова знижка'
+      edit: 'Редагування знижки'
+    sections:
+      general: 'Загальні налаштування'
+      targets: 'Товари та категорії'
+    fields:
+      percent: 'Відсоток'
+      default: 'Знижка за замовчуванням'
+      include_descendants: 'Включати підкатегорії'
+    target:
+      product: 'Товар'
+      category: 'Категорія'
+    actions:
+      add_target: 'Додати ціль'
+    empty:
+      targets: 'Товари або категорії ще не додані.'
+    preview:
+      title: 'Попередній розрахунок ціни'
+      price: 'Ціна продажу'
+      cost: 'Собівартість'
+      discounted_price: 'Після знижки'
+      below_cost: 'Нижче собівартості'
+  status:
+    active: 'Активний'
+    inactive: 'Неактивний'
+    deleted: 'Видалений'
   production:
     order: 'Виробниче замовлення'
     recipe: 'Виробничий рецепт'
@@ -318,6 +354,25 @@ Select supplier: 'Оберіть постачальника'
 Select recipe: 'Оберіть рецепт'
 Select order: 'Оберіть замовлення'
 Select purchase: 'Оберіть закупівлю'
+No discount: 'Без знижки'
+Allowed discount: 'Дозволена знижка'
+Manual override: 'Ручне перевизначення'
+Percent: 'Відсоток'
+Is default: 'Знижка за замовчуванням'
+Targets: 'Цілі'
+Target type: 'Тип цілі'
+Include descendants: 'Включати підкатегорії'
+Select category: 'Оберіть категорію'
+Discount percent must be greater than zero.: 'Відсоток знижки має бути більшим за нуль.'
+Discount percent cannot exceed 100.: 'Відсоток знижки не може перевищувати 100.'
+Discount cannot be negative.: 'Знижка не може бути відʼємною.'
+Enter discount name.: 'Введіть назву знижки.'
+Discount rule must have at least one product or category target.: 'Правило знижки повинно мати хоча б один товар або категорію.'
+Discount product target must belong to the selected store.: 'Товар для знижки має належати вибраному магазину.'
+Discount category target must belong to the selected store.: 'Категорія для знижки має належати вибраному магазину.'
+Selected discount is not allowed for this product.: 'Вибрана знижка недоступна для цього товару.'
+Manual order discount requires discount override permission.: 'Ручна знижка в замовленні потребує окремого права.'
+Discounted order line total is below cost and requires discount override permission.: 'Сума позиції після знижки нижча за собівартість і потребує окремого права.'
 Nothing to show...: 'Немає даних для показу...'
 Edit: 'Редагувати'
 Archive: 'Архівувати'

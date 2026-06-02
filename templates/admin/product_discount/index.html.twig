@@ -1,0 +1,68 @@
+{% extends 'admin/_store_components/layout.html.twig' %}
+
+{% block title %}{{ 'admin.discount.title.index'|trans }}{% endblock %}
+
+{% set table_actions %}
+	{% if is_granted('product_discount.manage') %}
+		<a class="btn btn-light btn-sm" href="{{ path('app_admin_product_discount_new', {store_id: app.request.attributes.get('store_id')}) }}">
+			<i class="fa-solid fa-plus me-1"></i>{{ 'admin.common.new'|trans }}
+		</a>
+	{% endif %}
+{% endset %}
+
+{% set table_head %}
+	<tr>
+		<th>{{ 'admin.common.name'|trans }}</th>
+		<th>{{ 'admin.discount.fields.percent'|trans }}</th>
+		<th>{{ 'admin.discount.fields.default'|trans }}</th>
+		<th>{{ 'admin.common.status'|trans }}</th>
+	</tr>
+{% endset %}
+
+{% set table_body %}
+	{% for entity in pagination %}
+		<tr
+				id="{{ entity.id }}"
+				data-id-column="id"
+				class="{{ first_entity and entity.id == first_entity.id ? 'table-active' : '' }}"
+				data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
+				data-link="{{ path('app_admin_product_discount_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+				onclick="document.getElementById('first-tab').click()"
+		>
+			<td>{{ entity.name }}</td>
+			<td>{{ entity.percent }}%</td>
+			<td>{{ entity.default ? 'admin.common.yes'|trans : 'admin.common.no'|trans }}</td>
+			<td>{{ ('admin.status.' ~ entity.status.value)|trans }}</td>
+		</tr>
+	{% endfor %}
+{% endset %}
+
+{% block main_content %}
+	<main class="content" {{ stimulus_controller('reload-card') }}>
+		<div class="container-fluid p-0">
+			<div class="row">
+				<div class="col-xxl-4 col-xl-5 col-lg-6">
+					{{ include('admin/_components/card/_tab_card.html.twig', {
+						tab_head: [
+							include('admin/_components/tab_icon/_show.html.twig')
+						],
+						tab_body: [
+							first_entity ? render(controller(
+								'App\\Controller\\Admin\\ProductDiscountRuleController::show',
+								{ store_id: app.request.attributes.get('store_id'), id: first_entity.id, 'request': app.request }
+							)) : '<div class="card"><div class="card-body">' ~ 'Nothing to show...'|trans ~ '</div></div>'
+						]
+					}) }}
+				</div>
+				<div class="col-xxl-8 col-xl-7 col-lg-6">
+					{{ include('admin/_components/card/_table_card.html.twig', {
+						actions: table_actions,
+						table_title: 'admin.discount.title.index',
+						table_head: table_head,
+						table_body: table_body
+					}) }}
+				</div>
+			</div>
+		</div>
+	</main>
+{% endblock %}

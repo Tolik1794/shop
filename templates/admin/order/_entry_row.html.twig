@@ -29,7 +29,9 @@
     or entry.warehouse.vars.errors|length > 0
     or entry.quantity.vars.errors|length > 0
     or entry.unitPrice.vars.errors|length > 0
-    or entry.discountAmount.vars.errors|length > 0
+    or entry.discountMode.vars.errors|length > 0
+    or entry.discountRule.vars.errors|length > 0
+    or entry.discountPercent.vars.errors|length > 0
 %}
 
 <div
@@ -120,16 +122,48 @@
             }) }}
             {{ form_help(entry.unitPrice) }}
         </div>
-        <div class="col-6 col-md-3">
+        <div class="col-12 col-md-4">
             <label class="form-label">{{ 'admin.order.fields.discount'|trans }}</label>
-            {{ form_widget(entry.discountAmount, {
+            {{ form_widget(entry.discountRule, {
                 attr: {
-                    class: 'form-control form-control-sm order-entry-number',
-                    'data-order-entry-target': 'discount',
-                    'data-action': 'input->order-entry#changed'
+                    class: 'form-select form-select-sm',
+                    'data-order-entry-target': 'discountRule',
+                    'data-action': 'change->order-entry#changed'
                 }
             }) }}
-            {{ form_help(entry.discountAmount) }}
+            {{ form_widget(entry.discountMode, {
+                attr: {
+                    class: 'd-none',
+                    'data-order-entry-target': 'discountMode'
+                }
+            }) }}
+            <div class="text-muted small" data-order-entry-target="discountMeta"></div>
+        </div>
+        <div class="col-6 col-md-3 {{ can_discount_override|default(false) ? '' : 'd-none' }}">
+            <label class="form-label">{{ 'admin.order.fields.manual_discount_percent'|trans }}</label>
+            {{ form_widget(entry.discountPercent, {
+                attr: entry.discountPercent.vars.attr|merge({
+                    class: 'form-control form-control-sm order-entry-number',
+                    'data-order-entry-target': 'discountPercent',
+                    'data-action': 'input->order-entry#changed'
+                })
+            }) }}
+            <div class="form-text">%</div>
+        </div>
+        {% if not can_discount_override|default(false) %}
+            {{ form_widget(entry.discountPercent, {
+                attr: entry.discountPercent.vars.attr|merge({
+                    class: 'd-none',
+                    'data-order-entry-target': 'discountPercent'
+                })
+            }) }}
+        {% endif %}
+        <div class="col-6 col-md-2">
+            <label class="form-label">{{ 'admin.order.fields.discount_amount'|trans }}</label>
+            <div class="form-control-plaintext py-1">
+                <span data-order-entry-target="discountAmount">{{ entryData and entryData.discountAmount ? entryData.discountAmount|money : '0.00' }}</span>
+                <span class="text-muted ms-1" data-order-currency-label>{{ currencyCode }}</span>
+            </div>
         </div>
         <div class="col-6 col-md-2">
             <label class="form-label">{{ 'admin.common.total'|trans }}</label>
@@ -147,7 +181,9 @@
             {{ form_errors(entry.warehouse) }}
             {{ form_errors(entry.quantity) }}
             {{ form_errors(entry.unitPrice) }}
-            {{ form_errors(entry.discountAmount) }}
+            {{ form_errors(entry.discountMode) }}
+            {{ form_errors(entry.discountRule) }}
+            {{ form_errors(entry.discountPercent) }}
         </div>
     {% endif %}
 </div>

@@ -10,6 +10,7 @@ use App\Repository\CurrencyRepository;
 use App\Repository\CustomerRepository;
 use App\Repository\ProductRepository;
 use App\Service\OrderCalculator;
+use App\Service\Discount\ProductDiscountResolver;
 use App\Service\Order\OrderBatchPricingService;
 use App\Service\Pricing\CatalogPriceResolver;
 use RuntimeException;
@@ -30,6 +31,7 @@ class OrderController extends AbstractController
 		private readonly OrderCalculator $orderCalculator,
 		private readonly CatalogPriceResolver $catalogPriceResolver,
 		private readonly OrderBatchPricingService $orderBatchPricingService,
+		private readonly ProductDiscountResolver $productDiscountResolver,
 	)
 	{
 	}
@@ -117,6 +119,7 @@ class OrderController extends AbstractController
 					$excludedOptionKeys,
 					$this->orderBatchPricingService,
 					$currency,
+					$this->productDiscountResolver,
 				);
 
 				if ($productDto instanceof ProductSearchProductDto) {

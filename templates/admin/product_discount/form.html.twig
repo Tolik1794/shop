@@ -1,0 +1,89 @@
+{% extends 'admin/_store_components/layout.html.twig' %}
+
+{% block title %}{{ entity.id ? 'admin.discount.title.edit'|trans : 'admin.discount.title.new'|trans }}{% endblock %}
+
+{% block navbar_breadcrumb %}
+	{{ include('admin/_components/_breadcrumb.html.twig', {
+		breadcrumb_class: 'mb-0',
+		items: [
+			{
+				label: 'admin.discount.title.index'|trans,
+				url: entity.id
+					? path('app_admin_product_discount_index', {store_id: app.request.attributes.get('store_id'), id: entity.id, page: discount_index_page})
+					: path('app_admin_product_discount_index', {store_id: app.request.attributes.get('store_id')})
+			},
+			{label: entity.id ? entity.name : 'admin.common.new'|trans}
+		]
+	}) }}
+{% endblock %}
+
+{% block main_content %}
+	<main class="content" {{ stimulus_controller('discount-form select-two') }}>
+		<div class="container-fluid p-0">
+			<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+				<div>
+					<h1 class="h3 mb-1">{{ entity.id ? 'admin.discount.title.edit'|trans : 'admin.discount.title.new'|trans }}</h1>
+				</div>
+				<div class="d-flex flex-wrap gap-2">
+					<button form="product-discount-form" type="submit" class="btn btn-primary">{{ 'admin.common.save'|trans }}</button>
+					<button form="product-discount-form" name="save" value="stay" type="submit" class="btn btn-outline-primary">{{ 'admin.common.save_as_draft'|trans }}</button>
+					<a href="{{ path('app_admin_product_discount_index', app.request.query.all|merge({store_id: app.request.attributes.get('store_id'), id: entity.id, page: discount_index_page})) }}" class="btn btn-light">{{ 'admin.common.cancel'|trans }}</a>
+				</div>
+			</div>
+
+			{% if form.vars.errors|length > 0 %}
+				<div class="form-error mb-3">
+					{{ form_errors(form) }}
+				</div>
+			{% endif %}
+
+			{{ form_start(form, {attr: {'id': 'product-discount-form', 'data-select-two-target': 'form', 'data-discount-form-target': 'form'}}) }}
+				<div class="row g-3">
+					<div class="col-12 col-xl-4">
+						<div class="card">
+							<div class="card-header">
+								<h5 class="card-title mb-0">{{ 'admin.discount.sections.general'|trans }}</h5>
+							</div>
+							<div class="card-body">
+								{{ form_row(form.name) }}
+								{{ form_row(form.percent, {attr: {'data-discount-form-target': 'percent', 'data-action': 'input->discount-form#recalculate'}}) }}
+								{{ form_row(form.isDefault) }}
+								{{ form_row(form.status) }}
+							</div>
+						</div>
+					</div>
+
+					<div class="col-12 col-xl-8">
+						<div class="card">
+							<div class="card-header d-flex justify-content-between align-items-center">
+								<h5 class="card-title mb-0">{{ 'admin.discount.sections.targets'|trans }}</h5>
+								<button type="button" class="btn btn-light btn-sm" data-action="discount-form#addTarget">
+									<i class="fa-solid fa-plus me-1"></i>{{ 'admin.discount.actions.add_target'|trans }}
+								</button>
+							</div>
+							<div class="card-body">
+								{% if form.targets.vars.errors|length > 0 %}
+									<div class="form-error">{{ form_errors(form.targets) }}</div>
+								{% endif %}
+
+								<div data-discount-form-target="targets">
+									{% for target in form.targets %}
+										{{ include('admin/product_discount/_target_row.html.twig', {target: target, rule: entity}) }}
+									{% endfor %}
+								</div>
+
+								<div class="text-muted {{ form.targets|length > 0 ? 'd-none' : '' }}" data-discount-form-target="emptyState">
+									{{ 'admin.discount.empty.targets'|trans }}
+								</div>
+
+								<template data-discount-form-target="prototype">
+									{{ include('admin/product_discount/_target_row.html.twig', {target: form.targets.vars.prototype, rule: entity}) }}
+								</template>
+							</div>
+						</div>
+					</div>
+				</div>
+			{{ form_end(form) }}
+		</div>
+	</main>
+{% endblock %}

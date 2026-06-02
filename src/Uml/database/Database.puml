@@ -16,6 +16,8 @@ package "02 Catalog" as Catalog {
     entity Unit
     entity Product
     entity ProductPrice
+    entity ProductDiscountRule
+    entity ProductDiscountTarget
 }
 
 package "03 Parties" as Parties {
@@ -82,6 +84,10 @@ Currency |o--o{ InventoryDocument
 Category ||--o{ Product
 Unit ||--o{ Product
 Product ||--o{ ProductPrice
+Product ||--o{ ProductDiscountTarget
+Category ||--o{ ProductDiscountTarget
+ProductDiscountRule ||--o{ ProductDiscountTarget
+ProductDiscountRule |o--o{ OrderEntry
 Product ||--o{ WarehouseStock
 Product ||--o{ OrderEntry
 Product ||--o{ PurchaseEntry

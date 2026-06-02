@@ -55,8 +55,8 @@ class CategoryProductParameterNameControllerTest extends WebTestCase
 		));
 
 		self::assertResponseIsSuccessful();
-		self::assertSelectorTextContains('body', 'Category product parameter names');
 		self::assertSelectorTextContains('body', 'Material');
+		self::assertSelectorTextContains('body', 'Parameter category');
 	}
 
 	private function createStore(string $slug): Store

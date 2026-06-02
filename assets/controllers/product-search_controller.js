@@ -147,6 +147,8 @@ export default class extends Controller {
             batchLayers: this.parseJson(button.dataset.batchLayers, []),
             sourceType: button.dataset.sourceType,
             sourceDetail: button.dataset.sourceDetail,
+            discountRules: this.parseJson(button.dataset.discountRules, []),
+            defaultDiscountRuleId: button.dataset.defaultDiscountRuleId,
         }
 
         this.dispatch('add', {detail: {product: product}})
@@ -264,6 +266,7 @@ export default class extends Controller {
 
     renderOptionButton({product, sourceType, label, meta, available, price, warehouseId, warehouseName, batchId, batchReceivedAt, sourceDetail, batchLayers}) {
         const batchLayersJson = JSON.stringify(batchLayers || [])
+        const discountRulesJson = JSON.stringify(product.discountRules || [])
 
         return `
             <button
@@ -284,6 +287,8 @@ export default class extends Controller {
                     data-batch-layers="${this.escapeHtml(batchLayersJson)}"
                     data-source-type="${this.escapeHtml(sourceType)}"
                     data-source-detail="${this.escapeHtml(sourceDetail || label || '')}"
+                    data-discount-rules="${this.escapeHtml(discountRulesJson)}"
+                    data-default-discount-rule-id="${this.escapeHtml(product.defaultDiscountRuleId || '')}"
             >
                 <span>${this.escapeHtml(label)}</span>
                 <small>${this.escapeHtml(meta)}</small>

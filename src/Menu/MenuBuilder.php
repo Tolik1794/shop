@@ -75,6 +75,7 @@ final class MenuBuilder
 
 		$this->addSidebarLink($settings, 'category.manage', 'admin.menu.categories', 'admin_category_index', $routeParameters, 'fa-layer-group');
 		$this->addSidebarLink($settings, 'product.view', 'admin.menu.products', 'admin_product_index', $routeParameters, 'fa-box-open');
+		$this->addSidebarLink($settings, 'product_discount.view', 'admin.menu.discounts', 'app_admin_product_discount_index', $routeParameters, 'fa-percent');
 		$this->addSidebarLink($settings, 'unit.manage', 'admin.menu.units', 'app_admin_unit_index', $routeParameters, 'fa-ruler-combined');
 		$this->addSidebarLink($settings, 'warehouse.view', 'admin.menu.warehouses', 'app_admin_warehouse_index', $routeParameters, 'fa-warehouse');
 		$this->addSidebarLink($settings, 'inventory_reason.manage', 'admin.menu.inventory_reasons', 'app_admin_inventory_reason_index', $routeParameters, 'fa-circle-question');

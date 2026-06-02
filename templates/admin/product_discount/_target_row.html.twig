@@ -1,0 +1,80 @@
+{% set targetData = target.vars.data|default(null) %}
+{% set product = targetData ? targetData.product|default(null) : null %}
+{% set basePrice = product ? product.baseSalePrice : null %}
+{% set totalCost = 0 %}
+{% set totalQuantity = 0 %}
+{% if product %}
+	{% for stock in product.warehouseStocks %}
+		{% if stock.warehouse and stock.warehouse.store and stock.warehouse.store.id == product.store.id and stock.quantityOnHand > 0 and stock.averageCost > 0 %}
+			{% set totalQuantity = totalQuantity + stock.quantityOnHand %}
+			{% set totalCost = totalCost + (stock.quantityOnHand * stock.averageCost) %}
+		{% endif %}
+	{% endfor %}
+{% endif %}
+{% set unitCost = totalQuantity > 0 ? totalCost / totalQuantity : null %}
+{% set discountedPrice = basePrice is not null ? basePrice - (basePrice * rule.percent / 100) : null %}
+{% set belowCost = discountedPrice is not null and unitCost is not null and discountedPrice < unitCost %}
+{% set hasTargetErrors =
+	target.vars.errors|length > 0
+	or target.targetType.vars.errors|length > 0
+	or target.product.vars.errors|length > 0
+	or target.category.vars.errors|length > 0
+	or target.includeDescendants.vars.errors|length > 0
+%}
+
+<div
+		class="border rounded p-3 mb-3 position-relative {{ not target.vars.valid ? 'border-danger' : '' }}"
+		data-discount-form-target="row"
+		data-product-price="{{ basePrice is not null ? basePrice|number_format(4, '.', '') : '' }}"
+		data-product-cost="{{ unitCost is not null ? unitCost|number_format(4, '.', '') : '' }}"
+>
+	<button type="button" class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 mt-2 me-2" data-action="discount-form#removeTarget">
+		<i class="fa-solid fa-trash"></i>
+	</button>
+
+	<div class="row g-3 pe-5">
+		<div class="col-12 col-lg-3">
+			{{ form_row(target.targetType, {
+				attr: {
+					'data-discount-form-target': 'targetType',
+					'data-action': 'change->discount-form#targetTypeChanged'
+				}
+			}) }}
+		</div>
+		<div class="col-12 col-lg-5" data-discount-form-target="productGroup">
+			{{ form_row(target.product, {
+				attr: target.product.vars.attr|merge({
+					'data-discount-form-target': 'product',
+					'data-action': 'change->discount-form#productChanged'
+				})
+			}) }}
+		</div>
+		<div class="col-12 col-lg-5" data-discount-form-target="categoryGroup">
+			{{ form_row(target.category, {
+				attr: target.category.vars.attr|merge({
+					'data-discount-form-target': 'category'
+				})
+			}) }}
+			{{ form_row(target.includeDescendants) }}
+		</div>
+		<div class="col-12 col-lg-4">
+			<label class="form-label">{{ 'admin.discount.preview.title'|trans }}</label>
+			<div class="small">
+				<div>{{ 'admin.discount.preview.price'|trans }}: <strong data-discount-form-target="price">{{ basePrice is not null ? basePrice|money : '-' }}</strong></div>
+				<div>{{ 'admin.discount.preview.cost'|trans }}: <strong data-discount-form-target="cost">{{ unitCost is not null ? unitCost|money : '-' }}</strong></div>
+				<div>{{ 'admin.discount.preview.discounted_price'|trans }}: <strong data-discount-form-target="discountedPrice">{{ discountedPrice is not null ? discountedPrice|money : '-' }}</strong></div>
+				<div class="text-danger {{ belowCost ? '' : 'd-none' }}" data-discount-form-target="belowCost">{{ 'admin.discount.preview.below_cost'|trans }}</div>
+			</div>
+		</div>
+	</div>
+
+	{% if hasTargetErrors %}
+		<div class="form-error mt-3 mb-0">
+			{{ form_errors(target) }}
+			{{ form_errors(target.targetType) }}
+			{{ form_errors(target.product) }}
+			{{ form_errors(target.category) }}
+			{{ form_errors(target.includeDescendants) }}
+		</div>
+	{% endif %}
+</div>

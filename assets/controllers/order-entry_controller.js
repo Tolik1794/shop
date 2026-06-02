@@ -15,16 +15,22 @@ export default class extends Controller {
         'availabilityWarning',
         'quantity',
         'unitPrice',
-        'discount',
+        'discountMode',
+        'discountRule',
+        'discountPercent',
+        'discountAmount',
+        'discountMeta',
         'lineTotal',
     ]
 
     connect() {
+        this.syncDiscount(null)
         this.recalculate()
         this.formatAvailable()
     }
 
-    changed() {
+    changed(event) {
+        this.syncDiscount(event ? event.target : null)
         this.recalculate()
         this.dispatch('changed', {detail: {row: this.element}})
     }
@@ -51,6 +57,50 @@ export default class extends Controller {
         if (selectedProduct && selectedProduct.value && this.hasProductMetaTarget && selectedProduct.dataset.code) {
             this.productMetaTarget.textContent = selectedProduct.dataset.code || ''
         }
+
+        this.updateDiscountMeta()
+    }
+
+    syncDiscount(target) {
+        if (!this.hasDiscountModeTarget || !this.hasDiscountPercentTarget || !this.hasDiscountRuleTarget) {
+            return
+        }
+
+        if (target === this.discountPercentTarget && this.numberValue(this.discountPercentTarget.value) > 0) {
+            this.discountModeTarget.value = 'manual_override'
+            this.discountRuleTarget.value = ''
+            this.updateDiscountMeta()
+            return
+        }
+
+        const selectedRule = this.discountRuleTarget.selectedOptions[0]
+        if (selectedRule && selectedRule.value) {
+            this.discountModeTarget.value = 'rule'
+            this.discountPercentTarget.value = selectedRule.dataset.percent || ''
+            this.updateDiscountMeta()
+            return
+        }
+
+        this.discountModeTarget.value = 'none'
+        this.discountPercentTarget.value = ''
+        this.updateDiscountMeta()
+    }
+
+    updateDiscountMeta() {
+        if (!this.hasDiscountMetaTarget || !this.hasDiscountModeTarget || !this.hasDiscountPercentTarget) {
+            return
+        }
+
+        const percent = this.numberValue(this.discountPercentTarget.value)
+        if (this.discountModeTarget.value === 'manual_override' && percent > 0) {
+            this.discountMetaTarget.textContent = `${percent.toFixed(2)}%`
+            return
+        }
+
+        const selectedRule = this.hasDiscountRuleTarget ? this.discountRuleTarget.selectedOptions[0] : null
+        this.discountMetaTarget.textContent = selectedRule && selectedRule.value && selectedRule.dataset.percent
+            ? `${selectedRule.dataset.percent}%`
+            : ''
     }
 
     formatAvailable() {

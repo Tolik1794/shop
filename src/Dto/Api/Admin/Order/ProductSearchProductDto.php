@@ -4,9 +4,11 @@ namespace App\Dto\Api\Admin\Order;
 
 use App\Entity\Currency;
 use App\Entity\Product;
+use App\Entity\ProductDiscountRule;
 use App\Entity\Store;
 use App\Entity\Warehouse;
 use App\Service\Order\OrderBatchPricingService;
+use App\Service\Discount\ProductDiscountResolver;
 use JsonSerializable;
 
 class ProductSearchProductDto implements JsonSerializable
@@ -25,6 +27,8 @@ class ProductSearchProductDto implements JsonSerializable
 		private readonly string $available,
 		private readonly array $stockOptions,
 		private readonly ?ProductSearchProductionOptionDto $productionOption,
+		private readonly array $discountRules = [],
+		private readonly ?int $defaultDiscountRuleId = null,
 	)
 	{
 	}
@@ -39,6 +43,7 @@ class ProductSearchProductDto implements JsonSerializable
 		array $excludedOptionKeys = [],
 		?OrderBatchPricingService $orderBatchPricingService = null,
 		?Currency $currency = null,
+		?ProductDiscountResolver $productDiscountResolver = null,
 	): ?self
 	{
 		$availableQuantity = 0.0;
@@ -105,6 +110,20 @@ class ProductSearchProductDto implements JsonSerializable
 			&& !in_array(self::productionOptionKey($product), $excludedOptionKeys, true)
 				? new ProductSearchProductionOptionDto($price)
 				: null;
+		$discountRules = $productDiscountResolver instanceof ProductDiscountResolver
+			? array_map(
+				static fn (ProductDiscountRule $rule): array => [
+					'id' => $rule->getId(),
+					'name' => $rule->getName(),
+					'percent' => $rule->getPercent(),
+					'isDefault' => $rule->isDefault(),
+				],
+				$productDiscountResolver->allowedRules($product, $store),
+			)
+			: [];
+		$defaultDiscountRule = $productDiscountResolver instanceof ProductDiscountResolver
+			? $productDiscountResolver->defaultRule($product, $store)
+			: null;
 		$hasFallbackOption = $allStockOptionCount === 0 && !$product->isCanBeManufactured();
 
 		if ($hasFallbackOption && in_array(self::fallbackOptionKey($product), $excludedOptionKeys, true)) {
@@ -126,6 +145,8 @@ class ProductSearchProductDto implements JsonSerializable
 			available: self::formatQuantity(max(0, $availableQuantity)),
 			stockOptions: $stockOptions,
 			productionOption: $productionOption,
+			discountRules: $discountRules,
+			defaultDiscountRuleId: $defaultDiscountRule?->getId(),
 		);
 	}
 
@@ -142,6 +163,8 @@ class ProductSearchProductDto implements JsonSerializable
 			'available' => $this->available,
 			'stockOptions' => $this->stockOptions,
 			'productionOption' => $this->productionOption,
+			'discountRules' => $this->discountRules,
+			'defaultDiscountRuleId' => $this->defaultDiscountRuleId,
 		];
 	}
 
