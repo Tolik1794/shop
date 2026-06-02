@@ -25,6 +25,7 @@ use App\Service\History\DocumentTimelineBuilder;
 use App\Service\Inventory\OrderShipmentUseCase;
 use App\Service\Order\CommentAudienceResolver;
 use App\Service\Order\CommentTemplateProvider;
+use App\Service\Payment\OrderPaymentReviewService;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
 use RuntimeException;
@@ -56,6 +57,7 @@ class OrderController extends AbstractAdvancedController
 		private readonly CommentAudienceResolver $commentAudienceResolver,
 		private readonly OrderCommentReadStateRepository $orderCommentReadStateRepository,
 		private readonly CustomerHistoryProvider $customerHistoryProvider,
+		private readonly OrderPaymentReviewService $orderPaymentReviewService,
 	)
 	{
 	}
@@ -282,6 +284,7 @@ class OrderController extends AbstractAdvancedController
 			'can_ship' => $this->orderShipmentUseCase->hasShippableLines($order),
 			'can_rollback_status' => $this->orderManager->canRollbackStatus($order),
 			'rollback_target_status' => $this->orderManager->getRollbackTargetStatus($order)?->value,
+			'payment_review' => $this->orderPaymentReviewService->canceledPaidReview($order),
 		]);
 	}
 
@@ -388,6 +391,9 @@ class OrderController extends AbstractAdvancedController
 		try {
 			$this->orderManager->cancel($order);
 			$this->addFlash('success', 'Order canceled.');
+			if ($this->orderPaymentReviewService->canceledPaidReview($order) !== null) {
+				$this->addFlash('warning', 'Canceled order still has received payment. Review refund with accounting.');
+			}
 		} catch (ConcurrencyConflictException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 
@@ -785,6 +791,7 @@ class OrderController extends AbstractAdvancedController
 				'can_ship' => $this->orderShipmentUseCase->hasShippableLines($order),
 				'can_rollback_status' => $this->orderManager->canRollbackStatus($order),
 				'rollback_target_status' => $this->orderManager->getRollbackTargetStatus($order)?->value,
+				'payment_review' => $this->orderPaymentReviewService->canceledPaidReview($order),
 			]),
 			'row' => $this->renderView('admin/order/_index_row.html.twig', [
 				'entity' => $order,

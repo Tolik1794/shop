@@ -5,6 +5,7 @@ namespace App\Tests\Service\Payment;
 use App\Entity\Order;
 use App\Entity\Payment;
 use App\Entity\Purchase;
+use App\Enum\PaymentDirectionEnum;
 use App\Enum\PaymentStatusEnum;
 use App\Enum\PaymentTypeEnum;
 use App\Service\Payment\PaymentRecalculationService;
@@ -49,8 +50,8 @@ class PaymentRecalculationServiceTest extends TestCase
 	public function testRefundReturnsPurchaseToRefundedStateAndClearsPaidAt(): void
 	{
 		$purchase = (new Purchase())->setTotalAmountBase('100.0000');
-		$purchase->addPayment($this->payment('100.0000', '2026-05-18 10:00:00'));
-		$purchase->addPayment($this->payment('100.0000', '2026-05-18 11:00:00', PaymentTypeEnum::REFUND));
+		$purchase->addPayment($this->payment('100.0000', '2026-05-18 10:00:00', direction: PaymentDirectionEnum::OUTGOING));
+		$purchase->addPayment($this->payment('100.0000', '2026-05-18 11:00:00', direction: PaymentDirectionEnum::INCOMING));
 
 		$this->service->recalculate($purchase);
 
@@ -59,10 +60,34 @@ class PaymentRecalculationServiceTest extends TestCase
 		self::assertNull($purchase->getPaidAt());
 	}
 
-	private function payment(string $amountBase, string $paidAt, PaymentTypeEnum $type = PaymentTypeEnum::CASH): Payment
+	public function testOutgoingOrderPaymentTypeIsTreatedAsRefund(): void
+	{
+		$order = (new Order())->setTotalAmountBase('100.0000');
+		$order->addPayment($this->payment('100.0000', '2026-05-18 10:00:00'));
+		$order->addPayment($this->payment(
+			'40.0000',
+			'2026-05-18 11:00:00',
+			PaymentTypeEnum::CARD,
+			PaymentDirectionEnum::OUTGOING,
+		));
+
+		$this->service->recalculate($order);
+
+		self::assertSame('60.0000', $order->getPaidAmountBase());
+		self::assertSame(PaymentStatusEnum::PARTIALLY_PAID, $order->getPaymentStatus());
+		self::assertNull($order->getPaidAt());
+	}
+
+	private function payment(
+		string $amountBase,
+		string $paidAt,
+		PaymentTypeEnum $type = PaymentTypeEnum::CASH,
+		PaymentDirectionEnum $direction = PaymentDirectionEnum::INCOMING,
+	): Payment
 	{
 		return (new Payment())
 			->setType($type)
+			->setDirection($direction)
 			->setAmountBase($amountBase)
 			->setPaidAt(new DateTimeImmutable($paidAt));
 	}

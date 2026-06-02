@@ -6,11 +6,18 @@ use App\Entity\Order;
 use App\Entity\Payment;
 use App\Entity\Purchase;
 use App\Entity\Store;
+use App\Service\Payment\PaymentAmountLimitService;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormInterface;
 
 class PaymentBusinessValidator
 {
+	public function __construct(
+		private readonly PaymentAmountLimitService $paymentAmountLimitService,
+	)
+	{
+	}
+
 	public function validate(Payment $payment, Store $store, FormInterface $form): bool
 	{
 		$targetCount = (int) ($payment->getOrder() instanceof Order)
@@ -26,6 +33,15 @@ class PaymentBusinessValidator
 
 		if ($payment->getPurchase() instanceof Purchase && $payment->getPurchase()->getStore()?->getId() !== $store->getId()) {
 			$form->get('purchase')->addError(new FormError('Select purchase from current store.'));
+		}
+
+		if (($violation = $this->paymentAmountLimitService->violation($payment)) !== null) {
+			$error = new FormError($violation);
+			if ($form->has('amount')) {
+				$form->get('amount')->addError($error);
+			} else {
+				$form->addError($error);
+			}
 		}
 
 		return $form->isValid();

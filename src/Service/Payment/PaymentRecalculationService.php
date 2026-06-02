@@ -5,8 +5,8 @@ namespace App\Service\Payment;
 use App\Entity\Order;
 use App\Entity\Payment;
 use App\Entity\Purchase;
+use App\Enum\PaymentDirectionEnum;
 use App\Enum\PaymentStatusEnum;
-use App\Enum\PaymentTypeEnum;
 
 class PaymentRecalculationService
 {
@@ -33,7 +33,7 @@ class PaymentRecalculationService
 
 		foreach ($payments as $payment) {
 			$amountBase = $this->numberValue($payment->getAmountBase());
-			$isRefund = $payment->getType() === PaymentTypeEnum::REFUND;
+			$isRefund = $this->isRefund($document, $payment);
 			$delta = $isRefund ? -$amountBase : $amountBase;
 			$effectivePaidAmount += $delta;
 			$hasPositivePayment = $hasPositivePayment || $delta > 0;
@@ -58,6 +58,13 @@ class PaymentRecalculationService
 			->setPaidAt(in_array($paymentStatus, [PaymentStatusEnum::PAID, PaymentStatusEnum::OVERPAID], true)
 				? $fullyPaidAt
 				: null);
+	}
+
+	private function isRefund(Order|Purchase $document, Payment $payment): bool
+	{
+		return $document instanceof Order
+			? $payment->getDirection() === PaymentDirectionEnum::OUTGOING
+			: $payment->getDirection() === PaymentDirectionEnum::INCOMING;
 	}
 
 	private function resolveStatus(

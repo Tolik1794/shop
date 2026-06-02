@@ -14,7 +14,6 @@ enum PaymentTypeEnum {
     card
     bank_transfer
     online
-    refund
     other
 }
 
@@ -102,7 +101,7 @@ note right of Payment
   - exactly one of order or purchase should be filled.
   - Order payments are usually incoming.
   - Purchase payments are usually outgoing.
-  - refunds can use type=refund with the opposite direction.
+  - refunds and reversals use the opposite direction while type remains the payment method.
   - reversal corrections are linked to the original payment and keep its snapshot.
   - every reversal stores an explicit business reason in comment.
   - amount is in payment currency.

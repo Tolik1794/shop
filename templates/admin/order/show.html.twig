@@ -5,6 +5,7 @@
 {% set customer_phone = entity.customerPhoneSnapshot|default('')|trim %}
 {% set customer_email = entity.customerEmailSnapshot|default('')|trim %}
 {% set delivery_address = entity.deliveryAddress|default('')|trim %}
+{% set payment_review = payment_review|default(null) %}
 
 {% set primary_order_action %}
     {% if entity.status.value == 'draft' %}
@@ -144,6 +145,13 @@
 
             <section class="order-show-section">
                 <h6>{{ 'admin.order.fields.payment'|trans }}</h6>
+                {% if payment_review %}
+                    <div class="alert alert-warning py-2 mb-3">
+                        <div class="fw-semibold">{{ 'Canceled order still has received payment.'|trans }}</div>
+                        <div class="small">{{ 'Review refund with accounting before closing the financial process.'|trans }}</div>
+                        <div class="small mt-1">{{ 'Net paid amount'|trans }}: {{ payment_review.paidAmountBase|money }}</div>
+                    </div>
+                {% endif %}
                 <dl class="order-show-money-list">
                     <div>
                         <dt>{{ 'admin.common.total'|trans }}</dt>

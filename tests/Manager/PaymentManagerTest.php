@@ -144,6 +144,25 @@ class PaymentManagerTest extends KernelTestCase
 		], $this->paymentManager->defaultsForOrder($order));
 	}
 
+	public function testPrefillRefundFromOrderUsesPaidAmountAndKeepsPaymentTypeEditable(): void
+	{
+		$baseCurrency = $this->persistCurrency('F' . substr(uniqid(), -2), 'Refund prefill base currency');
+		$documentCurrency = $this->persistCurrency('G' . substr(uniqid(), -2), 'Refund prefill document currency');
+		$store = $this->persistStore('payment-prefill-refund-' . uniqid(), $baseCurrency);
+		$order = $this->persistOrder($store, $documentCurrency, '300.0000')
+			->setExchangeRateToBase('2.00000000')
+			->setPaidAmountBase('120.0000');
+		$payment = $this->paymentManager->createForStore($store);
+
+		$this->paymentManager->prefillRefundFromOrder($payment, $order);
+
+		self::assertSame($order, $payment->getOrder());
+		self::assertSame($documentCurrency, $payment->getCurrency());
+		self::assertSame(PaymentDirectionEnum::OUTGOING, $payment->getDirection());
+		self::assertSame(PaymentTypeEnum::CASH, $payment->getType());
+		self::assertSame('60.0000', $payment->getAmount());
+	}
+
 	public function testPrefillFromPurchaseUsesDocumentCurrencyAndRemainingAmount(): void
 	{
 		$baseCurrency = $this->persistCurrency('L' . substr(uniqid(), -2), 'Purchase prefill base currency');
@@ -185,7 +204,7 @@ class PaymentManagerTest extends KernelTestCase
 
 		$reversal = $this->paymentManager->reversePayment($payment, 'Original payment was entered by mistake.');
 
-		self::assertSame(PaymentTypeEnum::REFUND, $reversal->getType());
+		self::assertSame(PaymentTypeEnum::CASH, $reversal->getType());
 		self::assertSame(PaymentDirectionEnum::OUTGOING, $reversal->getDirection());
 		self::assertSame('50.0000', $reversal->getAmount());
 		self::assertSame('100.0000', $reversal->getAmountBase());
@@ -210,6 +229,63 @@ class PaymentManagerTest extends KernelTestCase
 			static fn ($entry): string => $entry->getEventKey(),
 			$this->documentTimelineBuilder->forOrder($order),
 		));
+	}
+
+	public function testPaymentCorrectionCannotBeReversedAgain(): void
+	{
+		$currency = $this->persistCurrency('Z' . substr(uniqid(), -2), 'Correction reversal currency');
+		$store = $this->persistStore('payment-correction-reversal-' . uniqid(), $currency);
+		$order = $this->persistOrder($store, $currency, '20.0000');
+		$payment = $this->paymentManager->createForStore($store)
+			->setOrder($order)
+			->setDirection(PaymentDirectionEnum::INCOMING)
+			->setType(PaymentTypeEnum::CARD)
+			->setAmount('20.0000');
+		$this->paymentManager->savePayment($payment);
+		$reversal = $this->paymentManager->reversePayment($payment, 'Original payment was entered by mistake.');
+
+		$this->expectException(RuntimeException::class);
+		$this->expectExceptionMessage('Payment correction cannot be reversed by this flow.');
+
+		$this->paymentManager->reversePayment($reversal, 'Do not reverse a correction.');
+	}
+
+	public function testOrderPaymentCannotExceedRemainingAmount(): void
+	{
+		$currency = $this->persistCurrency('E' . substr(uniqid(), -2), 'Payment limit currency');
+		$store = $this->persistStore('payment-limit-' . uniqid(), $currency);
+		$order = $this->persistOrder($store, $currency, '100.0000')
+			->setPaidAmountBase('40.0000');
+		$this->entityManager->flush();
+		$payment = $this->paymentManager->createForStore($store)
+			->setOrder($order)
+			->setDirection(PaymentDirectionEnum::INCOMING)
+			->setType(PaymentTypeEnum::CASH)
+			->setAmount('61.0000');
+
+		$this->expectException(RuntimeException::class);
+		$this->expectExceptionMessage('Payment amount cannot exceed remaining order amount.');
+
+		$this->paymentManager->savePayment($payment);
+	}
+
+	public function testOrderRefundCannotExceedNetPaidAmount(): void
+	{
+		$currency = $this->persistCurrency('J' . substr(uniqid(), -2), 'Refund limit currency');
+		$store = $this->persistStore('refund-limit-' . uniqid(), $currency);
+		$order = $this->persistOrder($store, $currency, '100.0000')
+			->setPaidAmountBase('40.0000');
+		$this->entityManager->flush();
+		$payment = $this->paymentManager->createForStore($store)
+			->setOrder($order)
+			->setDirection(PaymentDirectionEnum::OUTGOING)
+			->setType(PaymentTypeEnum::CARD)
+			->setAmount('41.0000');
+
+		$this->expectException(RuntimeException::class);
+		$this->expectExceptionMessage('Refund amount cannot exceed net paid order amount.');
+
+		$this->paymentManager->savePayment($payment);
 	}
 
 	public function testReversePaymentRequiresReason(): void

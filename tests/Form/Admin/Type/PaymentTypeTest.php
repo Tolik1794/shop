@@ -7,6 +7,8 @@ use App\Entity\Order;
 use App\Entity\Payment;
 use App\Entity\Purchase;
 use App\Entity\Store;
+use App\Enum\PaymentDirectionEnum;
+use App\Enum\PaymentTypeEnum;
 use App\Form\Admin\Type\PaymentType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -95,6 +97,8 @@ class PaymentTypeTest extends KernelTestCase
 			->setStore($store)
 			->setCurrency($currency)
 			->setOrder($order)
+			->setDirection(PaymentDirectionEnum::OUTGOING)
+			->setType(PaymentTypeEnum::CASH)
 			->setAmount('42.0000');
 
 		$form = $this->formFactory->create(PaymentType::class, $payment, array_merge($this->formOptions($store), [
@@ -103,12 +107,13 @@ class PaymentTypeTest extends KernelTestCase
 		$view = $form->createView();
 
 		self::assertTrue($view['direction']->vars['disabled']);
+		self::assertFalse($view['type']->vars['disabled']);
 		self::assertTrue($view['amount']->vars['disabled']);
 		self::assertTrue($view['currency']->vars['disabled']);
 		self::assertTrue($view['order']->vars['disabled']);
 
 		$form->submit([
-			'type' => 'cash',
+			'type' => 'card',
 			'paidAt' => '2026-05-18T10:00',
 			'externalReference' => '',
 			'comment' => '',
@@ -117,6 +122,8 @@ class PaymentTypeTest extends KernelTestCase
 		self::assertTrue($form->isSynchronized());
 		self::assertSame($currency, $payment->getCurrency());
 		self::assertSame($order, $payment->getOrder());
+		self::assertSame(PaymentDirectionEnum::OUTGOING, $payment->getDirection());
+		self::assertSame(PaymentTypeEnum::CARD, $payment->getType());
 		self::assertSame('42.0000', $payment->getAmount());
 	}
 

@@ -157,6 +157,10 @@ class PaymentType extends AbstractType
 		}
 
 		if ($payment->getOrder() instanceof Order) {
+			if ($payment->getDirection() === PaymentDirectionEnum::OUTGOING) {
+				return 'Prefilled with the net paid amount available for refund on the linked order.';
+			}
+
 			return 'Prefilled with the remaining unpaid amount for the linked order.';
 		}
 

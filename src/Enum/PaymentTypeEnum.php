@@ -8,6 +8,5 @@ enum PaymentTypeEnum: string
 	case CARD = 'card';
 	case BANK_TRANSFER = 'bank_transfer';
 	case ONLINE = 'online';
-	case REFUND = 'refund';
 	case OTHER = 'other';
 }

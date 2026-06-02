@@ -13,6 +13,7 @@ use App\Manager\PaymentManager;
 use App\Repository\OrderRepository;
 use App\Repository\PurchaseRepository;
 use App\Service\FilterFormHandler;
+use App\Service\Payment\OrderPaymentReviewService;
 use App\Tools\AbstractAdvancedController;
 use App\Validator\PaymentBusinessValidator;
 use Knp\Component\Pager\PaginatorInterface;
@@ -28,11 +29,15 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/admin/store/{store_id}/payment', name: 'app_admin_payment_'), IsGranted('payment.view')]
 class PaymentController extends AbstractAdvancedController
 {
+	private const ORDER_PAYMENT_ACTION_INCOMING = 'incoming';
+	private const ORDER_PAYMENT_ACTION_REFUND = 'refund';
+
 	public function __construct(
 		private readonly PaymentManager $paymentManager,
 		private readonly PaymentBusinessValidator $paymentBusinessValidator,
 		private readonly OrderRepository $orderRepository,
 		private readonly PurchaseRepository $purchaseRepository,
+		private readonly OrderPaymentReviewService $orderPaymentReviewService,
 	)
 	{
 	}
@@ -274,7 +279,11 @@ class PaymentController extends AbstractAdvancedController
 			]);
 
 			if ($order instanceof Order) {
-				$this->paymentManager->prefillFromOrder($payment, $order);
+				if ($request->query->get('order_payment_action') === self::ORDER_PAYMENT_ACTION_REFUND) {
+					$this->paymentManager->prefillRefundFromOrder($payment, $order);
+				} else {
+					$this->paymentManager->prefillIncomingFromOrder($payment, $order);
+				}
 			}
 		}
 
@@ -351,6 +360,23 @@ class PaymentController extends AbstractAdvancedController
 		$fullFormUrl = $this->generateUrl('app_admin_payment_new', array_merge($documentRouteParameters, [
 			'return_url' => $returnUrl,
 		]));
+		$paymentActions = $document instanceof Order ? $this->orderPaymentReviewService->paymentActions($document) : null;
+		$paymentActionUrls = [
+			'incoming' => $paymentActions?->incoming !== null
+				? $this->generateUrl('app_admin_payment_new', array_merge($documentRouteParameters, [
+					'return_url' => $returnUrl,
+					'lock_prefilled_document_fields' => 1,
+					'order_payment_action' => self::ORDER_PAYMENT_ACTION_INCOMING,
+				]))
+				: null,
+			'refund' => $paymentActions?->refund !== null
+				? $this->generateUrl('app_admin_payment_new', array_merge($documentRouteParameters, [
+					'return_url' => $returnUrl,
+					'lock_prefilled_document_fields' => 1,
+					'order_payment_action' => self::ORDER_PAYMENT_ACTION_REFUND,
+				]))
+				: null,
+		];
 
 		return $this->render('admin/payment/document.html.twig', [
 			'entity' => $document,
@@ -361,7 +387,10 @@ class PaymentController extends AbstractAdvancedController
 				action: $lockedFormAction,
 				lockPrefilledDocumentFields: true,
 			)->createView(),
-			'full_payment_form_url' => $fullFormUrl,
+			'full_payment_form_url' => $document instanceof Purchase ? $fullFormUrl : null,
+			'payment_actions' => $paymentActions,
+			'payment_action_urls' => $paymentActionUrls,
+			'payment_review' => $document instanceof Order ? $this->orderPaymentReviewService->canceledPaidReview($document) : null,
 		]);
 	}
 }

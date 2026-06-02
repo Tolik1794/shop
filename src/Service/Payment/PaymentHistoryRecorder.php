@@ -105,7 +105,7 @@ class PaymentHistoryRecorder
 			'%s %s %s payment: %s %s (%s base).',
 			ucfirst($payment->getDirection()->value),
 			$payment->getType()->value,
-			$payment->getType()->value === 'refund' ? 'correction' : 'document',
+			$payment->getReversesPayment() instanceof Payment ? 'correction' : 'document',
 			$payment->getAmount(),
 			$currency?->getCode() ?? '',
 			$payment->getAmountBase(),

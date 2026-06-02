@@ -1,14 +1,38 @@
 {% set is_fully_paid = entity.paymentStatus.value in ['paid', 'overpaid'] %}
+{% set payment_review = payment_review|default(null) %}
+{% set payment_action_urls = payment_action_urls|default({incoming: null, refund: null}) %}
 {% set actions %}
-	<a class="btn btn-light btn-sm" href="{{ full_payment_form_url }}"><i class="fa-solid fa-file-pen me-1"></i>{{ 'Full form'|trans }}</a>
+	{% if payment_action_urls.incoming %}
+		<a class="btn btn-light btn-sm" href="{{ payment_action_urls.incoming }}">
+			<i class="fa-solid fa-arrow-down me-1"></i>{{ 'Add incoming payment'|trans }}
+		</a>
+	{% endif %}
+	{% if payment_action_urls.refund %}
+		<a class="btn btn-light btn-sm" href="{{ payment_action_urls.refund }}">
+			<i class="fa-solid fa-arrow-up me-1"></i>{{ 'Add outgoing refund'|trans }}
+		</a>
+	{% endif %}
+	{% if payment_action_urls.incoming is empty and payment_action_urls.refund is empty and full_payment_form_url|default(null) %}
+		<a class="btn btn-light btn-sm" href="{{ full_payment_form_url }}"><i class="fa-solid fa-file-pen me-1"></i>{{ 'Full form'|trans }}</a>
+	{% endif %}
 {% endset %}
 
 <div class="card" {{ stimulus_target('reload-card', 'paymentsCard') }} data-card-id="{{ entity.id }}">
 	<div class="card-header">
-		{{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
+		{% if actions|trim %}
+			{{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
+		{% endif %}
 		<h5 class="card-title mb-0">{{ 'Payments'|trans }}</h5>
 	</div>
 	<div class="card-body" data-controller="select-two">
+		{% if payment_review %}
+			<div class="alert alert-warning document-payment-status">
+				<div class="fw-semibold">{{ 'Canceled order still has received payment.'|trans }}</div>
+				<div class="small">{{ 'Review refund with accounting before closing the financial process.'|trans }}</div>
+				<div class="small mt-1">{{ 'Net paid amount'|trans }}: {{ payment_review.paidAmountBase|money }}</div>
+			</div>
+		{% endif %}
+
 		{% if payments|length > 0 %}
 			<div class="document-payment-list">
 				{% for payment in payments %}
@@ -51,7 +75,8 @@
 			<p class="text-muted">{{ 'No payments.'|trans }}</p>
 		{% endif %}
 
-		{% if is_fully_paid %}
+		{% if payment_review %}
+		{% elseif is_fully_paid %}
 			<div class="alert alert-success mb-0 document-payment-status">
 				{{ 'This document is fully paid.'|trans }}
 			</div>

@@ -9,6 +9,7 @@ use App\Entity\ExchangeRate;
 use App\Entity\Order;
 use App\Entity\OrderComment;
 use App\Entity\OrderEntry;
+use App\Entity\OrderStatus;
 use App\Entity\Payment;
 use App\Entity\Product;
 use App\Entity\ProductDiscountRule;
@@ -155,7 +156,9 @@ class OrderBuilderControllerTest extends WebTestCase
 		$this->client->request('GET', sprintf('/admin/store/%d/payment/order/%d/document', $store->getId(), $order->getId()));
 
 		self::assertResponseIsSuccessful();
-		self::assertSelectorExists('a', 'Full form');
+		self::assertSame(0, $this->client->getCrawler()->selectLink('Full form')->count());
+		self::assertSame(0, $this->client->getCrawler()->selectLink('Add incoming payment')->count());
+		self::assertSame(0, $this->client->getCrawler()->selectLink('Add outgoing refund')->count());
 		self::assertSelectorNotExists('.table-responsive table');
 		self::assertSelectorExists('.document-payment-list');
 		self::assertSelectorTextContains('.document-payment-card', 'Payment #1');
@@ -165,6 +168,84 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSelectorTextContains('.document-payment-card', 'Correction');
 		self::assertSelectorTextContains('.document-payment-card', '—');
 		self::assertSelectorTextContains('.document-payment-status', 'This document is fully paid.');
+	}
+
+	public function testUnpaidOrderPaymentsTabShowsIncomingPaymentAction(): void
+	{
+		$this->client->loginUser($this->createUser('order-payment-action-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-payment-action-store-' . uniqid());
+		$order = (new Order())
+			->setStore($store)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber('SO-payment-action-' . uniqid())
+			->setCustomerNameSnapshot('Unpaid Customer')
+			->setTotalAmount('10000.0000')
+			->setTotalAmountBase('10000.0000')
+			->setPaidAmountBase('2500.0000')
+			->setPaymentStatus(PaymentStatusEnum::PARTIALLY_PAID);
+
+		$this->entityManager->persist($order);
+		$this->entityManager->flush();
+
+		$this->client->request('GET', sprintf('/admin/store/%d/payment/order/%d/document', $store->getId(), $order->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSame(1, $this->client->getCrawler()->selectLink('Add incoming payment')->count());
+		self::assertSame(0, $this->client->getCrawler()->selectLink('Full form')->count());
+		self::assertSame(0, $this->client->getCrawler()->selectLink('Add outgoing refund')->count());
+		self::assertStringContainsString(
+			'order_payment_action=incoming',
+			$this->client->getCrawler()->selectLink('Add incoming payment')->link()->getUri(),
+		);
+	}
+
+	public function testCanceledPaidOrderShowsManualRefundReviewWarning(): void
+	{
+		$this->client->loginUser($this->createUser('order-payment-review-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-payment-review-store-' . uniqid());
+		$order = (new Order())
+			->setStore($store)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber('SO-payment-review-' . uniqid())
+			->setStatus(OrderStatus::CANCELED)
+			->setCustomerNameSnapshot('Paid Canceled Customer')
+			->setTotalAmount('10000.0000')
+			->setTotalAmountBase('10000.0000')
+			->setPaidAmountBase('10000.0000')
+			->setPaymentStatus(PaymentStatusEnum::PAID);
+		$payment = (new Payment())
+			->setStore($store)
+			->setOrder($order)
+			->setCurrency($store->getBaseCurrency())
+			->setDirection(PaymentDirectionEnum::INCOMING)
+			->setType(PaymentTypeEnum::CASH)
+			->setAmount('10000.0000')
+			->setAmountBase('10000.0000')
+			->setPaidAt(new DateTimeImmutable('2026-05-30 17:14:00'));
+		$order->addPayment($payment);
+
+		$this->entityManager->persist($order);
+		$this->entityManager->persist($payment);
+		$this->entityManager->flush();
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/%d/show', $store->getId(), $order->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('.order-show-card', 'Canceled order still has received payment.');
+		self::assertSelectorTextContains('.order-show-card', 'Net paid amount: 10 000.00');
+
+		$this->client->request('GET', sprintf('/admin/store/%d/payment/order/%d/document', $store->getId(), $order->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('.document-payment-status', 'Canceled order still has received payment.');
+		self::assertSelectorTextContains('.document-payment-status', 'Review refund with accounting before closing the financial process.');
+		self::assertSelectorTextContains('.document-payment-status', 'Net paid amount: 10 000.00');
+		self::assertSelectorTextNotContains('.document-payment-status', 'This document is fully paid.');
+		self::assertSame(1, $this->client->getCrawler()->selectLink('Add outgoing refund')->count());
+		self::assertStringContainsString(
+			'order_payment_action=refund',
+			$this->client->getCrawler()->selectLink('Add outgoing refund')->link()->getUri(),
+		);
 	}
 
 	public function testNewOrderBuilderFormCanBeSubmitted(): void

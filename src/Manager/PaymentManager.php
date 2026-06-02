@@ -12,6 +12,7 @@ use App\Enum\PaymentTypeEnum;
 use App\Repository\PaymentRepository;
 use App\Service\Concurrency\ConcurrencyGuard;
 use App\Service\ExchangeRateResolver;
+use App\Service\Payment\PaymentAmountLimitService;
 use App\Service\Payment\PaymentHistoryRecorder;
 use App\Service\Payment\PaymentRecalculationService;
 use DateTimeImmutable;
@@ -25,6 +26,7 @@ class PaymentManager extends AbstractManager
 		private readonly ExchangeRateResolver $exchangeRateResolver,
 		private readonly PaymentRecalculationService $paymentRecalculationService,
 		private readonly PaymentHistoryRecorder $paymentHistoryRecorder,
+		private readonly PaymentAmountLimitService $paymentAmountLimitService,
 		private readonly UserManager $userManager,
 		private readonly ConcurrencyGuard $concurrencyGuard,
 	)
@@ -40,7 +42,22 @@ class PaymentManager extends AbstractManager
 
 	public function prefillFromOrder(Payment $payment, Order $order): void
 	{
+		$this->prefillIncomingFromOrder($payment, $order);
+	}
+
+	public function prefillIncomingFromOrder(Payment $payment, Order $order): void
+	{
 		$this->prefillFromDocument($payment, $order, PaymentDirectionEnum::INCOMING);
+	}
+
+	public function prefillRefundFromOrder(Payment $payment, Order $order): void
+	{
+		$payment
+			->setCurrency($order->getCurrency())
+			->setDirection(PaymentDirectionEnum::OUTGOING)
+			->setType(PaymentTypeEnum::CASH)
+			->setAmount($this->documentAmountFromBase($order, $order->getPaidAmountBase()))
+			->setOrder($order);
 	}
 
 	public function prefillFromPurchase(Payment $payment, Purchase $purchase): void
@@ -74,6 +91,7 @@ class PaymentManager extends AbstractManager
 			$this->assertValidTarget($payment);
 			$this->concurrencyGuard->lockAll($this->documentsToRecalculate($payment, $previousOrder, $previousPurchase));
 			$this->preparePayment($payment);
+			$this->paymentAmountLimitService->assertWithinLimits($payment, true);
 
 			$actor = $this->currentActor();
 			if ($payment->getId() === null) {
@@ -111,8 +129,8 @@ class PaymentManager extends AbstractManager
 				throw new RuntimeException('Only recorded payments can be reversed.');
 			}
 
-			if ($payment->getType() === PaymentTypeEnum::REFUND) {
-				throw new RuntimeException('Refund payments cannot be reversed by this flow.');
+			if ($payment->getReversesPayment() instanceof Payment) {
+				throw new RuntimeException('Payment correction cannot be reversed by this flow.');
 			}
 
 			if ($payment->getReversedByPayment() instanceof Payment) {
@@ -125,7 +143,7 @@ class PaymentManager extends AbstractManager
 			$reversal = (new Payment())
 				->setStore($payment->getStore())
 				->setDirection($this->oppositeDirection($payment->getDirection()))
-				->setType(PaymentTypeEnum::REFUND)
+				->setType($payment->getType())
 				->setAmount((string) $payment->getAmount())
 				->setAmountBase((string) $payment->getAmountBase())
 				->setPaidAt(new DateTimeImmutable())
@@ -278,17 +296,22 @@ class PaymentManager extends AbstractManager
 
 	private function remainingDocumentAmount(Order|Purchase $document): string
 	{
-		$exchangeRateToBase = $this->numberValue($document->getExchangeRateToBase());
-		if ($exchangeRateToBase <= 0) {
-			return '0.0000';
-		}
-
 		$remainingAmountBase = max(
 			0,
 			$this->numberValue($document->getTotalAmountBase()) - $this->numberValue($document->getPaidAmountBase()),
 		);
 
-		return $this->formatMoney($remainingAmountBase / $exchangeRateToBase);
+		return $this->documentAmountFromBase($document, (string) $remainingAmountBase);
+	}
+
+	private function documentAmountFromBase(Order|Purchase $document, mixed $amountBase): string
+	{
+		$exchangeRateToBase = $this->numberValue($document->getExchangeRateToBase());
+		if ($exchangeRateToBase <= 0) {
+			return '0.0000';
+		}
+
+		return $this->formatMoney(max(0, $this->numberValue($amountBase)) / $exchangeRateToBase);
 	}
 
 	private function oppositeDirection(PaymentDirectionEnum $direction): PaymentDirectionEnum

@@ -127,7 +127,7 @@ note bottom
   - exchangeRateToBase > 0.
   - exactly one of order_id or purchase_id should be filled.
   - incoming payments usually belong to Order; outgoing payments usually belong to Purchase.
-  - refund payments may intentionally use the opposite direction.
+  - refund/reversal payments intentionally use the opposite direction.
   - Order/Purchase paidAmountBase and paymentStatus are cache fields.
   - Source of truth is sum(Payment.amountBase) against document totalAmountBase.
   - unpaid: paidAmountBase = 0.
@@ -143,7 +143,7 @@ note bottom
   - payment_id is required and should point to the payment row that caused the event.
   - eventKey should stay stable once used by the application.
   - payment.recorded is created when a new Payment is saved.
-  - payment.reversed is created when a linked refund/reversal Payment is created.
+  - payment.reversed is created when a linked reversal Payment is created.
   - Payment remains the financial source of truth; PaymentHistory is the audit/feed layer.
 
   ProductPrice / ExchangeRate:
@@ -268,7 +268,7 @@ note bottom
 Deletion / archiving rule:
 
 Do not physically delete documents, payments, stock movements or posted history.
-Use status transitions, reversal documents and refund payments instead.
+Use status transitions, reversal documents and reversal/refund payment directions instead.
 OrderHistory is append-only and must not be rewritten.
 PaymentHistory is append-only and must not be rewritten.
 OrderComment can be hidden by soft delete when needed.

@@ -12,6 +12,7 @@ use App\Entity\OrderEntry;
 use App\Entity\OrderHistory;
 use App\Entity\OrderHistorySource;
 use App\Entity\OrderStatus;
+use App\Entity\Payment;
 use App\Entity\Product;
 use App\Entity\ProductDiscountRule;
 use App\Entity\ProductDiscountTarget;
@@ -23,6 +24,8 @@ use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
 use App\Entity\WarehouseStockBatch;
 use App\Enum\PaymentStatusEnum;
+use App\Enum\PaymentDirectionEnum;
+use App\Enum\PaymentTypeEnum;
 use App\Enum\InventoryDirection;
 use App\Enum\InventoryDocumentStatus;
 use App\Enum\InventoryDocumentType;
@@ -262,6 +265,40 @@ class OrderManagerTest extends KernelTestCase
 
 		self::assertSame(OrderStatus::CANCELED, $order->getStatus());
 		self::assertNotNull($order->getCanceledAt());
+	}
+
+	public function testCancelPaidOrderDoesNotCreateAutomaticRefundPayment(): void
+	{
+		$currency = $this->persistCurrency('P' . substr(uniqid(), -2), 'Paid cancel currency');
+		$store = $this->persistStore('order-paid-cancel-' . uniqid(), $currency);
+		$order = $this->orderManager->createDraft($store)
+			->setTotalAmount('50.0000')
+			->setTotalAmountBase('50.0000')
+			->setPaidAmountBase('50.0000')
+			->setPaymentStatus(PaymentStatusEnum::PAID);
+		$this->orderManager->saveOrder($order);
+		$payment = (new Payment())
+			->setStore($store)
+			->setOrder($order)
+			->setCurrency($currency)
+			->setDirection(PaymentDirectionEnum::INCOMING)
+			->setType(PaymentTypeEnum::CASH)
+			->setAmount('50.0000')
+			->setAmountBase('50.0000');
+		$order->addPayment($payment);
+		$this->entityManager->persist($payment);
+		$this->entityManager->flush();
+
+		$this->orderManager->cancel($order);
+
+		$payments = $this->entityManager->getRepository(Payment::class)->findBy(['order' => $order]);
+
+		self::assertSame(OrderStatus::CANCELED, $order->getStatus());
+		self::assertSame('50.0000', $order->getPaidAmountBase());
+		self::assertSame(PaymentStatusEnum::PAID, $order->getPaymentStatus());
+		self::assertCount(1, $payments);
+		self::assertSame(PaymentTypeEnum::CASH, $payments[0]->getType());
+		self::assertNull($payments[0]->getReversedByPayment());
 	}
 
 	public function testCancelWithoutShippedQuantityDoesNotCreateCustomerReturnDraft(): void
