@@ -152,6 +152,13 @@ export default class extends Controller {
             div.innerHTML = fragments.history.trim()
             this.historyCardTarget.replaceWith(div.firstElementChild)
         }
+
+        if (fragments.payments && this.hasPaymentsCardTarget) {
+            const div = document.createElement('div')
+
+            div.innerHTML = fragments.payments.trim()
+            this.paymentsCardTarget.replaceWith(div.firstElementChild)
+        }
     }
 
     dismissFlash(event) {

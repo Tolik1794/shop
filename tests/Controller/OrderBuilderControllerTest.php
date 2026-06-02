@@ -390,6 +390,72 @@ class OrderBuilderControllerTest extends WebTestCase
 		);
 	}
 
+	public function testOrderQuickStatusActionReturnsHistoryAndPaymentsFragments(): void
+	{
+		$this->client->loginUser($this->createUser('order-quick-status-fragments-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-quick-status-fragments-store-' . uniqid());
+		$product = $this->createProduct($store, 'Quick status fragment product');
+		$order = (new Order())
+			->setStore($store)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber('SO-quick-fragments-' . uniqid())
+			->setStatus(OrderStatus::DRAFT)
+			->setCustomerNameSnapshot('Quick Fragment Customer')
+			->setTotalAmount('100.0000')
+			->setTotalAmountBase('100.0000')
+			->setPaidAmountBase('0.0000')
+			->setPaymentStatus(PaymentStatusEnum::UNPAID);
+		$entry = (new OrderEntry())
+			->setProduct($product)
+			->setProductNameSnapshot($product->getName())
+			->setProductCodeSnapshot($product->getCode())
+			->setUnitCodeSnapshot($product->getUnit()?->getCode() ?? 'pc')
+			->setUnitNameSnapshot($product->getUnit()?->getName() ?? 'Piece')
+			->setQuantity('1.0000')
+			->setUnitPrice('100.0000')
+			->setUnitPriceBase('100.0000')
+			->setTotalPrice('100.0000')
+			->setTotalPriceBase('100.0000');
+		$order->addOrderEntry($entry);
+
+		$this->entityManager->persist($order);
+		$this->entityManager->persist($entry);
+		$this->entityManager->flush();
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/show', $store->getId(), $order->getId()));
+		$form = $crawler
+			->filter('form[data-action="submit->reload-card#submitQuickAction"]')
+			->first()
+			->form();
+
+		$this->client->request(
+			$form->getMethod(),
+			$form->getUri(),
+			$form->getValues(),
+			[],
+			[
+				'HTTP_ACCEPT' => 'application/json',
+				'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest',
+			],
+		);
+
+		self::assertResponseIsSuccessful();
+		$data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+		self::assertArrayHasKey('fragments', $data);
+		self::assertArrayHasKey('card', $data['fragments']);
+		self::assertArrayHasKey('row', $data['fragments']);
+		self::assertArrayHasKey('history', $data['fragments']);
+		self::assertArrayHasKey('payments', $data['fragments']);
+		self::assertStringContainsString('Awaiting stock', $data['fragments']['row']);
+		self::assertStringContainsString('order.status_changed', $data['fragments']['history']);
+		self::assertStringContainsString('draft', $data['fragments']['history']);
+		self::assertStringContainsString('confirmed', $data['fragments']['history']);
+		self::assertStringContainsString('Add incoming payment', $data['fragments']['payments']);
+		self::assertStringContainsString('Add payment', $data['fragments']['payments']);
+		self::assertStringContainsString('data-reload-card-target="paymentsCard"', $data['fragments']['payments']);
+	}
+
 	public function testNewOrderBuilderFormCanBeSubmitted(): void
 	{
 		$this->client->loginUser($this->createUser('order-builder-submit-admin-' . uniqid() . '@example.com'));

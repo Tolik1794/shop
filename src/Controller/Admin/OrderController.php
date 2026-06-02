@@ -26,6 +26,7 @@ use App\Service\Inventory\OrderShipmentUseCase;
 use App\Service\Order\CommentAudienceResolver;
 use App\Service\Order\CommentTemplateProvider;
 use App\Service\Payment\OrderPaymentReviewService;
+use App\Service\Payment\PaymentDocumentRenderer;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
 use RuntimeException;
@@ -58,6 +59,7 @@ class OrderController extends AbstractAdvancedController
 		private readonly OrderCommentReadStateRepository $orderCommentReadStateRepository,
 		private readonly CustomerHistoryProvider $customerHistoryProvider,
 		private readonly OrderPaymentReviewService $orderPaymentReviewService,
+		private readonly PaymentDocumentRenderer $paymentDocumentRenderer,
 	)
 	{
 	}
@@ -793,6 +795,11 @@ class OrderController extends AbstractAdvancedController
 				'rollback_target_status' => $this->orderManager->getRollbackTargetStatus($order)?->value,
 				'payment_review' => $this->orderPaymentReviewService->canceledPaidReview($order),
 			]),
+			'history' => $this->renderView('admin/order/history.html.twig', [
+				'entity' => $order,
+				'history_entries' => $this->documentTimelineBuilder->forOrder($order),
+			]),
+			'payments' => $this->paymentDocumentRenderer->renderOrder($order, $store, $request),
 			'row' => $this->renderView('admin/order/_index_row.html.twig', [
 				'entity' => $order,
 				'first_entity' => $order,
