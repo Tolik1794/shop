@@ -1,6 +1,7 @@
 {% set is_fully_paid = entity.paymentStatus.value in ['paid', 'overpaid'] %}
 {% set payment_review = payment_review|default(null) %}
 {% set payment_action_urls = payment_action_urls|default({incoming: null, refund: null}) %}
+{% set can_add_payment = can_add_payment is defined ? can_add_payment : true %}
 {% set actions %}
 	{% if payment_action_urls.incoming %}
 		<a class="btn btn-light btn-sm" href="{{ payment_action_urls.incoming }}">
@@ -80,7 +81,7 @@
 			<div class="alert alert-success mb-0 document-payment-status">
 				{{ 'This document is fully paid.'|trans }}
 			</div>
-		{% else %}
+		{% elseif can_add_payment %}
 			<h6 class="mb-2">{{ 'Add payment'|trans }}</h6>
 
 			{{ form_start(payment_form, {attr: {'data-select-two-target': 'form'}}) }}

@@ -5,6 +5,7 @@ namespace App\Tests\Manager;
 use App\Entity\Currency;
 use App\Entity\ExchangeRate;
 use App\Entity\Order;
+use App\Entity\OrderStatus;
 use App\Entity\PaymentHistory;
 use App\Entity\Payment;
 use App\Entity\Purchase;
@@ -44,8 +45,10 @@ class PaymentManagerTest extends KernelTestCase
 		$baseCurrency = $this->persistCurrency('B' . substr(uniqid(), -2), 'Base currency');
 		$paymentCurrency = $this->persistCurrency('P' . substr(uniqid(), -2), 'Payment currency');
 		$store = $this->persistStore('payment-' . uniqid(), $baseCurrency);
-		$order = $this->persistOrder($store, $baseCurrency, '100.0000');
+		$order = $this->persistOrder($store, $baseCurrency, '100.0000')
+			->setStatus(OrderStatus::CONFIRMED);
 		$this->persistExchangeRate($paymentCurrency, $baseCurrency, $store, '2.00000000');
+		$this->entityManager->flush();
 
 		$payment = $this->paymentManager->createForStore($store)
 			->setCurrency($paymentCurrency)
@@ -191,8 +194,10 @@ class PaymentManagerTest extends KernelTestCase
 		$baseCurrency = $this->persistCurrency('R' . substr(uniqid(), -2), 'Reversal base currency');
 		$paymentCurrency = $this->persistCurrency('V' . substr(uniqid(), -2), 'Reversal payment currency');
 		$store = $this->persistStore('payment-reversal-' . uniqid(), $baseCurrency);
-		$order = $this->persistOrder($store, $baseCurrency, '100.0000');
+		$order = $this->persistOrder($store, $baseCurrency, '100.0000')
+			->setStatus(OrderStatus::CONFIRMED);
 		$this->persistExchangeRate($paymentCurrency, $baseCurrency, $store, '2.00000000');
+		$this->entityManager->flush();
 
 		$payment = $this->paymentManager->createForStore($store)
 			->setCurrency($paymentCurrency)
@@ -235,7 +240,9 @@ class PaymentManagerTest extends KernelTestCase
 	{
 		$currency = $this->persistCurrency('Z' . substr(uniqid(), -2), 'Correction reversal currency');
 		$store = $this->persistStore('payment-correction-reversal-' . uniqid(), $currency);
-		$order = $this->persistOrder($store, $currency, '20.0000');
+		$order = $this->persistOrder($store, $currency, '20.0000')
+			->setStatus(OrderStatus::CONFIRMED);
+		$this->entityManager->flush();
 		$payment = $this->paymentManager->createForStore($store)
 			->setOrder($order)
 			->setDirection(PaymentDirectionEnum::INCOMING)
@@ -255,6 +262,7 @@ class PaymentManagerTest extends KernelTestCase
 		$currency = $this->persistCurrency('E' . substr(uniqid(), -2), 'Payment limit currency');
 		$store = $this->persistStore('payment-limit-' . uniqid(), $currency);
 		$order = $this->persistOrder($store, $currency, '100.0000')
+			->setStatus(OrderStatus::CONFIRMED)
 			->setPaidAmountBase('40.0000');
 		$this->entityManager->flush();
 		$payment = $this->paymentManager->createForStore($store)
@@ -288,11 +296,84 @@ class PaymentManagerTest extends KernelTestCase
 		$this->paymentManager->savePayment($payment);
 	}
 
+	public function testOutgoingRefundCanBeRecordedForCanceledPaidOrder(): void
+	{
+		$currency = $this->persistCurrency('U' . substr(uniqid(), -2), 'Canceled refund currency');
+		$store = $this->persistStore('canceled-refund-' . uniqid(), $currency);
+		$order = $this->persistOrder($store, $currency, '100.0000')
+			->setStatus(OrderStatus::CANCELED)
+			->setPaidAmountBase('40.0000');
+		$existingPayment = (new Payment())
+			->setStore($store)
+			->setOrder($order)
+			->setCurrency($currency)
+			->setDirection(PaymentDirectionEnum::INCOMING)
+			->setType(PaymentTypeEnum::CASH)
+			->setAmount('40.0000')
+			->setAmountBase('40.0000')
+			->setPaidAt(new DateTimeImmutable('2026-05-18 09:00:00'));
+		$order->addPayment($existingPayment);
+
+		$this->entityManager->persist($existingPayment);
+		$this->entityManager->flush();
+
+		$refund = $this->paymentManager->createForStore($store)
+			->setOrder($order)
+			->setDirection(PaymentDirectionEnum::OUTGOING)
+			->setType(PaymentTypeEnum::CARD)
+			->setAmount('40.0000');
+
+		$this->paymentManager->savePayment($refund);
+
+		self::assertSame('0.0000', $order->getPaidAmountBase());
+		self::assertSame(PaymentStatusEnum::REFUNDED, $order->getPaymentStatus());
+	}
+
+	public function testIncomingOrderPaymentRequiresStatusAfterDraftAndBeforeCancellation(): void
+	{
+		$currency = $this->persistCurrency('K' . substr(uniqid(), -2), 'Payment status guard currency');
+		$store = $this->persistStore('payment-status-guard-' . uniqid(), $currency);
+		$order = $this->persistOrder($store, $currency, '100.0000')
+			->setStatus(OrderStatus::DRAFT);
+		$this->entityManager->flush();
+		$payment = $this->paymentManager->createForStore($store)
+			->setOrder($order)
+			->setDirection(PaymentDirectionEnum::INCOMING)
+			->setType(PaymentTypeEnum::CASH)
+			->setAmount('10.0000');
+
+		$this->expectException(RuntimeException::class);
+		$this->expectExceptionMessage('Order payments are allowed only after draft and before cancellation.');
+
+		$this->paymentManager->savePayment($payment);
+	}
+
+	public function testIncomingPaymentCannotBeRecordedForCanceledOrder(): void
+	{
+		$currency = $this->persistCurrency('N' . substr(uniqid(), -2), 'Canceled payment guard currency');
+		$store = $this->persistStore('payment-canceled-guard-' . uniqid(), $currency);
+		$order = $this->persistOrder($store, $currency, '100.0000')
+			->setStatus(OrderStatus::CANCELED);
+		$this->entityManager->flush();
+		$payment = $this->paymentManager->createForStore($store)
+			->setOrder($order)
+			->setDirection(PaymentDirectionEnum::INCOMING)
+			->setType(PaymentTypeEnum::CASH)
+			->setAmount('10.0000');
+
+		$this->expectException(RuntimeException::class);
+		$this->expectExceptionMessage('Order payments are allowed only after draft and before cancellation.');
+
+		$this->paymentManager->savePayment($payment);
+	}
+
 	public function testReversePaymentRequiresReason(): void
 	{
 		$currency = $this->persistCurrency('Q' . substr(uniqid(), -2), 'Reason currency');
 		$store = $this->persistStore('payment-reason-' . uniqid(), $currency);
-		$order = $this->persistOrder($store, $currency, '10.0000');
+		$order = $this->persistOrder($store, $currency, '10.0000')
+			->setStatus(OrderStatus::CONFIRMED);
+		$this->entityManager->flush();
 		$payment = $this->paymentManager->createForStore($store)
 			->setOrder($order)
 			->setAmount('10.0000');
@@ -308,7 +389,9 @@ class PaymentManagerTest extends KernelTestCase
 	{
 		$currency = $this->persistCurrency('I' . substr(uniqid(), -2), 'Immutable currency');
 		$store = $this->persistStore('payment-immutable-' . uniqid(), $currency);
-		$order = $this->persistOrder($store, $currency, '10.0000');
+		$order = $this->persistOrder($store, $currency, '10.0000')
+			->setStatus(OrderStatus::CONFIRMED);
+		$this->entityManager->flush();
 		$payment = $this->paymentManager->createForStore($store)
 			->setOrder($order)
 			->setAmount('10.0000');

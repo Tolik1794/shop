@@ -361,6 +361,8 @@ class PaymentController extends AbstractAdvancedController
 			'return_url' => $returnUrl,
 		]));
 		$paymentActions = $document instanceof Order ? $this->orderPaymentReviewService->paymentActions($document) : null;
+		$canAddPayment = $document instanceof Purchase
+			|| ($document instanceof Order && $this->orderPaymentReviewService->canRecordIncomingPayment($document));
 		$paymentActionUrls = [
 			'incoming' => $paymentActions?->incoming !== null
 				? $this->generateUrl('app_admin_payment_new', array_merge($documentRouteParameters, [
@@ -388,6 +390,7 @@ class PaymentController extends AbstractAdvancedController
 				lockPrefilledDocumentFields: true,
 			)->createView(),
 			'full_payment_form_url' => $document instanceof Purchase ? $fullFormUrl : null,
+			'can_add_payment' => $canAddPayment,
 			'payment_actions' => $paymentActions,
 			'payment_action_urls' => $paymentActionUrls,
 			'payment_review' => $document instanceof Order ? $this->orderPaymentReviewService->canceledPaidReview($document) : null,

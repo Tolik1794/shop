@@ -5,6 +5,7 @@ namespace App\Tests\Controller;
 use App\Entity\Currency;
 use App\Entity\Customer;
 use App\Entity\Order;
+use App\Entity\OrderStatus;
 use App\Entity\Store;
 use App\Entity\User\RoleEnum;
 use App\Entity\User\User;
@@ -167,6 +168,7 @@ class ListContextRedirectControllerTest extends WebTestCase
 			->setStore($store)
 			->setCurrency($store->getBaseCurrency())
 			->setNumber('SO-' . uniqid())
+			->setStatus(OrderStatus::CONFIRMED)
 			->setTotalAmount('10.0000')
 			->setTotalAmountBase('10.0000');
 

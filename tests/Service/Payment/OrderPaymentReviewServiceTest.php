@@ -4,6 +4,7 @@ namespace App\Tests\Service\Payment;
 
 use App\Entity\Order;
 use App\Entity\OrderStatus;
+use App\Service\Payment\OrderPaymentEligibilityService;
 use App\Service\Payment\OrderPaymentReviewService;
 use PHPUnit\Framework\TestCase;
 
@@ -11,7 +12,7 @@ class OrderPaymentReviewServiceTest extends TestCase
 {
 	public function testReturnsReviewForCanceledOrderWithNetPaidAmount(): void
 	{
-		$review = (new OrderPaymentReviewService())->canceledPaidReview((new Order())
+		$review = $this->service()->canceledPaidReview((new Order())
 			->setStatus(OrderStatus::CANCELED)
 			->setPaidAmountBase('25.5000'));
 
@@ -21,7 +22,7 @@ class OrderPaymentReviewServiceTest extends TestCase
 
 	public function testIgnoresCanceledOrderWithoutNetPaidAmount(): void
 	{
-		$review = (new OrderPaymentReviewService())->canceledPaidReview((new Order())
+		$review = $this->service()->canceledPaidReview((new Order())
 			->setStatus(OrderStatus::CANCELED)
 			->setPaidAmountBase('0.0000'));
 
@@ -30,7 +31,7 @@ class OrderPaymentReviewServiceTest extends TestCase
 
 	public function testIgnoresActivePaidOrder(): void
 	{
-		$review = (new OrderPaymentReviewService())->canceledPaidReview((new Order())
+		$review = $this->service()->canceledPaidReview((new Order())
 			->setStatus(OrderStatus::DELIVERED)
 			->setPaidAmountBase('25.5000'));
 
@@ -39,7 +40,7 @@ class OrderPaymentReviewServiceTest extends TestCase
 
 	public function testReturnsIncomingActionForUnpaidOrderRemainder(): void
 	{
-		$actions = (new OrderPaymentReviewService())->paymentActions((new Order())
+		$actions = $this->service()->paymentActions((new Order())
 			->setStatus(OrderStatus::CONFIRMED)
 			->setTotalAmountBase('100.0000')
 			->setPaidAmountBase('25.0000')
@@ -51,16 +52,27 @@ class OrderPaymentReviewServiceTest extends TestCase
 		self::assertNull($actions->refund);
 	}
 
+	public function testDoesNotReturnIncomingActionForDraftOrder(): void
+	{
+		$actions = $this->service()->paymentActions((new Order())
+			->setStatus(OrderStatus::DRAFT)
+			->setTotalAmountBase('100.0000')
+			->setPaidAmountBase('0.0000')
+			->setExchangeRateToBase('1.00000000'));
+
+		self::assertNull($actions->incoming);
+		self::assertNull($actions->refund);
+	}
+
 	public function testReturnsRefundActionForCanceledPaidOrder(): void
 	{
-		$actions = (new OrderPaymentReviewService())->paymentActions((new Order())
+		$actions = $this->service()->paymentActions((new Order())
 			->setStatus(OrderStatus::CANCELED)
 			->setTotalAmountBase('100.0000')
 			->setPaidAmountBase('80.0000')
 			->setExchangeRateToBase('2.00000000'));
 
-		self::assertNotNull($actions->incoming);
-		self::assertSame('10.0000', $actions->incoming->amount);
+		self::assertNull($actions->incoming);
 		self::assertNotNull($actions->refund);
 		self::assertSame('40.0000', $actions->refund->amount);
 		self::assertSame('80.0000', $actions->refund->amountBase);
@@ -68,12 +80,17 @@ class OrderPaymentReviewServiceTest extends TestCase
 
 	public function testDoesNotReturnActionsForFullyPaidActiveOrder(): void
 	{
-		$actions = (new OrderPaymentReviewService())->paymentActions((new Order())
+		$actions = $this->service()->paymentActions((new Order())
 			->setStatus(OrderStatus::DELIVERED)
 			->setTotalAmountBase('100.0000')
 			->setPaidAmountBase('100.0000')
 			->setExchangeRateToBase('1.00000000'));
 
 		self::assertFalse($actions->hasAny());
+	}
+
+	private function service(): OrderPaymentReviewService
+	{
+		return new OrderPaymentReviewService(new OrderPaymentEligibilityService());
 	}
 }

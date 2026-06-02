@@ -264,6 +264,7 @@ class OrderBuilderControllerTest extends WebTestCase
 			->setStore($store)
 			->setCurrency($store->getBaseCurrency())
 			->setNumber('SO-payment-action-' . uniqid())
+			->setStatus(OrderStatus::CONFIRMED)
 			->setCustomerNameSnapshot('Unpaid Customer')
 			->setTotalAmount('10000.0000')
 			->setTotalAmountBase('10000.0000')
@@ -279,10 +280,63 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSame(1, $this->client->getCrawler()->selectLink('Add incoming payment')->count());
 		self::assertSame(0, $this->client->getCrawler()->selectLink('Full form')->count());
 		self::assertSame(0, $this->client->getCrawler()->selectLink('Add outgoing refund')->count());
+		self::assertSame(1, $this->client->getCrawler()->filterXPath('//h6[contains(., "Add payment")]')->count());
 		self::assertStringContainsString(
 			'order_payment_action=incoming',
 			$this->client->getCrawler()->selectLink('Add incoming payment')->link()->getUri(),
 		);
+	}
+
+	public function testDraftOrderPaymentsTabDoesNotShowIncomingPaymentActions(): void
+	{
+		$this->client->loginUser($this->createUser('order-payment-draft-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-payment-draft-store-' . uniqid());
+		$order = (new Order())
+			->setStore($store)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber('SO-payment-draft-' . uniqid())
+			->setStatus(OrderStatus::DRAFT)
+			->setCustomerNameSnapshot('Draft Customer')
+			->setTotalAmount('10000.0000')
+			->setTotalAmountBase('10000.0000')
+			->setPaidAmountBase('0.0000')
+			->setPaymentStatus(PaymentStatusEnum::UNPAID);
+
+		$this->entityManager->persist($order);
+		$this->entityManager->flush();
+
+		$this->client->request('GET', sprintf('/admin/store/%d/payment/order/%d/document', $store->getId(), $order->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSame(0, $this->client->getCrawler()->selectLink('Add incoming payment')->count());
+		self::assertSame(0, $this->client->getCrawler()->selectLink('Add outgoing refund')->count());
+		self::assertSame(0, $this->client->getCrawler()->filterXPath('//h6[contains(., "Add payment")]')->count());
+	}
+
+	public function testCanceledUnpaidOrderPaymentsTabDoesNotShowIncomingPaymentActions(): void
+	{
+		$this->client->loginUser($this->createUser('order-payment-canceled-unpaid-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-payment-canceled-unpaid-store-' . uniqid());
+		$order = (new Order())
+			->setStore($store)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber('SO-payment-canceled-unpaid-' . uniqid())
+			->setStatus(OrderStatus::CANCELED)
+			->setCustomerNameSnapshot('Canceled Unpaid Customer')
+			->setTotalAmount('10000.0000')
+			->setTotalAmountBase('10000.0000')
+			->setPaidAmountBase('0.0000')
+			->setPaymentStatus(PaymentStatusEnum::UNPAID);
+
+		$this->entityManager->persist($order);
+		$this->entityManager->flush();
+
+		$this->client->request('GET', sprintf('/admin/store/%d/payment/order/%d/document', $store->getId(), $order->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSame(0, $this->client->getCrawler()->selectLink('Add incoming payment')->count());
+		self::assertSame(0, $this->client->getCrawler()->selectLink('Add outgoing refund')->count());
+		self::assertSame(0, $this->client->getCrawler()->filterXPath('//h6[contains(., "Add payment")]')->count());
 	}
 
 	public function testCanceledPaidOrderShowsManualRefundReviewWarning(): void
@@ -327,7 +381,9 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSelectorTextContains('.document-payment-status', 'Review refund with accounting before closing the financial process.');
 		self::assertSelectorTextContains('.document-payment-status', 'Net paid amount: 10 000.00');
 		self::assertSelectorTextNotContains('.document-payment-status', 'This document is fully paid.');
+		self::assertSame(0, $this->client->getCrawler()->selectLink('Add incoming payment')->count());
 		self::assertSame(1, $this->client->getCrawler()->selectLink('Add outgoing refund')->count());
+		self::assertSame(0, $this->client->getCrawler()->filterXPath('//h6[contains(., "Add payment")]')->count());
 		self::assertStringContainsString(
 			'order_payment_action=refund',
 			$this->client->getCrawler()->selectLink('Add outgoing refund')->link()->getUri(),

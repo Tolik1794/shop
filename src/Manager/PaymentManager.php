@@ -12,6 +12,7 @@ use App\Enum\PaymentTypeEnum;
 use App\Repository\PaymentRepository;
 use App\Service\Concurrency\ConcurrencyGuard;
 use App\Service\ExchangeRateResolver;
+use App\Service\Payment\OrderPaymentEligibilityService;
 use App\Service\Payment\PaymentAmountLimitService;
 use App\Service\Payment\PaymentHistoryRecorder;
 use App\Service\Payment\PaymentRecalculationService;
@@ -27,6 +28,7 @@ class PaymentManager extends AbstractManager
 		private readonly PaymentRecalculationService $paymentRecalculationService,
 		private readonly PaymentHistoryRecorder $paymentHistoryRecorder,
 		private readonly PaymentAmountLimitService $paymentAmountLimitService,
+		private readonly OrderPaymentEligibilityService $orderPaymentEligibilityService,
 		private readonly UserManager $userManager,
 		private readonly ConcurrencyGuard $concurrencyGuard,
 	)
@@ -90,6 +92,7 @@ class PaymentManager extends AbstractManager
 
 			$this->assertValidTarget($payment);
 			$this->concurrencyGuard->lockAll($this->documentsToRecalculate($payment, $previousOrder, $previousPurchase));
+			$this->assertOrderPaymentAllowed($payment);
 			$this->preparePayment($payment);
 			$this->paymentAmountLimitService->assertWithinLimits($payment, true);
 
@@ -202,6 +205,15 @@ class PaymentManager extends AbstractManager
 
 		if ($payment->getPurchase() instanceof Purchase && $payment->getPurchase()->getStore()?->getId() !== $store->getId()) {
 			throw new RuntimeException('Selected purchase does not belong to current store.');
+		}
+	}
+
+	private function assertOrderPaymentAllowed(Payment $payment): void
+	{
+		$violation = $this->orderPaymentEligibilityService->violation($payment);
+
+		if ($violation !== null) {
+			throw new RuntimeException($violation);
 		}
 	}
 

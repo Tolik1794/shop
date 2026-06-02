@@ -7,6 +7,12 @@ use App\Entity\OrderStatus;
 
 class OrderPaymentReviewService
 {
+	public function __construct(
+		private readonly OrderPaymentEligibilityService $orderPaymentEligibilityService,
+	)
+	{
+	}
+
 	public function paymentActions(Order $order): OrderPaymentActions
 	{
 		$exchangeRateToBase = $this->numberValue($order->getExchangeRateToBase());
@@ -15,9 +21,14 @@ class OrderPaymentReviewService
 		$refundableAmountBase = $order->getStatus() === OrderStatus::CANCELED ? $paidAmountBase : 0.0;
 
 		return new OrderPaymentActions(
-			incoming: $unpaidAmountBase > 0.00005 ? $this->action($unpaidAmountBase, $exchangeRateToBase) : null,
+			incoming: $this->canRecordIncomingPayment($order) && $unpaidAmountBase > 0.00005 ? $this->action($unpaidAmountBase, $exchangeRateToBase) : null,
 			refund: $refundableAmountBase > 0.00005 ? $this->action($refundableAmountBase, $exchangeRateToBase) : null,
 		);
+	}
+
+	public function canRecordIncomingPayment(Order $order): bool
+	{
+		return $this->orderPaymentEligibilityService->canRecordIncomingPayment($order);
 	}
 
 	public function canceledPaidReview(Order $order): ?CanceledOrderPaymentReview
