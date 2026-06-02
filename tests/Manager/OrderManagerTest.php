@@ -5,6 +5,8 @@ namespace App\Tests\Manager;
 use App\Entity\Category;
 use App\Entity\Currency;
 use App\Entity\ExchangeRate;
+use App\Entity\InventoryDocument;
+use App\Entity\InventoryDocumentLine;
 use App\Entity\Order;
 use App\Entity\OrderEntry;
 use App\Entity\OrderHistory;
@@ -21,6 +23,9 @@ use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
 use App\Entity\WarehouseStockBatch;
 use App\Enum\PaymentStatusEnum;
+use App\Enum\InventoryDirection;
+use App\Enum\InventoryDocumentStatus;
+use App\Enum\InventoryDocumentType;
 use App\Enum\OrderDiscountModeEnum;
 use App\Enum\ProductDiscountTargetTypeEnum;
 use App\Enum\ProductKindEnum;
@@ -257,6 +262,125 @@ class OrderManagerTest extends KernelTestCase
 
 		self::assertSame(OrderStatus::CANCELED, $order->getStatus());
 		self::assertNotNull($order->getCanceledAt());
+	}
+
+	public function testCancelWithoutShippedQuantityDoesNotCreateCustomerReturnDraft(): void
+	{
+		$currency = $this->persistCurrency('U' . substr(uniqid(), -2), 'Unshipped cancel currency');
+		$store = $this->persistStore('order-cancel-unshipped-' . uniqid(), $currency);
+		$product = $this->persistProduct($store);
+		$order = $this->orderManager->createDraft($store);
+		$order->addOrderEntry((new OrderEntry())
+			->setProduct($product)
+			->setQuantity('2.0000')
+			->setUnitPrice('10.0000'));
+		$this->orderManager->saveOrder($order);
+
+		$this->orderManager->cancel($order);
+
+		$documents = $this->entityManager->getRepository(InventoryDocument::class)->findBy([
+			'order' => $order,
+			'type' => InventoryDocumentType::CUSTOMER_RETURN,
+		]);
+
+		self::assertSame(OrderStatus::CANCELED, $order->getStatus());
+		self::assertCount(0, $documents);
+	}
+
+	public function testCancelCreatesCustomerReturnDraftForShippedQuantityOnly(): void
+	{
+		$currency = $this->persistCurrency('J' . substr(uniqid(), -2), 'Shipped cancel currency');
+		$store = $this->persistStore('order-cancel-shipped-' . uniqid(), $currency);
+		$product = $this->persistProduct($store);
+		$warehouse = $this->persistWarehouse($store);
+		$warehouseStock = $this->persistWarehouseStock($warehouse, $product, '5.0000');
+		$warehouseStock->setAverageCost('4.5000');
+		$order = $this->orderManager->createDraft($store);
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('3.0000')
+			->setUnitPrice('10.0000');
+		$order->addOrderEntry($orderEntry);
+		$this->orderManager->saveOrder($order);
+		$order
+			->setStatus(OrderStatus::SHIPPED);
+		$orderEntry
+			->setShippedQuantity('2.0000')
+			->setReturnedQuantity('0.5000');
+		$this->entityManager->flush();
+
+		$this->orderManager->cancel($order);
+		$this->entityManager->refresh($warehouseStock);
+
+		$document = $this->entityManager->getRepository(InventoryDocument::class)->findOneBy([
+			'order' => $order,
+			'type' => InventoryDocumentType::CUSTOMER_RETURN,
+		]);
+
+		self::assertInstanceOf(InventoryDocument::class, $document);
+		self::assertSame(InventoryDocumentStatus::DRAFT, $document->getStatus());
+		self::assertNull($document->getReason());
+		self::assertCount(1, $document->getLines());
+		$line = $document->getLines()->first();
+		self::assertSame(InventoryDirection::IN, $line->getDirection());
+		self::assertSame($orderEntry, $line->getOrderEntry());
+		self::assertSame('1.5000', $line->getQuantity());
+		self::assertSame('4.5000', $line->getUnitPriceBase());
+		self::assertSame('5.0000', $warehouseStock->getQuantityOnHand());
+	}
+
+	public function testCancelSkipsEntriesThatAlreadyHaveDraftCustomerReturnLines(): void
+	{
+		$currency = $this->persistCurrency('I' . substr(uniqid(), -2), 'Draft return guard currency');
+		$store = $this->persistStore('order-cancel-draft-return-guard-' . uniqid(), $currency);
+		$product = $this->persistProduct($store);
+		$warehouse = $this->persistWarehouse($store);
+		$this->persistWarehouseStock($warehouse, $product, '5.0000');
+		$order = $this->orderManager->createDraft($store);
+		$firstEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('2.0000')
+			->setUnitPrice('10.0000');
+		$secondEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setQuantity('2.0000')
+			->setUnitPrice('10.0000');
+		$order
+			->addOrderEntry($firstEntry)
+			->addOrderEntry($secondEntry);
+		$this->orderManager->saveOrder($order);
+		$order->setStatus(OrderStatus::SHIPPED);
+		$firstEntry->setShippedQuantity('2.0000');
+		$secondEntry->setShippedQuantity('1.0000');
+		$existingDocument = (new InventoryDocument())
+			->setStore($store)
+			->setNumber('CRN-existing-' . uniqid())
+			->setType(InventoryDocumentType::CUSTOMER_RETURN)
+			->setOrder($order)
+			->addLine((new InventoryDocumentLine())
+				->setProduct($product)
+				->setWarehouse($warehouse)
+				->setDirection(InventoryDirection::IN)
+				->setQuantity('2.0000')
+				->setOrderEntry($firstEntry));
+		$this->entityManager->persist($existingDocument);
+		$this->entityManager->flush();
+
+		$this->orderManager->cancel($order);
+
+		$documents = $this->entityManager->getRepository(InventoryDocument::class)->findBy([
+			'order' => $order,
+			'type' => InventoryDocumentType::CUSTOMER_RETURN,
+		], ['id' => 'ASC']);
+
+		self::assertCount(2, $documents);
+		self::assertSame($existingDocument->getId(), $documents[0]->getId());
+		self::assertCount(1, $documents[1]->getLines());
+		self::assertSame($secondEntry, $documents[1]->getLines()->first()->getOrderEntry());
+		self::assertSame('1.0000', $documents[1]->getLines()->first()->getQuantity());
 	}
 
 	public function testCancelSucceedsWhenEntryBatchNoLongerHasAvailableQuantity(): void
@@ -513,6 +637,35 @@ class OrderManagerTest extends KernelTestCase
 		self::assertSame('2.0000', $warehouseStock->getReservedQuantity());
 	}
 
+	public function testRollbackStatusDoesNotRevalidateDepletedSelectedBatchForStatusOnlyRollback(): void
+	{
+		$currency = $this->persistCurrency('E' . substr(uniqid(), -2), 'Depleted batch rollback currency');
+		$store = $this->persistStore('order-depleted-batch-rollback-' . uniqid(), $currency);
+		$product = $this->persistProduct($store);
+		$warehouse = $this->persistWarehouse($store);
+		$warehouseStock = $this->persistWarehouseStock($warehouse, $product, '5.0000');
+		$batch = $this->persistWarehouseStockBatch($warehouseStock, '2.0000', '14.0000');
+		$order = $this->orderManager->createDraft($store);
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setWarehouseStockBatch($batch)
+			->setQuantity('2.0000')
+			->setUnitPrice('14.0000');
+		$order->addOrderEntry($orderEntry);
+		$this->orderManager->saveOrder($order);
+		$this->recordStatusChange($order, OrderStatus::DRAFT, OrderStatus::SHIPPED);
+		$orderEntry->setShippedQuantity('2.0000');
+		$batch->setRemainingQuantity('0.0000');
+		$this->entityManager->flush();
+		$this->recordStatusChange($order, OrderStatus::SHIPPED, OrderStatus::DELIVERED);
+
+		$this->orderManager->rollbackStatus($order);
+
+		self::assertSame(OrderStatus::SHIPPED, $order->getStatus());
+		self::assertSame('0.0000', $batch->getRemainingQuantity());
+	}
+
 	public function testRollbackStatusRestoresCompletedOrderToDelivered(): void
 	{
 		$currency = $this->persistCurrency('M' . substr(uniqid(), -2), 'Completed rollback currency');
@@ -547,6 +700,37 @@ class OrderManagerTest extends KernelTestCase
 			'transition' => 'rollback_status',
 			'rolled_back_history_id' => $completedHistory->getId(),
 		], $history->getPayload());
+	}
+
+	public function testStatusOnlyActionsDoNotRevalidateDepletedSelectedBatch(): void
+	{
+		$currency = $this->persistCurrency('Y' . substr(uniqid(), -2), 'Status only depleted batch currency');
+		$store = $this->persistStore('order-status-only-depleted-batch-' . uniqid(), $currency);
+		$product = $this->persistProduct($store);
+		$warehouse = $this->persistWarehouse($store);
+		$warehouseStock = $this->persistWarehouseStock($warehouse, $product, '5.0000');
+		$batch = $this->persistWarehouseStockBatch($warehouseStock, '2.0000', '14.0000');
+		$order = $this->orderManager->createDraft($store);
+		$orderEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setWarehouseStockBatch($batch)
+			->setQuantity('2.0000')
+			->setUnitPrice('14.0000');
+		$order->addOrderEntry($orderEntry);
+		$this->orderManager->saveOrder($order);
+		$this->recordStatusChange($order, OrderStatus::DRAFT, OrderStatus::SHIPPED);
+		$orderEntry->setShippedQuantity('2.0000');
+		$batch->setRemainingQuantity('0.0000');
+		$this->entityManager->flush();
+
+		$this->orderManager->markDelivered($order);
+		$order->setPaymentStatus(PaymentStatusEnum::PAID);
+		$this->entityManager->flush();
+		$this->orderManager->complete($order);
+
+		self::assertSame(OrderStatus::COMPLETED, $order->getStatus());
+		self::assertSame('0.0000', $batch->getRemainingQuantity());
 	}
 
 	public function testRollbackStatusWalksBackThroughUnrolledStatusHistory(): void

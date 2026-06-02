@@ -83,6 +83,10 @@ class NoPaymentsGuard <<guard>>
 class ReserveStockAction <<action>>
 class ReleaseReservationsAction <<action>>
 class RecalculateProgressAction <<action>>
+class MarkOrderCanceledAction <<action>>
+class CreateCustomerReturnDraftOnOrderCancelAction <<action>>
+class CanceledOrderCustomerReturnDraftService <<service>>
+class CustomerReturnUseCase <<use case>>
 
 WorkflowSubjectInterface <|.. Order
 WorkflowSubjectInterface <|.. Purchase
@@ -114,8 +118,14 @@ TransitionGuardInterface <|.. NoPaymentsGuard
 TransitionActionInterface <|.. ReserveStockAction
 TransitionActionInterface <|.. ReleaseReservationsAction
 TransitionActionInterface <|.. RecalculateProgressAction
+TransitionActionInterface <|.. MarkOrderCanceledAction
+TransitionActionInterface <|.. CreateCustomerReturnDraftOnOrderCancelAction
 
 OrderWorkflowDefinition --> OrderHistoryRecorder : order timeline
+OrderWorkflowDefinition --> MarkOrderCanceledAction : cancel after-action
+OrderWorkflowDefinition --> CreateCustomerReturnDraftOnOrderCancelAction : cancel after-action
+CreateCustomerReturnDraftOnOrderCancelAction --> CanceledOrderCustomerReturnDraftService : delegates
+CanceledOrderCustomerReturnDraftService --> CustomerReturnUseCase : creates draft return
 PurchaseWorkflowDefinition --> GenericStatusHistoryRecorder : generic status history
 InventoryDocumentWorkflowDefinition --> GenericStatusHistoryRecorder : generic status history
 ProductionOrderWorkflowDefinition --> GenericStatusHistoryRecorder : generic status history
@@ -170,6 +180,17 @@ note right of HistoryRecorderInterface
     for Purchase, InventoryDocument and ProductionOrder.
 
   The core transition service does not know which table is used.
+end note
+
+note right of CreateCustomerReturnDraftOnOrderCancelAction
+  Order cancel side effect.
+
+  If shippedQuantity - returnedQuantity > 0,
+  create one draft CUSTOMER_RETURN with IN lines.
+
+  It never posts stock immediately.
+  Existing draft customer return lines are skipped per order entry
+  to keep cancel idempotent for open warehouse work.
 end note
 
 note bottom

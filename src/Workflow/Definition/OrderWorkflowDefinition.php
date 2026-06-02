@@ -4,6 +4,7 @@ namespace App\Workflow\Definition;
 
 use App\Entity\Order;
 use App\Entity\OrderStatus;
+use App\Workflow\Action\CreateCustomerReturnDraftOnOrderCancelAction;
 use App\Workflow\Action\MarkOrderCanceledAction;
 use App\Workflow\Exception\UnknownTransitionException;
 use App\Workflow\Guard\DocumentFullyPaidGuard;
@@ -26,6 +27,7 @@ class OrderWorkflowDefinition implements WorkflowDefinitionInterface
 		OrderHasEntriesGuard $orderHasEntriesGuard,
 		DocumentFullyPaidGuard $documentFullyPaidGuard,
 		MarkOrderCanceledAction $markOrderCanceledAction,
+		CreateCustomerReturnDraftOnOrderCancelAction $createCustomerReturnDraftOnOrderCancelAction,
 		private readonly OrderHistoryRecorder $historyRecorder,
 	)
 	{
@@ -70,7 +72,7 @@ class OrderWorkflowDefinition implements WorkflowDefinitionInterface
 					], true),
 				)),
 				toStatus: OrderStatus::CANCELED->value,
-				afterActions: [$markOrderCanceledAction],
+				afterActions: [$markOrderCanceledAction, $createCustomerReturnDraftOnOrderCancelAction],
 				historyEventKey: 'order.status_changed',
 			),
 		];

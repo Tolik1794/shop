@@ -151,10 +151,7 @@ class OrderManager extends AbstractManager
 
 			$this->statusTransitionService->apply($order, 'cancel', $this->transitionContext());
 			$this->releaseActiveReservations($order);
-			// Cancelling only changes status and releases reservations; it must not re-run the
-			// order-entry batch availability validation (saveOrder()), which fails for already
-			// shipped/consumed batches. The status change history is recorded by the transition service.
-			$this->save($order);
+			$this->saveStatusOnlyOrder($order);
 		});
 	}
 
@@ -219,7 +216,7 @@ class OrderManager extends AbstractManager
 				$this->releaseActiveReservations($order);
 			}
 
-			$this->saveOrder($order);
+			$this->saveStatusOnlyOrder($order);
 
 			if ($this->shouldRefreshReservationsAfterRollback($targetStatus)) {
 				$this->reserveStockForOrder($order);
@@ -233,7 +230,7 @@ class OrderManager extends AbstractManager
 		$this->entityManager->wrapInTransaction(function () use ($order): void {
 			$this->concurrencyGuard->lock($order);
 			$this->statusTransitionService->apply($order, 'mark_delivered', $this->transitionContext());
-			$this->saveOrder($order);
+			$this->saveStatusOnlyOrder($order);
 		});
 	}
 
@@ -242,7 +239,7 @@ class OrderManager extends AbstractManager
 		$this->entityManager->wrapInTransaction(function () use ($order): void {
 			$this->concurrencyGuard->lock($order);
 			$this->statusTransitionService->apply($order, 'complete', $this->transitionContext());
-			$this->saveOrder($order);
+			$this->saveStatusOnlyOrder($order);
 		});
 	}
 
@@ -362,6 +359,14 @@ class OrderManager extends AbstractManager
 			OrderStatus::AWAITING_STOCK,
 			OrderStatus::READY_TO_SHIP,
 		], true);
+	}
+
+	private function saveStatusOnlyOrder(Order $order): void
+	{
+		// Status-only actions must not re-run order-entry preparation. Batch availability may have
+		// legitimately changed after shipment or reservation consumption, while the action only
+		// writes workflow state/history and related reservation side effects.
+		$this->save($order);
 	}
 
 	private function reserveStockForOrder(Order $order): void

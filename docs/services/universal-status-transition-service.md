@@ -104,6 +104,10 @@ $this->statusTransitionService->apply(
 
 Важливо: зворотний перехід не з’являється автоматично. Якщо бізнес дозволяє повернення назад, для нього треба окремо створити окремий transition key з власними правилами.
 
+Для `OrderWorkflowDefinition::cancel` after-action pipeline також запускає створення draft `CUSTOMER_RETURN`, але тільки для рядків із `shippedQuantity - returnedQuantity > 0`. Дія не проводить складський документ і пропускає позиції, які вже мають відкритий draft customer return line у цьому замовленні.
+
+Order status-only actions (`cancel`, `mark_delivered`, `complete`, `rollback_status`) зберігають тільки workflow state/history і свої явні side effects. Вони не запускають повторну підготовку рядків замовлення, щоб не перевіряти доступність партії складу, яка могла бути валідно спожита відвантаженням. Якщо дія має окремий stock side effect, наприклад відновлення резервів при rollback у `ready_to_ship`, ця перевірка виконується окремо і лишається валідною.
+
 ### Guards
 
 Guards відповідають на питання: **чи можна виконати перехід зараз?**

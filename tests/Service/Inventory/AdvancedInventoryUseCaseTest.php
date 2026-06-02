@@ -85,6 +85,40 @@ class AdvancedInventoryUseCaseTest extends TestCase
 		self::assertSame($orderEntry, $line->getOrderEntry());
 	}
 
+	public function testCustomerReturnUseCaseCreatesOneDraftForReturnableEntries(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct();
+		$order = (new Order())->setStore($store)->setNumber('SO-1');
+		$firstEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setShippedQuantity('3.0000')
+			->setReturnedQuantity('1.0000');
+		$secondEntry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setShippedQuantity('1.5000');
+		$order
+			->addOrderEntry($firstEntry)
+			->addOrderEntry($secondEntry);
+		$useCase = new CustomerReturnUseCase(
+			$this->entityManagerExpectingDraftPersist(),
+			$this->postingService(),
+			$this->warehouseStockRepository(new WarehouseStock()),
+		);
+
+		$document = $useCase->createDraftForReturnableEntries($order, [$firstEntry, $secondEntry], number: 'CRN-2');
+		$lines = $document->getLines()->toArray();
+
+		self::assertSame(InventoryDocumentType::CUSTOMER_RETURN, $document->getType());
+		self::assertSame($order, $document->getOrder());
+		self::assertCount(2, $lines);
+		self::assertSame('2.0000', $lines[0]->getQuantity());
+		self::assertSame($firstEntry, $lines[0]->getOrderEntry());
+		self::assertSame('1.5000', $lines[1]->getQuantity());
+		self::assertSame($secondEntry, $lines[1]->getOrderEntry());
+	}
+
 	public function testOrderShipmentUseCaseCreatesDraftForRemainingOrderQuantities(): void
 	{
 		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct();
