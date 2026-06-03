@@ -63,6 +63,18 @@ class ProductType extends AbstractType
 		        'required' => true,
 		        'attr' => ['class' => 'select2'],
 	        ])
+	        ->add('productRelations', CollectionType::class, [
+		        'entry_type' => ProductRelationType::class,
+		        'entry_options' => [
+			        'label' => false,
+			        'store' => $product->getStore(),
+			        'exclude_product' => $product,
+		        ],
+		        'allow_add' => true,
+		        'allow_delete' => true,
+		        'by_reference' => false,
+		        'label' => 'admin.product.relations.title',
+	        ])
         ;
 
 		$builder->addEventListener(FormEvents::PRE_SET_DATA, function (FormEvent $event): void {

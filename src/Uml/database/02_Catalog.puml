@@ -30,6 +30,13 @@ enum ProductDiscountTargetTypeEnum {
     category
 }
 
+enum ProductRelationTypeEnum {
+    accessory
+    spare_part
+    hardware
+    related
+}
+
 entity Category {
     * id: int
     --
@@ -164,6 +171,15 @@ entity CategoryProductParameterName {
     * category: Category
 }
 
+entity ProductRelation {
+    * id: int
+    --
+    * type: ProductRelationTypeEnum
+    * sortOrder: smallint
+    * product: Product
+    * relatedProduct: Product
+}
+
 
 Store ||--o{ Category : owns
 Store ||--o{ CategoryAdditionalName : scopes
@@ -190,6 +206,9 @@ Currency ||--o{ ProductPrice : price currency
 Product ||--o{ ProductParameter : has
 ProductParameterName ||--o{ ProductParameter : names
 ProductParameterName ||--o{ CategoryProductParameterName : allowed for category
+Product ||--o{ ProductRelation : owns relations
+Product ||--o{ ProductRelation : referenced as related
+ProductRelationTypeEnum ||--o{ ProductRelation : classifies
 
 note right of Category
   Unique:
@@ -291,6 +310,19 @@ end note
 note right of ProductParameter
   Unique:
   (product_id, product_parameter_name_id)
+end note
+
+note right of ProductRelation
+  Related products (table -> chairs, legs, hardware).
+
+  Unique:
+  (product_id, related_product_id)
+
+  Relations are bidirectional (mirrored): a relation
+  product -> relatedProduct is kept in sync with an inverse
+  relatedProduct -> product of the same type. Both products
+  must belong to the same store. ON DELETE CASCADE on both
+  foreign keys removes relations when a product is deleted.
 end note
 
 @enduml

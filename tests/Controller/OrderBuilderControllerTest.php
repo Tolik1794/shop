@@ -14,6 +14,7 @@ use App\Entity\Payment;
 use App\Entity\Product;
 use App\Entity\ProductDiscountRule;
 use App\Entity\ProductDiscountTarget;
+use App\Entity\ProductRelation;
 use App\Entity\Store;
 use App\Entity\Unit;
 use App\Entity\User\RoleEnum;
@@ -26,6 +27,7 @@ use App\Enum\PaymentStatusEnum;
 use App\Enum\PaymentTypeEnum;
 use App\Enum\ProductDiscountTargetTypeEnum;
 use App\Enum\ProductKindEnum;
+use App\Enum\ProductRelationTypeEnum;
 use DateTime;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
@@ -708,6 +710,54 @@ class OrderBuilderControllerTest extends WebTestCase
 
 		self::assertContains($currentProduct->getId(), $ids);
 		self::assertNotContains($otherProduct->getId(), $ids);
+	}
+
+	public function testRelatedProductsEndpointReturnsRelatedProductsForStore(): void
+	{
+		$this->client->loginUser($this->createUser('order-builder-related-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-builder-related-store-' . uniqid());
+		$table = $this->createProduct($store, 'Related table');
+		$chair = $this->createProduct($store, 'Related chair');
+
+		$relation = (new ProductRelation())
+			->setProduct($table)
+			->setRelatedProduct($chair)
+			->setType(ProductRelationTypeEnum::ACCESSORY);
+		$this->entityManager->persist($relation);
+		$this->entityManager->flush();
+
+		$this->client->request('GET', sprintf(
+			'/api/admin/store/%d/order/related-products?productId=%d',
+			$store->getId(),
+			$table->getId(),
+		));
+
+		self::assertResponseIsSuccessful();
+
+		$data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+		$ids = array_column($data['products'], 'id');
+
+		self::assertContains($chair->getId(), $ids);
+		self::assertNotContains($table->getId(), $ids);
+	}
+
+	public function testRelatedProductsEndpointReturnsEmptyForProductWithoutRelations(): void
+	{
+		$this->client->loginUser($this->createUser('order-builder-related-empty-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-builder-related-empty-store-' . uniqid());
+		$product = $this->createProduct($store, 'Lonely product');
+
+		$this->client->request('GET', sprintf(
+			'/api/admin/store/%d/order/related-products?productId=%d',
+			$store->getId(),
+			$product->getId(),
+		));
+
+		self::assertResponseIsSuccessful();
+
+		$data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+		self::assertSame([], $data['products']);
 	}
 
 	public function testProductSearchUsesRequestedOrderCurrencyForPrice(): void

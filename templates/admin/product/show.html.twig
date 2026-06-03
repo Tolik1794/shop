@@ -70,5 +70,32 @@
             </tr>
             </tbody>
         </table>
+
+        <h6 class="mb-2">{{ 'admin.product.relations.title'|trans }}</h6>
+        {% if entity.productRelations|length == 0 %}
+            <p class="text-muted small mb-0">{{ 'admin.product.relations.no_relations'|trans }}</p>
+        {% else %}
+            {% set relation_groups = {} %}
+            {% for relation in entity.productRelations %}
+                {% set type_key = relation.type.value %}
+                {% set relation_groups = relation_groups|merge({(type_key): (relation_groups[type_key]|default([]))|merge([relation])}) %}
+            {% endfor %}
+            {% for type_key, group in relation_groups %}
+                <div class="mb-2">
+                    <div class="text-muted small text-uppercase">{{ ('admin.product.relation_type.' ~ type_key)|trans }}</div>
+                    <ul class="list-unstyled mb-0">
+                        {% for relation in group %}
+                            {% set related = relation.relatedProduct %}
+                            <li>
+                                <a href="{{ path('admin_product_index', {store_id: app.request.attributes.get('store_id'), id: related.id}) }}">
+                                    {{ related.name }}
+                                </a>
+                                <span class="text-muted">({{ related.code }})</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endfor %}
+        {% endif %}
     </div>
 </div>

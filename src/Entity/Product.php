@@ -86,6 +86,15 @@ class Product
     )]
     private Collection $productParameters;
 
+    #[ORM\OneToMany(
+		targetEntity: ProductRelation::class,
+	    mappedBy: 'product',
+	    cascade: ['persist'],
+	    orphanRemoval: true
+    )]
+    #[ORM\OrderBy(['sortOrder' => 'ASC', 'id' => 'ASC'])]
+    private Collection $productRelations;
+
     public function __construct()
     {
 		$this->status = ActiveStatusEnum::ACTIVE;
@@ -95,6 +104,7 @@ class Product
         $this->warehouseStocks = new ArrayCollection();
 		$this->productPrices = new ArrayCollection();
         $this->productParameters = new ArrayCollection();
+        $this->productRelations = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -375,6 +385,36 @@ class Product
             // set the owning side to null (unless already changed)
             if ($productParameter->getProduct() === $this) {
                 $productParameter->setProduct(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, ProductRelation>
+     */
+    public function getProductRelations(): Collection
+    {
+        return $this->productRelations;
+    }
+
+    public function addProductRelation(ProductRelation $productRelation): self
+    {
+        if (!$this->productRelations->contains($productRelation)) {
+            $this->productRelations->add($productRelation);
+            $productRelation->setProduct($this);
+        }
+
+        return $this;
+    }
+
+    public function removeProductRelation(ProductRelation $productRelation): self
+    {
+        if ($this->productRelations->removeElement($productRelation)) {
+            // set the owning side to null (unless already changed)
+            if ($productRelation->getProduct() === $this) {
+                $productRelation->setProduct(null);
             }
         }
 

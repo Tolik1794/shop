@@ -8,6 +8,7 @@ use App\Entity\Currency;
 use App\Entity\Store;
 use App\Repository\CurrencyRepository;
 use App\Repository\CustomerRepository;
+use App\Repository\ProductRelationRepository;
 use App\Repository\ProductRepository;
 use App\Service\OrderCalculator;
 use App\Service\Discount\ProductDiscountResolver;
@@ -26,6 +27,7 @@ class OrderController extends AbstractController
 {
 	public function __construct(
 		private readonly ProductRepository $productRepository,
+		private readonly ProductRelationRepository $productRelationRepository,
 		private readonly CurrencyRepository $currencyRepository,
 		private readonly CustomerRepository $customerRepository,
 		private readonly OrderCalculator $orderCalculator,
@@ -95,6 +97,57 @@ class OrderController extends AbstractController
 		$payload = $request->request->all('order');
 
 		return $this->json($this->orderCalculator->calculatePayload($payload));
+	}
+
+	#[Route('/related-products', name: 'related_products', methods: ['GET'])]
+	public function relatedProducts(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+	): JsonResponse
+	{
+		$productId = $request->query->getInt('productId');
+		$currency = $this->resolveSearchCurrency($request, $store);
+
+		if ($productId < 1) {
+			return $this->json(new ProductSearchResponseDto([], 1, false));
+		}
+
+		$product = $this->productRepository->find($productId);
+
+		if ($product === null || $product->getStore()?->getId() !== $store->getId()) {
+			return $this->json(new ProductSearchResponseDto([], 1, false));
+		}
+
+		$products = [];
+		$relations = $this->productRelationRepository->findBy(
+			['product' => $product],
+			['sortOrder' => 'ASC', 'id' => 'ASC'],
+		);
+
+		foreach ($relations as $relation) {
+			$relatedProduct = $relation->getRelatedProduct();
+
+			if ($relatedProduct === null || $relatedProduct->getStore()?->getId() !== $store->getId()) {
+				continue;
+			}
+
+			$productDto = ProductSearchProductDto::fromProduct(
+				$relatedProduct,
+				$store,
+				$this->catalogPriceResolver->tryResolve($relatedProduct, $store, $currency)?->getAmount(),
+				[],
+				$this->orderBatchPricingService,
+				$currency,
+				$this->productDiscountResolver,
+			);
+
+			if ($productDto instanceof ProductSearchProductDto) {
+				$products[] = $productDto;
+			}
+		}
+
+		return $this->json(new ProductSearchResponseDto($products, 1, false));
 	}
 
 	/**

@@ -189,6 +189,19 @@ admin:
     no_important_notes: 'Важливих приміток немає.'
     no_returns: 'Повернень немає.'
     no_customer: 'До цього замовлення не прив’язано клієнта.'
+  product:
+    relations:
+      title: 'Пов''язані товари'
+      add: 'Додати пов''язаний товар'
+      remove: 'Видалити зв''язок'
+      no_relations: 'Немає пов''язаних товарів.'
+      related_product: 'Пов''язаний товар'
+      type: 'Тип зв''язку'
+    relation_type:
+      accessory: 'Аксесуари'
+      spare_part: 'Запчастини'
+      hardware: 'Фурнітура'
+      related: 'Супутні'
   order:
     title:
       new: 'Нове замовлення'
@@ -244,6 +257,8 @@ admin:
       subtotal: 'Сума товарів'
       discount: 'Знижка'
       total: 'Загальна сума'
+    related:
+      title: 'Пов''язані товари'
     discount:
       none: 'Без знижки'
     source:

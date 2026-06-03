@@ -184,6 +184,19 @@ admin:
     no_important_notes: 'No important notes.'
     no_returns: 'No returns.'
     no_customer: 'No customer linked to this order.'
+  product:
+    relations:
+      title: 'Related products'
+      add: 'Add related product'
+      remove: 'Remove relation'
+      no_relations: 'No related products.'
+      related_product: 'Related product'
+      type: 'Relation type'
+    relation_type:
+      accessory: 'Accessories'
+      spare_part: 'Spare parts'
+      hardware: 'Hardware'
+      related: 'Related'
   order:
     title:
       new: 'New order'
@@ -239,6 +252,8 @@ admin:
       subtotal: 'Product subtotal'
       discount: 'Discount'
       total: 'Total amount'
+    related:
+      title: 'Related products'
     discount:
       none: 'No discount'
     source:

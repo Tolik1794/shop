@@ -1,0 +1,17 @@
+<div class="row g-2 align-items-end border rounded p-2 mb-2" {{ stimulus_target('product-relations', 'row') }}>
+    <div class="col-12 col-md-6">
+        {{ form_label(relation.relatedProduct, 'admin.product.relations.related_product'|trans, {label_attr: {class: 'form-label'}}) }}
+        {{ form_widget(relation.relatedProduct) }}
+        {{ form_errors(relation.relatedProduct) }}
+    </div>
+    <div class="col-9 col-md-5">
+        {{ form_label(relation.type, 'admin.product.relations.type'|trans, {label_attr: {class: 'form-label'}}) }}
+        {{ form_widget(relation.type, {attr: {class: 'form-select'}}) }}
+        {{ form_errors(relation.type) }}
+    </div>
+    <div class="col-3 col-md-1 text-end">
+        <button type="button" class="btn btn-sm btn-outline-danger" data-action="product-relations#removeEntry" title="{{ 'admin.product.relations.remove'|trans }}" aria-label="{{ 'admin.product.relations.remove'|trans }}">
+            <i class="fa-solid fa-trash"></i>
+        </button>
+    </div>
+</div>

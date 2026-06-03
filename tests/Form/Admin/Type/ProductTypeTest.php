@@ -60,6 +60,57 @@ class ProductTypeTest extends KernelTestCase
 		self::assertTrue($form->get('productParameters')->has('Size'));
 	}
 
+	public function testProductFormSubmitsRelatedProductsCollection(): void
+	{
+		$store = $this->persistStore('relations-store-' . uniqid());
+		$category = $this->persistCategory($store, 'Furniture');
+		$unit = $this->persistUnit($store, 'pcs-' . uniqid());
+		$table = $this->persistProduct($store, $category, $unit, 'Table');
+		$chair = $this->persistProduct($store, $category, $unit, 'Chair');
+
+		$form = $this->formFactory->create(ProductType::class, $table, ['csrf_protection' => false]);
+
+		self::assertTrue($form->has('productRelations'));
+
+		$form->submit([
+			'name' => $table->getName(),
+			'code' => $table->getCode(),
+			'unit' => (string) $unit->getId(),
+			'productKind' => $table->getProductKind()->value,
+			'category' => (string) $category->getId(),
+			'canBeSold' => '1',
+			'productRelations' => [
+				['relatedProduct' => (string) $chair->getId(), 'type' => 'accessory'],
+			],
+		], false);
+
+		self::assertTrue($form->isValid(), (string) $form->getErrors(true));
+		self::assertCount(1, $table->getProductRelations());
+
+		$relation = $table->getProductRelations()->first();
+		self::assertSame($chair->getId(), $relation->getRelatedProduct()->getId());
+		self::assertSame('accessory', $relation->getType()->value);
+		self::assertSame($table, $relation->getProduct());
+	}
+
+	private function persistProduct(Store $store, Category $category, Unit $unit, string $name): Product
+	{
+		$product = (new Product())
+			->setStore($store)
+			->setCategory($category)
+			->setUnit($unit)
+			->setName($name)
+			->setCode($name . '-' . uniqid())
+			->setCanBeSold(true)
+			->setCanBePurchased(false)
+			->setCanBeManufactured(false);
+
+		$this->entityManager->persist($product);
+		$this->entityManager->flush();
+
+		return $product;
+	}
+
 	private function persistStore(string $slug): Store
 	{
 		$store = (new Store())

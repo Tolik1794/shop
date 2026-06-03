@@ -15,7 +15,9 @@
                         {{ form_errors(form) }}
 
                         {% for name, widget in form %}
-                            {{ form_row(widget) }}
+                            {% if name != 'productRelations' %}
+                                {{ form_row(widget) }}
+                            {% endif %}
 {#                            <div class="mb-2">#}
 {#                                {% set widget_type = widget.vars.block_prefixes|first %}#}
 {#                                {% if widget_type != 'button' %}#}
@@ -35,6 +37,24 @@
 {#                                {% endif %}#}
 {#                            </div>#}
                         {% endfor %}
+
+                        <div class="mb-3" {{ stimulus_controller('product-relations') }}>
+                            <label class="form-label d-block">{{ 'admin.product.relations.title'|trans }}</label>
+                            <div {{ stimulus_target('product-relations', 'entries') }}>
+                                {% for relation in form.productRelations %}
+                                    {{ include('admin/product/_relation_row.html.twig', {relation: relation}) }}
+                                {% endfor %}
+                            </div>
+                            <p class="text-muted small mb-2 {{ form.productRelations|length > 0 ? 'd-none' : '' }}" {{ stimulus_target('product-relations', 'emptyState') }}>
+                                {{ 'admin.product.relations.no_relations'|trans }}
+                            </p>
+                            <template {{ stimulus_target('product-relations', 'prototype') }}>
+                                {{ include('admin/product/_relation_row.html.twig', {relation: form.productRelations.vars.prototype}) }}
+                            </template>
+                            <button type="button" class="btn btn-sm btn-light" data-action="product-relations#addEntry">
+                                <i class="fa-solid fa-plus me-1"></i>{{ 'admin.product.relations.add'|trans }}
+                            </button>
+                        </div>
 
                         <div class="row">
                             <div class="form-control-lg">

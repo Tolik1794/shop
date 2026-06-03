@@ -57,6 +57,8 @@ export default class extends Controller {
         document.addEventListener('click', this.closeCustomerResultsOnOutsideClick.bind(this))
 
         this.rowTargets.forEach((row) => this.initializeRow(row))
+        this.relatedAbortControllers = new WeakMap()
+        this.rowTargets.forEach((row) => this.loadRelatedProducts(row))
         this.updateCurrencyLabels()
         this.requestSummaryCalculation()
         this.toggleEmptyState()
@@ -285,6 +287,155 @@ export default class extends Controller {
         this.updateCurrencyLabels(row)
         this.requestSummaryCalculation()
         this.toggleEmptyState()
+        this.loadRelatedProducts(row)
+    }
+
+    loadRelatedProducts(row) {
+        const panel = row.querySelector('[data-order-related-panel]')
+        const productId = row.dataset.productId
+
+        if (!panel || !productId || !panel.dataset.relatedUrl) {
+            if (panel) {
+                panel.innerHTML = ''
+                panel.classList.add('d-none')
+            }
+            return
+        }
+
+        if (!this.relatedAbortControllers) {
+            this.relatedAbortControllers = new WeakMap()
+        }
+
+        const previousController = this.relatedAbortControllers.get(panel)
+        if (previousController) {
+            previousController.abort()
+        }
+
+        const controller = new AbortController()
+        this.relatedAbortControllers.set(panel, controller)
+
+        const params = new URLSearchParams({productId: String(productId)})
+        const currency = this.relatedCurrencyCode()
+        if (currency) {
+            params.set('currency', currency)
+        }
+
+        fetch(`${panel.dataset.relatedUrl}?${params.toString()}`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            signal: controller.signal,
+        })
+            .then((response) => response.json())
+            .then((data) => this.renderRelatedProducts(panel, data.products || []))
+            .catch((error) => {
+                if (error.name !== 'AbortError') {
+                    panel.innerHTML = ''
+                    panel.classList.add('d-none')
+                }
+            })
+    }
+
+    renderRelatedProducts(panel, products) {
+        if (!products.length) {
+            panel.innerHTML = ''
+            panel.classList.add('d-none')
+            return
+        }
+
+        const buttons = products
+            .map((product) => {
+                const option = this.relatedDefaultOption(product)
+                const label = `${this.escapeRelatedHtml(product.name || product.text || '')}`
+                return `<button type="button" class="btn btn-sm btn-outline-secondary order-entry-related-add" data-related-payload="${this.escapeRelatedHtml(JSON.stringify(option))}"><i class="fa-solid fa-plus me-1"></i>${label}</button>`
+            })
+            .join('')
+
+        panel.innerHTML = `<div class="text-muted small mb-1">${this.escapeRelatedHtml(trans('order.related.title', 'Related products'))}</div><div class="d-flex flex-wrap gap-1">${buttons}</div>`
+        panel.classList.remove('d-none')
+
+        panel.querySelectorAll('.order-entry-related-add').forEach((button) => {
+            button.addEventListener('click', () => {
+                let payload = {}
+                try {
+                    payload = JSON.parse(button.dataset.relatedPayload)
+                } catch (error) {
+                    payload = {}
+                }
+                this.element.dispatchEvent(new CustomEvent('product-search:add', {bubbles: true, detail: {product: payload}}))
+            })
+        })
+    }
+
+    relatedDefaultOption(product) {
+        const stockOption = (product.stockOptions || [])[0]
+        const base = {
+            id: product.id,
+            text: product.text,
+            code: product.code,
+            unit: product.unit,
+            unitPrecision: product.unitPrecision,
+            discountRules: product.discountRules || [],
+            defaultDiscountRuleId: product.defaultDiscountRuleId || '',
+        }
+
+        if (stockOption) {
+            return {
+                ...base,
+                price: stockOption.price || product.price,
+                available: stockOption.available || '0.0000',
+                warehouseId: stockOption.warehouseId || '',
+                warehouseName: stockOption.warehouseName || '',
+                batchId: stockOption.batchId || '',
+                batchReceivedAt: stockOption.batchReceivedAt || '',
+                batchLayers: stockOption.batchLayers || [],
+                sourceType: 'stock',
+                sourceDetail: stockOption.batchId
+                    ? `${stockOption.warehouseName || ''} · Batch #${stockOption.batchId}`
+                    : (stockOption.warehouseName || ''),
+            }
+        }
+
+        if (product.productionOption) {
+            return {
+                ...base,
+                price: product.productionOption.price || product.price,
+                available: '0.0000',
+                warehouseId: '',
+                warehouseName: '',
+                batchId: '',
+                batchReceivedAt: '',
+                batchLayers: [],
+                sourceType: 'production',
+                sourceDetail: trans('order.source.production', 'For production'),
+            }
+        }
+
+        return {
+            ...base,
+            price: product.price,
+            available: '0.0000',
+            warehouseId: '',
+            warehouseName: '',
+            batchId: '',
+            batchReceivedAt: '',
+            batchLayers: [],
+            sourceType: 'stock',
+            sourceDetail: trans('order.source.unavailable', 'No warehouse stock'),
+        }
+    }
+
+    relatedCurrencyCode() {
+        const currencyInput = this.element.querySelector('[name$="[currency]"]')
+
+        return currencyInput ? currencyInput.value : ''
+    }
+
+    escapeRelatedHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;')
     }
 
     createRow() {

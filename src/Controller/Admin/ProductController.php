@@ -7,6 +7,7 @@ use App\Entity\Store;
 use App\Form\Admin\FilterType\ProductFilterType;
 use App\Form\Admin\Type\ProductType;
 use App\Manager\ProductManager;
+use App\Manager\ProductRelationManager;
 use App\Repository\ProductPriceRepository;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
@@ -24,6 +25,7 @@ class ProductController extends AbstractAdvancedController
 
 	public function __construct(
 		private readonly ProductManager $productManager,
+		private readonly ProductRelationManager $productRelationManager,
 		private readonly ProductPriceRepository $productPriceRepository,
 	)
 	{
@@ -92,6 +94,7 @@ class ProductController extends AbstractAdvancedController
 
 		if ($form->isSubmitted() && $form->isValid()) {
 			$this->productManager->save($product);
+			$this->productRelationManager->syncMirrors($product);
 
 			return $this->stayOrRedirect(
 				route: 'admin_product_index',
@@ -117,6 +120,7 @@ class ProductController extends AbstractAdvancedController
 
 		if ($form->isSubmitted() && $form->isValid()) {
 			$this->productManager->save($product);
+			$this->productRelationManager->syncMirrors($product);
 
 			return $this->stayOrRedirect('admin_product_index', ['store_id' => $store->getId()]);
 		}
