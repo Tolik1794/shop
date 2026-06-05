@@ -66,49 +66,46 @@
 {% set active_order_tab = app.request.query.get('active_tab')|default('show') %}
 {% set active_order_tab_key = order_tab_key_map[active_order_tab]|default(0) %}
 
+{% set order_toolbar_search %}
+    <form method="get" action="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')) }}">
+        {% for filter_name, filter_value in active_order_filters %}
+            {% if filter_name != 'number' %}
+                <input type="hidden" name="{{ filter_form.vars.full_name }}[{{ filter_name }}]" value="{{ filter_value }}">
+            {% endif %}
+        {% endfor %}
+        {% if active_order_quick_filter %}
+            <input type="hidden" name="{{ filter_form.vars.full_name }}[quick]" value="{{ active_order_quick_filter }}">
+        {% endif %}
+        <label class="visually-hidden" for="order-quick-search">{{ 'admin.order.filters.quick_search'|trans }}</label>
+        <div class="input-group input-group-sm">
+            <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input id="order-quick-search"
+                   class="form-control"
+                   type="search"
+                   name="{{ filter_form.number.vars.full_name }}"
+                   value="{{ filter_form.number.vars.value|default('') }}"
+                   placeholder="{{ 'admin.order.filters.quick_search_placeholder'|trans }}">
+        </div>
+    </form>
+{% endset %}
+
+{% set order_toolbar_actions %}
+    <button class="btn btn-light btn-sm"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#{{ order_filter_collapse_id }}"
+            aria-expanded="{{ order_filters_open ? 'true' : 'false' }}"
+            aria-controls="{{ order_filter_collapse_id }}">
+        <i class="fa-solid fa-filter me-1"></i>{{ 'admin.common.filters'|trans }}
+        {% if active_order_filter_count > 0 %}
+            <span class="badge bg-danger ms-1">{{ active_order_filter_count }}</span>
+        {% endif %}
+    </button>
+    {{ table_actions }}
+{% endset %}
+
 {% set order_list_controls %}
     <div class="order-list-toolbar">
-        <div class="order-list-toolbar__row">
-            <div class="order-list-toolbar__title">
-                <h5 class="card-title mb-0">{{ 'Orders'|trans }}</h5>
-                <span class="text-muted small">{{ 'admin.pagination.records'|trans({'%count%': pagination.getTotalItemCount}) }}</span>
-            </div>
-            <div class="order-list-toolbar__controls">
-                <form class="order-list-toolbar__search" method="get" action="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')) }}">
-                    {% for filter_name, filter_value in active_order_filters %}
-                        {% if filter_name != 'number' %}
-                            <input type="hidden" name="{{ filter_form.vars.full_name }}[{{ filter_name }}]" value="{{ filter_value }}">
-                        {% endif %}
-                    {% endfor %}
-                    {% if active_order_quick_filter %}
-                        <input type="hidden" name="{{ filter_form.vars.full_name }}[quick]" value="{{ active_order_quick_filter }}">
-                    {% endif %}
-                    <label class="visually-hidden" for="order-quick-search">{{ 'admin.order.filters.quick_search'|trans }}</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
-                        <input id="order-quick-search"
-                               class="form-control"
-                               type="search"
-                               name="{{ filter_form.number.vars.full_name }}"
-                               value="{{ filter_form.number.vars.value|default('') }}"
-                               placeholder="{{ 'admin.order.filters.quick_search_placeholder'|trans }}">
-                    </div>
-                </form>
-                <button class="btn btn-light btn-sm"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#{{ order_filter_collapse_id }}"
-                        aria-expanded="{{ order_filters_open ? 'true' : 'false' }}"
-                        aria-controls="{{ order_filter_collapse_id }}">
-                    <i class="fa-solid fa-filter me-1"></i>{{ 'admin.common.filters'|trans }}
-                    {% if active_order_filter_count > 0 %}
-                        <span class="badge bg-danger ms-1">{{ active_order_filter_count }}</span>
-                    {% endif %}
-                </button>
-                {{ table_actions }}
-            </div>
-        </div>
-
         <div class="order-quick-filters" aria-label="{{ 'admin.order.filters.quick_filters'|trans }}">
             {% for quick_filter in order_quick_filters %}
                 {% set quick_filter_params = order_filter_params|merge({quick: quick_filter.value}) %}
@@ -211,7 +208,8 @@
                         table_head: table_head,
                         table_body: table_body,
                         filter_form: null,
-                        show_header: false,
+                        toolbar_search: order_toolbar_search,
+                        toolbar_extra: order_toolbar_actions,
                         before_table: order_list_controls
                     }) }}
                 </div>

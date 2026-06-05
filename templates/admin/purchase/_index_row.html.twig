@@ -16,7 +16,7 @@
 			{{ include('admin/_components/status/_badge.html.twig', {context: 'payment', value: entity.paymentStatus.value}) }}
 		{% endset %}
 		{% set items %}
-			{% for entry in entity.purchaseEntries %}
+			{% for entry in entity.purchaseEntries|slice(0, 3) %}
 				{{ include('admin/_components/document_list/_item.html.twig', {
 					name: entry.productNameSnapshot,
 					quantity_label: entry.quantity|quantity(entry.product) ~ (entry.unitCodeSnapshot ? ' ' ~ entry.unitCodeSnapshot : ''),
@@ -24,6 +24,13 @@
 					sku: entry.productCodeSnapshot
 				}) }}
 			{% endfor %}
+			{% if entry_count > 3 %}
+				<div class="document-list-card__item document-list-card__item-more">
+					<div class="document-list-card__item-main">
+						<span class="document-list-card__item-quantity">{{ 'admin.document_list.more_items'|trans({'%count%': entry_count - 3}) }}</span>
+					</div>
+				</div>
+			{% endif %}
 		{% endset %}
 		{{ include('admin/_components/document_list/_card.html.twig', {
 			number: entity.number,

@@ -164,6 +164,7 @@ admin:
     empty_status: 'Історії статусів ще немає.'
   document_list:
     products_count: '%count% товари'
+    more_items: '+ ще %count% товарів'
   customer:
     fields:
       labels: 'Лейбли'
@@ -325,8 +326,39 @@ admin:
       general: 'Загальні налаштування'
       entries: 'Позиції закупівлі'
       summary: 'Підсумки'
+      supplier: 'Постачальник'
+      payment: 'Оплата'
+      delivery: 'Доставка'
+      products: 'Товари'
+      inventory_documents: 'Складські документи'
+    filters:
+      active_filters: 'Активні фільтри'
+      clear_filter: 'Скинути фільтр %label%'
+      quick_filters: 'Швидкі фільтри'
+      quick_search: 'Швидкий пошук'
+      quick_search_placeholder: 'Пошук за номером або постачальником'
+      quick:
+        all: 'Усі'
+        drafts: 'Чернетки'
+        unpaid: 'Не оплачені'
+        paid: 'Оплачені'
+        canceled: 'Скасовані'
+        returned: 'Повернені'
+        completed: 'Завершені'
+    fields:
+      amount_to_pay: 'До сплати'
+      exchange_rate: 'Курс обміну'
+      paid_amount: 'Сплачено'
+      unit: 'Одиниця'
     actions:
       add_entry: 'Додати позицію'
+    empty:
+      products: 'Товари відсутні.'
+    summary:
+      number: 'Номер закупівлі'
+      supplier: 'Постачальник'
+      statuses: 'Статуси'
+      total: 'Загальна сума'
   discount:
     title:
       index: 'Знижки'
@@ -364,6 +396,15 @@ admin:
       partially_shipped: 'Частково відвантажено'
       shipped: 'Відвантажено'
       delivered: 'Доставлено'
+      completed: 'Завершено'
+      canceled: 'Скасовано'
+      partially_returned: 'Частково повернено'
+      returned: 'Повернено'
+    purchase:
+      draft: 'Чернетка'
+      ordered: 'Замовлено'
+      partially_received: 'Частково отримано'
+      received: 'Отримано'
       completed: 'Завершено'
       canceled: 'Скасовано'
       partially_returned: 'Частково повернено'

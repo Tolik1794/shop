@@ -28,6 +28,136 @@
 	{% endfor %}
 {% endset %}
 
+{% set purchase_filter_params = app.request.query.all(filter_form.vars.name) %}
+{% set active_purchase_quick_filter = purchase_filter_params.quick|default('') %}
+{% set active_purchase_filters = {} %}
+{% for filter_name, filter_value in purchase_filter_params %}
+	{% if filter_name != 'quick' and filter_value is not iterable and filter_value is not same as('') and filter_value is not null %}
+		{% set active_purchase_filters = active_purchase_filters|merge({(filter_name): filter_value}) %}
+	{% endif %}
+{% endfor %}
+{% set active_purchase_filter_count = active_purchase_filters|length + (active_purchase_quick_filter ? 1 : 0) %}
+{% set purchase_filter_labels = {
+	number: 'Number'|trans,
+	supplier: 'Supplier'|trans,
+	status: 'Status'|trans
+} %}
+{% set purchase_quick_filters = [
+	{value: '', label: 'admin.purchase.filters.quick.all'|trans},
+	{value: 'draft', label: 'admin.purchase.filters.quick.drafts'|trans},
+	{value: 'unpaid', label: 'admin.purchase.filters.quick.unpaid'|trans},
+	{value: 'paid', label: 'admin.purchase.filters.quick.paid'|trans},
+	{value: 'canceled', label: 'admin.purchase.filters.quick.canceled'|trans},
+	{value: 'returned', label: 'admin.purchase.filters.quick.returned'|trans},
+	{value: 'completed', label: 'admin.purchase.filters.quick.completed'|trans}
+] %}
+{% set purchase_quick_filter_labels = {
+	draft: 'admin.purchase.filters.quick.drafts'|trans,
+	unpaid: 'admin.purchase.filters.quick.unpaid'|trans,
+	paid: 'admin.purchase.filters.quick.paid'|trans,
+	canceled: 'admin.purchase.filters.quick.canceled'|trans,
+	returned: 'admin.purchase.filters.quick.returned'|trans,
+	completed: 'admin.purchase.filters.quick.completed'|trans
+} %}
+{% set purchase_filter_collapse_id = filter_form.vars.id ~ '-advanced-filters' %}
+{% set purchase_filters_open = filter_form.vars.errors|length > 0 %}
+{% set purchase_tab_keys = ['show', 'payments', 'history'] %}
+{% set purchase_tab_key_map = {show: 0, payments: 1, history: 2} %}
+{% set active_purchase_tab = app.request.query.get('active_tab')|default('show') %}
+{% set active_purchase_tab_key = purchase_tab_key_map[active_purchase_tab]|default(0) %}
+
+{% set purchase_toolbar_search %}
+	<form method="get" action="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')) }}">
+		{% for filter_name, filter_value in active_purchase_filters %}
+			{% if filter_name != 'number' %}
+				<input type="hidden" name="{{ filter_form.vars.full_name }}[{{ filter_name }}]" value="{{ filter_value }}">
+			{% endif %}
+		{% endfor %}
+		{% if active_purchase_quick_filter %}
+			<input type="hidden" name="{{ filter_form.vars.full_name }}[quick]" value="{{ active_purchase_quick_filter }}">
+		{% endif %}
+		<label class="visually-hidden" for="purchase-quick-search">{{ 'admin.purchase.filters.quick_search'|trans }}</label>
+		<div class="input-group input-group-sm">
+			<span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+			<input id="purchase-quick-search"
+				   class="form-control"
+				   type="search"
+				   name="{{ filter_form.number.vars.full_name }}"
+				   value="{{ filter_form.number.vars.value|default('') }}"
+				   placeholder="{{ 'admin.purchase.filters.quick_search_placeholder'|trans }}">
+		</div>
+	</form>
+{% endset %}
+
+{% set purchase_toolbar_actions %}
+	<button class="btn btn-light btn-sm"
+			type="button"
+			data-bs-toggle="collapse"
+			data-bs-target="#{{ purchase_filter_collapse_id }}"
+			aria-expanded="{{ purchase_filters_open ? 'true' : 'false' }}"
+			aria-controls="{{ purchase_filter_collapse_id }}">
+		<i class="fa-solid fa-filter me-1"></i>{{ 'admin.common.filters'|trans }}
+		{% if active_purchase_filter_count > 0 %}
+			<span class="badge bg-danger ms-1">{{ active_purchase_filter_count }}</span>
+		{% endif %}
+	</button>
+	{{ table_actions }}
+{% endset %}
+
+{% set purchase_list_controls %}
+	<div class="order-list-toolbar">
+		<div class="order-quick-filters" aria-label="{{ 'admin.purchase.filters.quick_filters'|trans }}">
+			{% for quick_filter in purchase_quick_filters %}
+				{% set quick_filter_params = purchase_filter_params|merge({quick: quick_filter.value}) %}
+				<a class="order-quick-filter-chip{{ active_purchase_quick_filter == quick_filter.value ? ' is-active' : '' }}"
+				   href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge({(filter_form.vars.name): quick_filter_params})) }}">
+					{{ quick_filter.label }}
+				</a>
+			{% endfor %}
+		</div>
+
+		{% if active_purchase_filters or active_purchase_quick_filter %}
+			<div class="order-filter-chips" aria-label="{{ 'admin.purchase.filters.active_filters'|trans }}">
+				{% if active_purchase_quick_filter %}
+					{% set quick_filter_label = purchase_quick_filter_labels[active_purchase_quick_filter]|default(active_purchase_quick_filter|replace({'_': ' '})|title) %}
+					{% set next_filter_params = purchase_filter_params|merge({quick: ''}) %}
+					<a class="order-filter-chip"
+					   href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge({(filter_form.vars.name): next_filter_params})) }}"
+					   aria-label="{{ 'admin.purchase.filters.clear_filter'|trans({'%label%': 'admin.purchase.filters.quick_filters'|trans}) }}">
+						<span>{{ 'admin.purchase.filters.quick_filters'|trans }}: {{ quick_filter_label }}</span>
+						<i class="fa-solid fa-xmark"></i>
+					</a>
+				{% endif %}
+				{% for filter_name, filter_value in active_purchase_filters %}
+					{% set filter_label = purchase_filter_labels[filter_name]|default(filter_name|replace({'_': ' '})|capitalize) %}
+					{% set status_translation_key = 'admin.status.purchase.' ~ filter_value %}
+					{% set status_translation = status_translation_key|trans %}
+					{% set filter_display_value = filter_name == 'status'
+						? (status_translation == status_translation_key ? filter_value|replace({'_': ' '})|title : status_translation)
+						: filter_value %}
+					{% set next_filter_params = purchase_filter_params|merge({(filter_name): ''}) %}
+					<a class="order-filter-chip"
+					   href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge({(filter_form.vars.name): next_filter_params})) }}"
+					   aria-label="{{ 'admin.purchase.filters.clear_filter'|trans({'%label%': filter_label}) }}">
+						<span>{{ filter_label }}: {{ filter_display_value }}</span>
+						<i class="fa-solid fa-xmark"></i>
+					</a>
+				{% endfor %}
+				<a class="order-filter-chip order-filter-chip--reset"
+				   href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')) }}">
+					{{ 'admin.common.reset_filters'|trans }}
+				</a>
+			</div>
+		{% endif %}
+
+		{{ include('admin/_components/filter/_accordion_panel.html.twig', {
+			form: filter_form,
+			collapse_id: purchase_filter_collapse_id,
+			is_open: purchase_filters_open
+		}) }}
+	</div>
+{% endset %}
+
 {% block main_content %}
 	<main class="content" {{ stimulus_controller('reload-card') }}>
 		<div class="container-fluid p-0">
@@ -36,7 +166,8 @@
 			<div class="row">
 				<div class="col-12 col-xl-5 col-lg-5">
 					{{ include('admin/_components/card/_tab_card.html.twig', {
-						active_tab_key: app.request.query.get('active_tab') == 'payments' ? 1 : 0,
+						active_tab_key: active_purchase_tab_key,
+						tab_keys: purchase_tab_keys,
 						tab_head: [
 							include('admin/_components/tab_icon/_show.html.twig'),
 							include('admin/_components/tab_icon/_payment.html.twig', {
@@ -62,12 +193,14 @@
 				</div>
 				<div class="col-12 col-xl-7 col-lg-7 order-first">
 					{{ include('admin/_components/card/_table_card.html.twig', {
-						actions: table_actions,
 						table_title: 'Purchases',
 						table_class: 'purchase-index-table',
 						table_head: table_head,
 						table_body: table_body,
-						filter_form: filter_form
+						filter_form: null,
+						toolbar_search: purchase_toolbar_search,
+						toolbar_extra: purchase_toolbar_actions,
+						before_table: purchase_list_controls
 					}) }}
 				</div>
 			</div>

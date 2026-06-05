@@ -1,22 +1,33 @@
+{% set empty_text = 'Not specified'|trans %}
+{% set dash_text = '—' %}
+{% set currency_code = entity.currency ? entity.currency.code : dash_text %}
+{% set supplier_name = entity.supplierNameSnapshot|default('')|trim %}
+{% set supplier_phone = entity.supplierPhoneSnapshot|default('')|trim %}
+{% set supplier_email = entity.supplierEmailSnapshot|default('')|trim %}
+{% set invoice_number = entity.invoiceNumber|default('')|trim %}
+{% set comment_text = entity.comment|default('')|trim %}
+{% set amount_due_base = entity.totalAmountBase - entity.paidAmountBase %}
+{% set amount_due_base = amount_due_base > 0 ? amount_due_base : 0 %}
+
 {% set primary_action %}
 	{% if entity.status.value == 'draft' %}
 		<form method="post" action="{{ path('app_admin_purchase_order', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction">
 			<input type="hidden" name="_token" value="{{ csrf_token('order_purchase_' ~ entity.id) }}">
-			<button class="btn btn-success btn-sm" type="submit" {{ entity.purchaseEntries|length == 0 ? 'disabled' : '' }}>{{ 'Order'|trans }}</button>
+			<button class="btn btn-success btn-sm order-primary-action" type="submit" {{ entity.purchaseEntries|length == 0 ? 'disabled' : '' }}>{{ 'Order'|trans }}</button>
 		</form>
 	{% endif %}
 
 	{% if can_receive|default(false) %}
 		<form method="post" action="{{ path('app_admin_purchase_receive', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline">
 			<input type="hidden" name="_token" value="{{ csrf_token('receive_purchase_' ~ entity.id) }}">
-			<button class="btn btn-success btn-sm" type="submit"><i class="fa-solid fa-truck me-1"></i>{{ 'Receive'|trans }}</button>
+			<button class="btn btn-success btn-sm order-primary-action" type="submit"><i class="fa-solid fa-truck me-1"></i>{{ 'Receive'|trans }}</button>
 		</form>
 	{% endif %}
 
 	{% if entity.status.value == 'received' %}
 		<form method="post" action="{{ path('app_admin_purchase_complete', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="d-inline" data-action="submit->reload-card#submitQuickAction" data-confirm-message="{{ 'Complete purchase?'|trans }}">
 			<input type="hidden" name="_token" value="{{ csrf_token('complete_purchase_' ~ entity.id) }}">
-			<button class="btn btn-success btn-sm" type="submit">{{ 'Complete'|trans }}</button>
+			<button class="btn btn-success btn-sm order-primary-action" type="submit">{{ 'Complete'|trans }}</button>
 		</form>
 	{% endif %}
 {% endset %}
@@ -46,102 +57,199 @@
 	{{ include('admin/_components/status/_badge.html.twig', {context: 'payment', value: entity.paymentStatus.value}) }}
 {% endset %}
 
-<div class="card show-card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+<div class="card show-card purchase-show-card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
 	{{ include('admin/_components/show_card/_header.html.twig', {
 		title: entity.number,
-		subtitle: entity.supplierNameSnapshot,
+		subtitle: supplier_name,
 		badges: header_badges,
 		primary_action: primary_action,
 		secondary_actions: secondary_actions,
 		show_more: show_more_actions
 	}) }}
 	<div class="card-body">
-		<table class="table table-sm mt-2 mb-4">
-			<tbody>
-			<tr><th>{{ 'Status'|trans }}</th><td>{{ entity.status.value }}</td></tr>
-			<tr><th>{{ 'Supplier'|trans }}</th><td>{{ entity.supplierNameSnapshot }}</td></tr>
-			<tr><th>{{ 'Phone'|trans }}</th><td>{{ entity.supplierPhoneSnapshot }}</td></tr>
-			<tr><th>{{ 'Email'|trans }}</th><td>{{ entity.supplierEmailSnapshot }}</td></tr>
-			<tr><th>{{ 'Currency'|trans }}</th><td>{{ entity.currency.code }}</td></tr>
-			<tr><th>{{ 'Exchange rate'|trans }}</th><td>{{ entity.exchangeRateToBase }}</td></tr>
-			<tr><th>{{ 'Invoice'|trans }}</th><td>{{ entity.invoiceNumber }}</td></tr>
-			<tr><th>{{ 'Document date'|trans }}</th><td>{{ entity.documentDate ? entity.documentDate|date('Y-m-d') : '' }}</td></tr>
-			<tr><th>{{ 'Delivery'|trans }}</th><td>{{ entity.deliveryCost|money }} {{ entity.currency.code }}</td></tr>
-			<tr><th>{{ 'Total'|trans }}</th><td>{{ entity.totalAmount|money }} {{ entity.currency.code }}</td></tr>
-			<tr><th>{{ 'Total base'|trans }}</th><td>{{ entity.totalAmountBase|money }}</td></tr>
-			<tr><th>{{ 'Payment'|trans }}</th><td>{{ entity.paymentStatus.value }}</td></tr>
-			<tr><th>{{ 'Paid amount base'|trans }}</th><td>{{ entity.paidAmountBase|money }}</td></tr>
-			<tr><th>{{ 'Paid at'|trans }}</th><td>{{ entity.paidAt ? entity.paidAt|date('Y-m-d H:i') : '' }}</td></tr>
-			<tr><th>{{ 'Comment'|trans }}</th><td>{{ entity.comment }}</td></tr>
-			</tbody>
-		</table>
-
-		<h6 class="mb-2">{{ 'Products'|trans }}</h6>
-		{% if entity.purchaseEntries|length > 0 %}
-			<div class="table-responsive">
-				<table class="table table-sm mb-3">
-					<thead>
-					<tr>
-						<th>{{ 'Product'|trans }}</th>
-						<th>{{ 'Warehouse'|trans }}</th>
-						<th>{{ 'Qty'|trans }}</th>
-						<th>{{ 'Unit'|trans }}</th>
-						<th>{{ 'Unit cost'|trans }}</th>
-						<th>{{ 'Delivery'|trans }}</th>
-						<th>{{ 'Total'|trans }}</th>
-					</tr>
-					</thead>
-					<tbody>
-					{% for entry in entity.purchaseEntries %}
-						<tr>
-							<td>
-								{{ entry.productNameSnapshot }}
-								<div class="text-muted small">{{ entry.productCodeSnapshot }}</div>
-							</td>
-							<td>{{ entry.warehouse.name }}</td>
-							<td>{{ entry.quantity|quantity(entry.product) }}</td>
-							<td>{{ entry.unitCodeSnapshot }}</td>
-							<td>{{ entry.unitCost|money }}</td>
-							<td>{{ entry.deliveryCost|money }}</td>
-							<td>{{ entry.totalCost|money }}</td>
-						</tr>
-					{% endfor %}
-					</tbody>
-				</table>
+		<div class="order-show-summary">
+			<div class="order-show-summary__item order-show-summary__item--identity">
+				<span class="order-show-summary__label">{{ 'admin.purchase.summary.number'|trans }}</span>
+				<strong>{{ entity.number }}</strong>
 			</div>
-		{% else %}
-			<p class="text-muted">{{ 'No products.'|trans }}</p>
-		{% endif %}
-
-		{% if entity.inventoryDocuments|length > 0 %}
-			<h6 class="mb-2">{{ 'Inventory documents'|trans }}</h6>
-			<div class="table-responsive">
-				<table class="table table-sm mb-3">
-					<thead>
-					<tr>
-						<th>{{ 'Date'|trans }}</th>
-						<th>{{ 'Number'|trans }}</th>
-						<th>{{ 'Type'|trans }}</th>
-						<th>{{ 'Status'|trans }}</th>
-					</tr>
-					</thead>
-					<tbody>
-					{% for inventoryDocument in entity.inventoryDocuments %}
-						<tr>
-							<td>{{ inventoryDocument.documentDate|date('Y-m-d') }}</td>
-							<td>
-								<a href="{{ path('app_admin_inventory_document_index', {store_id: app.request.attributes.get('store_id'), id: inventoryDocument.id}) }}">
-									{{ inventoryDocument.number }}
-								</a>
-							</td>
-							<td>{{ inventoryDocument.type.value }}</td>
-							<td>{{ inventoryDocument.status.value }}</td>
-						</tr>
-					{% endfor %}
-					</tbody>
-				</table>
+			<div class="order-show-summary__item">
+				<span class="order-show-summary__label">{{ 'admin.purchase.summary.supplier'|trans }}</span>
+				<strong>{{ supplier_name is not empty ? supplier_name : empty_text }}</strong>
 			</div>
-		{% endif %}
+			<div class="order-show-summary__item">
+				<span class="order-show-summary__label">{{ 'admin.common.phone'|trans }}</span>
+				<strong>{{ supplier_phone is not empty ? supplier_phone : empty_text }}</strong>
+			</div>
+			<div class="order-show-summary__item order-show-summary__item--amount">
+				<span class="order-show-summary__label">{{ 'admin.purchase.summary.total'|trans }}</span>
+				<strong>{{ entity.totalAmount|money }} {{ currency_code }}</strong>
+			</div>
+			<div class="order-show-summary__item order-show-summary__item--statuses order-show-summary__item--wide">
+				<span class="order-show-summary__label">{{ 'admin.purchase.summary.statuses'|trans }}</span>
+				<strong class="order-show-summary__statuses">
+					{{ include('admin/_components/status/_badge.html.twig', {context: 'purchase', value: entity.status.value}) }}
+					{{ include('admin/_components/status/_badge.html.twig', {context: 'payment', value: entity.paymentStatus.value}) }}
+				</strong>
+			</div>
+		</div>
 
+		<div class="order-show-grid">
+			<section class="order-show-section">
+				<h6>{{ 'admin.purchase.sections.supplier'|trans }}</h6>
+				<dl class="order-show-fields">
+					<div>
+						<dt>{{ 'Supplier'|trans }}</dt>
+						<dd>{{ supplier_name is not empty ? supplier_name : empty_text }}</dd>
+					</div>
+					<div>
+						<dt>{{ 'Phone'|trans }}</dt>
+						<dd>{{ supplier_phone is not empty ? supplier_phone : empty_text }}</dd>
+					</div>
+					<div>
+						<dt>{{ 'Email'|trans }}</dt>
+						<dd>{{ supplier_email is not empty ? supplier_email : empty_text }}</dd>
+					</div>
+					<div>
+						<dt>{{ 'Invoice'|trans }}</dt>
+						<dd>{{ invoice_number is not empty ? invoice_number : empty_text }}</dd>
+					</div>
+					<div>
+						<dt>{{ 'Document date'|trans }}</dt>
+						<dd>{{ entity.documentDate ? entity.documentDate|date('d.m.Y') : dash_text }}</dd>
+					</div>
+					{% if comment_text is not empty %}
+						<div>
+							<dt>{{ 'Comment'|trans }}</dt>
+							<dd>{{ comment_text }}</dd>
+						</div>
+					{% endif %}
+				</dl>
+			</section>
+
+			<section class="order-show-section">
+				<h6>{{ 'admin.purchase.sections.payment'|trans }}</h6>
+				<div class="order-show-payment-totals">
+					<div class="order-show-payment-total order-show-payment-total--due">
+						<span>{{ 'admin.purchase.fields.amount_to_pay'|trans }}</span>
+						<strong>{{ amount_due_base|money }}</strong>
+					</div>
+					<div class="order-show-payment-total order-show-payment-total--paid">
+						<span>{{ 'admin.purchase.fields.paid_amount'|trans }}</span>
+						<strong>{{ entity.paidAmountBase|money }}</strong>
+					</div>
+				</div>
+				<dl class="order-show-money-list order-show-payment-meta">
+					<div>
+						<dt>{{ 'admin.common.currency'|trans }}</dt>
+						<dd>{{ currency_code }}</dd>
+					</div>
+					<div>
+						<dt>{{ 'admin.purchase.fields.exchange_rate'|trans }}</dt>
+						<dd>{{ entity.exchangeRateToBase ?: dash_text }}</dd>
+					</div>
+					<div>
+						<dt>{{ 'Amount'|trans }}</dt>
+						<dd>{{ entity.totalAmount|money }} {{ currency_code }}</dd>
+					</div>
+					<div>
+						<dt>{{ 'Amount base'|trans }}</dt>
+						<dd>{{ entity.totalAmountBase|money }}</dd>
+					</div>
+					<div>
+						<dt>{{ 'Paid amount base'|trans }}</dt>
+						<dd>{{ entity.paidAmountBase|money }}</dd>
+					</div>
+					<div>
+						<dt>{{ 'Paid at'|trans }}</dt>
+						<dd>{{ entity.paidAt ? entity.paidAt|date('d.m.Y H:i') : dash_text }}</dd>
+					</div>
+				</dl>
+			</section>
+
+			<section class="order-show-section">
+				<h6>{{ 'admin.purchase.sections.delivery'|trans }}</h6>
+				<dl class="order-show-money-list">
+					<div>
+						<dt>{{ 'Delivery'|trans }}</dt>
+						<dd>{{ entity.deliveryCost is not null ? entity.deliveryCost|money ~ ' ' ~ currency_code : empty_text }}</dd>
+					</div>
+				</dl>
+			</section>
+
+			<section class="order-show-section order-show-section-wide">
+				<h6>{{ 'admin.purchase.sections.products'|trans }}</h6>
+				{% if entity.purchaseEntries|length > 0 %}
+					<div class="order-show-products">
+						{% for entry in entity.purchaseEntries %}
+							{% set product_name = entry.productNameSnapshot|default('')|trim %}
+							{% set product_code = entry.productCodeSnapshot|default('')|trim %}
+							{% set unit_code = entry.unitCodeSnapshot|default('')|trim %}
+							{% set quantity_label = entry.quantity|quantity(entry.product) %}
+							<div class="order-show-product-card purchase-show-product-card">
+								<div class="order-show-product-main">
+									<div class="order-show-product-heading">
+										<strong class="order-show-product-name">{{ product_name is not empty ? product_name : empty_text }}</strong>
+									</div>
+									{% if product_code is not empty %}
+										<div class="text-muted small">{{ product_code }}</div>
+									{% endif %}
+									<dl class="purchase-show-product-fields">
+										<div>
+											<dt>{{ 'Warehouse'|trans }}</dt>
+											<dd>{{ entry.warehouse ? entry.warehouse.name : empty_text }}</dd>
+										</div>
+										<div>
+											<dt>{{ 'Quantity'|trans }}</dt>
+											<dd>{{ quantity_label }}</dd>
+										</div>
+										<div>
+											<dt>{{ 'admin.purchase.fields.unit'|trans }}</dt>
+											<dd>{{ unit_code is not empty ? unit_code : empty_text }}</dd>
+										</div>
+										<div>
+											<dt>{{ 'Unit cost'|trans }}</dt>
+											<dd>{{ entry.unitCost|money }} {{ currency_code }}</dd>
+										</div>
+										<div>
+											<dt>{{ 'Delivery'|trans }}</dt>
+											<dd>{{ entry.deliveryCost is not null ? entry.deliveryCost|money ~ ' ' ~ currency_code : dash_text }}</dd>
+										</div>
+										<div>
+											<dt>{{ 'Total'|trans }}</dt>
+											<dd>{{ entry.totalCost|money }} {{ currency_code }}</dd>
+										</div>
+									</dl>
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+				{% else %}
+					<p class="text-muted mb-0">{{ 'admin.purchase.empty.products'|trans }}</p>
+				{% endif %}
+			</section>
+
+			<section class="order-show-section">
+				<h6>{{ 'admin.purchase.sections.inventory_documents'|trans }}</h6>
+				{% if entity.inventoryDocuments|length > 0 %}
+					<div class="order-show-documents">
+						{% for inventoryDocument in entity.inventoryDocuments %}
+							<div class="order-show-document">
+								<div>
+									<a href="{{ path('app_admin_inventory_document_index', {store_id: app.request.attributes.get('store_id'), id: inventoryDocument.id}) }}">
+										{{ inventoryDocument.number }}
+									</a>
+									<div class="text-muted small">
+										{{ inventoryDocument.documentDate|date('d.m.Y') }} · {{ inventoryDocument.type.value }}
+									</div>
+								</div>
+								{{ include('admin/_components/status/_badge.html.twig', {context: 'inventory', value: inventoryDocument.status.value}) }}
+							</div>
+						{% endfor %}
+					</div>
+				{% else %}
+					<p class="text-muted mb-0">{{ dash_text }}</p>
+				{% endif %}
+			</section>
+		</div>
 	</div>
 </div>

@@ -157,6 +157,7 @@ admin:
     empty_status: 'No status history yet.'
   document_list:
     products_count: '%count% products'
+    more_items: '+ %count% more products'
   customer:
     fields:
       labels: 'Labels'
@@ -302,8 +303,39 @@ admin:
       general: 'General settings'
       entries: 'Purchase entries'
       summary: 'Summary'
+      supplier: 'Supplier'
+      payment: 'Payment'
+      delivery: 'Delivery'
+      products: 'Products'
+      inventory_documents: 'Inventory documents'
+    filters:
+      active_filters: 'Active filters'
+      clear_filter: 'Clear %label% filter'
+      quick_filters: 'Quick filters'
+      quick_search: 'Quick search'
+      quick_search_placeholder: 'Search by number or supplier'
+      quick:
+        all: 'All'
+        drafts: 'Drafts'
+        unpaid: 'Unpaid'
+        paid: 'Paid'
+        canceled: 'Canceled'
+        returned: 'Returned'
+        completed: 'Completed'
+    fields:
+      amount_to_pay: 'Amount to pay'
+      exchange_rate: 'Exchange rate'
+      paid_amount: 'Paid'
+      unit: 'Unit'
     actions:
       add_entry: 'Add entry'
+    empty:
+      products: 'No products.'
+    summary:
+      number: 'Purchase number'
+      supplier: 'Supplier'
+      statuses: 'Statuses'
+      total: 'Total amount'
   discount:
     title:
       index: 'Discounts'
@@ -341,6 +373,15 @@ admin:
       partially_shipped: 'Partially shipped'
       shipped: 'Shipped'
       delivered: 'Delivered'
+      completed: 'Completed'
+      canceled: 'Canceled'
+      partially_returned: 'Partially returned'
+      returned: 'Returned'
+    purchase:
+      draft: 'Draft'
+      ordered: 'Ordered'
+      partially_received: 'Partially received'
+      received: 'Received'
       completed: 'Completed'
       canceled: 'Canceled'
       partially_returned: 'Partially returned'
