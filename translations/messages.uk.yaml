@@ -66,6 +66,7 @@ admin:
     save: 'Зберегти'
     save_and_continue: 'Зберегти і продовжити'
     save_as_draft: 'Зберегти як чернетку'
+    unsaved_changes: 'Є незбережені зміни'
     search: 'Пошук'
     searching: 'Пошук...'
     show: 'Показати'
@@ -190,6 +191,20 @@ admin:
     no_returns: 'Повернень немає.'
     no_customer: 'До цього замовлення не прив’язано клієнта.'
   product:
+    sections:
+      basic: 'Основна інформація'
+      availability_pricing: 'Доступність і ціна'
+    parameters:
+      title: 'Параметри товару'
+      add: 'Додати параметр'
+      remove: 'Видалити параметр'
+      no_parameters: 'Для цієї категорії параметри не налаштовані.'
+      select_category_hint: 'Оберіть категорію, щоб додати параметри товару.'
+      select_parameter: 'Оберіть параметр'
+      parameter: 'Параметр'
+      value: 'Значення'
+      required: 'обовʼязково'
+      required_locked: 'Обовʼязковий параметр не можна видалити.'
     relations:
       title: 'Пов''язані товари'
       add: 'Додати пов''язаний товар'
@@ -416,6 +431,8 @@ Discount category target must belong to the selected store.: 'Категорія
 Selected discount is not allowed for this product.: 'Вибрана знижка недоступна для цього товару.'
 Manual order discount requires discount override permission.: 'Ручна знижка в замовленні потребує окремого права.'
 Discounted order line total is below cost and requires discount override permission.: 'Сума позиції після знижки нижча за собівартість і потребує окремого права.'
+This product parameter is already added.: 'Цей параметр товару вже додано.'
+This product parameter is not available for the selected category.: 'Цей параметр товару недоступний для вибраної категорії.'
 Nothing to show...: 'Немає даних для показу...'
 Edit: 'Редагувати'
 Archive: 'Архівувати'

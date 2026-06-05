@@ -1,73 +1,135 @@
 {% extends 'admin/_store_components/layout.html.twig' %}
 
-{% block title %}Hello MainController!{% endblock %}
+{% block title %}{{ entity.id ? 'Edit'|trans : 'New'|trans }} {{ 'Product'|trans }}{% endblock %}
 
 {% block main_content %}
     <main class="content">
         <div class="container-fluid p-0">
-            <div class="row">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">{{ 'Private info'|trans }}</h5>
-                    </div>
-                    <div class="card-body">
-                        {{ form_start(form) }}
-                        {{ form_errors(form) }}
+            <h1 class="h3 mb-3">{{ entity.id ? 'Edit'|trans : 'New'|trans }} {{ 'Product'|trans }}</h1>
 
-                        {% for name, widget in form %}
-                            {% if name != 'productRelations' %}
-                                {{ form_row(widget) }}
-                            {% endif %}
-{#                            <div class="mb-2">#}
-{#                                {% set widget_type = widget.vars.block_prefixes|first %}#}
-{#                                {% if widget_type != 'button' %}#}
-{#                                    {% if name != '_token' %}#}
-{#                                        <div class="font-weight-bold">#}
-{#                                            {{ form_label(widget, null, {label_attr: {class: 'form-label'}}) }}#}
-{#                                        </div>#}
-{#                                    {% endif %}#}
+            {{ form_start(form, {attr: {
+                'class': 'product-form',
+                'data-controller': 'product-parameters',
+                'data-product-parameters-options-url-value': path('admin_product_category_parameters', {store_id: app.request.attributes.get('store_id')}),
+                'data-product-parameters-category-select-id-value': form.category.vars.id,
+                'data-product-parameters-duplicate-message-value': 'This product parameter is already added.'|trans,
+                'data-product-parameters-incompatible-message-value': 'This product parameter is not available for the selected category.'|trans,
+                'data-product-parameters-required-label-value': 'admin.product.parameters.required'|trans,
+                'data-product-parameters-required-locked-message-value': 'admin.product.parameters.required_locked'|trans
+            }}) }}
+            {% if form._token is defined %}
+                {{ form_widget(form._token) }}
+            {% endif %}
+            {{ form_errors(form) }}
 
-{#                                    {{ form_widget(widget, {attr:{class: 'form-control'}}) }}#}
-
-{#                                    <small>{{ form_help(widget) }}</small>#}
-
-{#                                    <div class="form-error">#}
-{#                                        {{ form_errors(widget) }}#}
-{#                                    </div>#}
-{#                                {% endif %}#}
-{#                            </div>#}
-                        {% endfor %}
-
-                        <div class="mb-3" {{ stimulus_controller('product-relations') }}>
-                            <label class="form-label d-block">{{ 'admin.product.relations.title'|trans }}</label>
-                            <div {{ stimulus_target('product-relations', 'entries') }}>
-                                {% for relation in form.productRelations %}
-                                    {{ include('admin/product/_relation_row.html.twig', {relation: relation}) }}
-                                {% endfor %}
-                            </div>
-                            <p class="text-muted small mb-2 {{ form.productRelations|length > 0 ? 'd-none' : '' }}" {{ stimulus_target('product-relations', 'emptyState') }}>
-                                {{ 'admin.product.relations.no_relations'|trans }}
-                            </p>
-                            <template {{ stimulus_target('product-relations', 'prototype') }}>
-                                {{ include('admin/product/_relation_row.html.twig', {relation: form.productRelations.vars.prototype}) }}
-                            </template>
-                            <button type="button" class="btn btn-sm btn-light" data-action="product-relations#addEntry">
-                                <i class="fa-solid fa-plus me-1"></i>{{ 'admin.product.relations.add'|trans }}
-                            </button>
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{{ 'admin.product.sections.basic'|trans }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            {{ form_row(form.name) }}
                         </div>
-
-                        <div class="row">
-                            <div class="form-control-lg">
-                                <button type="submit" class="btn btn-primary btn mb-1 me-2">{{ 'admin.common.save'|trans }}</button>
-                                <button name="save" value="stay" type="submit" class="btn btn-primary mb-1 me-2">{{ 'admin.common.save_and_continue'|trans }}</button>
-                                <a href="{{ path('admin_product_index', app.request.query.all|merge(app.request.attributes.get('_route_params'))) }}" class="btn btn-text mb-1">{{ 'admin.common.cancel'|trans }}</a>
-                            </div>
+                        <div class="col-12 col-md-6">
+                            {{ form_row(form.code) }}
                         </div>
-
-                        {{ form_end(form, {'render_rest': false}) }}
+                        <div class="col-12 col-md-6">
+                            {{ form_row(form.category, {attr: {class: 'select2'}}) }}
+                        </div>
+                        <div class="col-12 col-md-6">
+                            {{ form_row(form.unit) }}
+                        </div>
+                        <div class="col-12">
+                            {{ form_row(form.productKind) }}
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{{ 'admin.product.sections.availability_pricing'|trans }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            {{ form_row(form.baseSalePrice) }}
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="row g-2">
+                                <div class="col-12 col-sm-4">{{ form_row(form.canBeSold) }}</div>
+                                <div class="col-12 col-sm-4">{{ form_row(form.canBePurchased) }}</div>
+                                <div class="col-12 col-sm-4">{{ form_row(form.canBeManufactured) }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="card-title mb-0">{{ 'admin.product.parameters.title'|trans }}</h5>
+                    <button type="button" class="btn btn-sm btn-light" data-action="product-parameters#addEntry">
+                        <i class="fa-solid fa-plus me-1"></i>{{ 'admin.product.parameters.add'|trans }}
+                    </button>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-2 {{ form.category.vars.data ? 'd-none' : '' }}" {{ stimulus_target('product-parameters', 'selectCategoryHint') }}>
+                        {{ 'admin.product.parameters.select_category_hint'|trans }}
+                    </p>
+                    <div class="d-none product-parameter-row product-parameter-row--head text-muted small fw-bold {{ form.productParameters|length > 0 ? 'd-md-grid' : '' }}" {{ stimulus_target('product-parameters', 'head') }}>
+                        <div>{{ 'admin.product.parameters.parameter'|trans }}</div>
+                        <div>{{ 'admin.product.parameters.value'|trans }}</div>
+                        <div></div>
+                    </div>
+                    <div {{ stimulus_target('product-parameters', 'entries') }}>
+                        {% for parameter in form.productParameters %}
+                            {{ include('admin/product/_parameter_row.html.twig', {parameter: parameter}) }}
+                        {% endfor %}
+                    </div>
+                    <p class="text-muted small mb-0 {{ form.productParameters|length > 0 ? 'd-none' : '' }}" {{ stimulus_target('product-parameters', 'emptyState') }}>
+                        {{ 'admin.product.parameters.no_parameters'|trans }}
+                    </p>
+                    <template {{ stimulus_target('product-parameters', 'prototype') }}>
+                        {{ include('admin/product/_parameter_row.html.twig', {parameter: form.productParameters.vars.prototype}) }}
+                    </template>
+                </div>
+            </div>
+
+            <div class="card" {{ stimulus_controller('product-relations') }}>
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="card-title mb-0">{{ 'admin.product.relations.title'|trans }}</h5>
+                    <button type="button" class="btn btn-sm btn-light" data-action="product-relations#addEntry">
+                        <i class="fa-solid fa-plus me-1"></i>{{ 'admin.product.relations.add'|trans }}
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="d-none product-relation-row product-relation-row--head text-muted small fw-bold {{ form.productRelations|length > 0 ? 'd-md-grid' : '' }}" {{ stimulus_target('product-relations', 'head') }}>
+                        <div>{{ 'admin.product.relations.related_product'|trans }}</div>
+                        <div>{{ 'admin.product.relations.type'|trans }}</div>
+                        <div></div>
+                    </div>
+                    <div {{ stimulus_target('product-relations', 'entries') }}>
+                        {% for relation in form.productRelations %}
+                            {{ include('admin/product/_relation_row.html.twig', {relation: relation}) }}
+                        {% endfor %}
+                    </div>
+                    <p class="text-muted small mb-0 {{ form.productRelations|length > 0 ? 'd-none' : '' }}" {{ stimulus_target('product-relations', 'emptyState') }}>
+                        {{ 'admin.product.relations.no_relations'|trans }}
+                    </p>
+                    <template {{ stimulus_target('product-relations', 'prototype') }}>
+                        {{ include('admin/product/_relation_row.html.twig', {relation: form.productRelations.vars.prototype}) }}
+                    </template>
+                </div>
+            </div>
+
+            {{ include('admin/_components/_form_actions.html.twig', {
+                cancel_url: path('admin_product_index', app.request.query.all|merge(app.request.attributes.get('_route_params'))),
+                context: entity.name ?: ('New'|trans ~ ' ' ~ 'Product'|trans)
+            }) }}
+
+            {{ form_end(form, {'render_rest': false}) }}
         </div>
     </main>
 {% endblock %}

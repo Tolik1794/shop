@@ -1,0 +1,153 @@
+// Align select2 widgets with Bootstrap form controls (.form-control / .form-select):
+// same height, border-radius, border, focus border color (+ ring). Driven by the same
+// Bootstrap input variables so the three control types stay in sync. Size-specific
+// tweaks should be local overrides where genuinely needed.
+
+// Focus ring pieces, matching the Bootstrap input focus ring, used to draw the ring on
+// the open dropdown's outer sides only (so there is no highlight band where the dropdown
+// meets the field).
+$select2-focus-ring-width: $input-btn-focus-width;
+$select2-focus-ring-color: rgba($primary, 0.25);
+
+.select2-container--default {
+  // Single select — mirror the exact box model of a single-line .form-control /
+  // .form-select (vertical padding + line-height + border) so the rendered height is
+  // pixel-identical to an input instead of relying on a separate fixed height.
+  .select2-selection--single {
+    height: auto;
+    min-height: $input-height;
+    padding: $input-padding-y 0;
+    background-color: $input-bg;
+    border: $input-border-width solid $input-border-color;
+    border-radius: $input-border-radius;
+
+    .select2-selection__rendered {
+      color: $input-color;
+      line-height: $input-line-height;
+      padding-left: $input-padding-x;
+      padding-right: $input-padding-x + 1rem; // room for the dropdown arrow
+    }
+
+    .select2-selection__placeholder {
+      color: $input-placeholder-color;
+    }
+
+    .select2-selection__arrow {
+      height: 100%;
+      top: 0;
+      right: $input-padding-x * 0.5;
+    }
+  }
+
+  // Multiple select — grows with chips but never shorter than an input.
+  .select2-selection--multiple {
+    min-height: $input-height;
+    padding: 0 ($input-padding-x - 0.35rem);
+    background-color: $input-bg;
+    border: $input-border-width solid $input-border-color;
+    border-radius: $input-border-radius;
+
+    .select2-selection__choice {
+      border: 0;
+      border-radius: $border-radius;
+      background-color: #f1f5f9;
+    }
+
+    .select2-selection__choice__remove {
+      border-right: 0;
+      padding: 0 6px;
+    }
+  }
+
+  // Focus / open — same focus look as Bootstrap inputs.
+  &.select2-container--focus,
+  &.select2-container--open {
+    .select2-selection--single,
+    .select2-selection--multiple {
+      border-color: $input-focus-border-color;
+      box-shadow: $input-focus-box-shadow;
+      outline: 0;
+    }
+  }
+
+  // When the list is open, carry the focus highlight onto the dropdown so the field +
+  // expanded list read as one highlighted control, while keeping the junction between
+  // them seamless (no border line and no ring band).
+  &.select2-container--open {
+    // Drop the field's border on the side that meets the list (height is pinned by the
+    // selection's min-height, so removing 1px does not shrink the control).
+    &.select2-container--below {
+      .select2-selection--single,
+      .select2-selection--multiple {
+        border-bottom: 0;
+      }
+    }
+
+    &.select2-container--above {
+      .select2-selection--single,
+      .select2-selection--multiple {
+        border-top: 0;
+      }
+    }
+
+    .select2-dropdown {
+      border-color: $input-focus-border-color;
+    }
+
+    // Ring the dropdown's outer sides only, omitting the edge that touches the field, so
+    // the highlight wraps the open area without a band between the list and the field.
+    .select2-dropdown--below {
+      box-shadow:
+        (-$select2-focus-ring-width) 0 0 0 $select2-focus-ring-color,
+        $select2-focus-ring-width 0 0 0 $select2-focus-ring-color,
+        0 $select2-focus-ring-width 0 0 $select2-focus-ring-color;
+    }
+
+    .select2-dropdown--above {
+      box-shadow:
+        (-$select2-focus-ring-width) 0 0 0 $select2-focus-ring-color,
+        $select2-focus-ring-width 0 0 0 $select2-focus-ring-color,
+        0 (-$select2-focus-ring-width) 0 0 $select2-focus-ring-color;
+    }
+  }
+
+  // Disabled — match input disabled background.
+  &.select2-container--disabled {
+    .select2-selection--single,
+    .select2-selection--multiple {
+      background-color: $input-disabled-bg;
+    }
+  }
+
+  // Dropdown.
+  .select2-search--dropdown .select2-search__field {
+    border: $input-border-width solid $input-border-color;
+    border-radius: $input-border-radius;
+  }
+
+  .select2-results__option--selected {
+    display: none;
+  }
+
+  // The clear ("x") control is non-functional project-wide: select2 needs a
+  // `placeholder` option for `allowClear` to work, and none is configured. Hide it so it
+  // is not shown as a dead control next to the dropdown arrow. The per-chip remove on
+  // multi-selects (.select2-selection__choice__remove) keeps working.
+  .select2-selection__clear {
+    display: none;
+  }
+
+  .select2-results__option--highlighted[aria-selected] {
+    background-color: $primary;
+  }
+}
+
+input.select2-search__field:focus-visible {
+  outline: none;
+}
+
+// Reserve the final select2 height for not-yet-enhanced selects so the controls do not
+// shift the layout while select2 mounts on load.
+select.select2:not(.select2-hidden-accessible) {
+  min-height: $input-height;
+}

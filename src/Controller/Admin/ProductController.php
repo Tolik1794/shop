@@ -8,11 +8,14 @@ use App\Form\Admin\FilterType\ProductFilterType;
 use App\Form\Admin\Type\ProductType;
 use App\Manager\ProductManager;
 use App\Manager\ProductRelationManager;
+use App\Repository\CategoryProductParameterNameRepository;
+use App\Repository\CategoryRepository;
 use App\Repository\ProductPriceRepository;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -27,6 +30,8 @@ class ProductController extends AbstractAdvancedController
 		private readonly ProductManager $productManager,
 		private readonly ProductRelationManager $productRelationManager,
 		private readonly ProductPriceRepository $productPriceRepository,
+		private readonly CategoryRepository $categoryRepository,
+		private readonly CategoryProductParameterNameRepository $categoryProductParameterNameRepository,
 	)
 	{
 	}
@@ -76,6 +81,43 @@ class ProductController extends AbstractAdvancedController
 			'first_entity' => $product,
 			'filter_form' => $filterForm->createView()
 		]);
+	}
+
+	#[IsGranted('product.manage')]
+	#[Route('/category-parameters', name: 'category_parameters', methods: ['GET'])]
+	public function categoryParameters(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+	): JsonResponse
+	{
+		$categoryId = $request->query->getInt('category_id');
+		if ($categoryId < 1) {
+			return $this->json(['parameters' => []]);
+		}
+
+		$category = $this->categoryRepository->find($categoryId);
+		if (!$category || $category->getStore()?->getId() !== $store->getId()) {
+			return $this->json(['parameters' => []], Response::HTTP_NOT_FOUND);
+		}
+
+		$parameters = [];
+		foreach ($this->categoryProductParameterNameRepository->findAllByCategory($category) as $categoryProductParameterName) {
+			$productParameterName = $categoryProductParameterName->getProductParameterName();
+			if (!$productParameterName || !$productParameterName->getId()) {
+				continue;
+			}
+
+			$parameters[$productParameterName->getId()] = [
+				'id' => $productParameterName->getId(),
+				'name' => $productParameterName->getName(),
+				'isRequired' => (bool) $categoryProductParameterName->isIsRequired(),
+			];
+		}
+
+		usort($parameters, static fn (array $left, array $right): int => strcmp($left['name'], $right['name']));
+
+		return $this->json(['parameters' => $parameters]);
 	}
 
 	#[IsGranted('product.manage')]

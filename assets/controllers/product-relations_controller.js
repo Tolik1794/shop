@@ -1,7 +1,7 @@
 import {Controller} from '@hotwired/stimulus'
 
 export default class extends Controller {
-    static targets = ['prototype', 'entries', 'row', 'emptyState']
+    static targets = ['prototype', 'entries', 'row', 'emptyState', 'head']
 
     connect() {
         this.nextIndex = this.rowTargets.length
@@ -27,8 +27,14 @@ export default class extends Controller {
     }
 
     toggleEmptyState() {
+        const hasRows = this.rowTargets.length > 0
+
         if (this.hasEmptyStateTarget) {
-            this.emptyStateTarget.classList.toggle('d-none', this.rowTargets.length > 0)
+            this.emptyStateTarget.classList.toggle('d-none', hasRows)
+        }
+
+        if (this.hasHeadTarget) {
+            this.headTarget.classList.toggle('d-md-grid', hasRows)
         }
     }
 

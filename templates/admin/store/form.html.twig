@@ -5,6 +5,7 @@
 {% block main_content %}
     <main class="content">
         <div class="container-fluid p-0">
+            {{ form_start(form) }}
             <div class="row">
                 <div class="card">
                     <div class="card-header">
@@ -14,7 +15,6 @@
                         {% if avatar %}
                             <img alt="Avatar" class="article-img" src="{{ avatar|trim_full_path|imagine_filter('squared_thumbnail_small') }}">
                         {% endif %}
-                        {{ form_start(form) }}
                         {{ form_errors(form) }}
 
                         {% for name, widget in form %}
@@ -40,18 +40,13 @@
                             </div>
                         {% endfor %}
 
-                        <div class="row">
-                            <div class="form-control-lg">
-                                <button type="submit" class="btn btn-primary btn mb-1 me-2">{{ 'admin.common.save'|trans }}</button>
-                                <button name="save" value="stay" type="submit" class="btn btn-primary mb-1 me-2">{{ 'admin.common.save_and_continue'|trans }}</button>
-                                <a href="{{ path('admin_store_index', app.request.query.all|merge(app.request.attributes.get('_route_params'))) }}" class="btn btn-text mb-1">{{ 'admin.common.cancel'|trans }}</a>
-                            </div>
-                        </div>
-
-                        {{ form_end(form, {'render_rest': false}) }}
                     </div>
                 </div>
+                {{ include('admin/_components/_form_actions.html.twig', {
+                    cancel_url: path('admin_store_index', app.request.query.all|merge(app.request.attributes.get('_route_params')))
+                }) }}
             </div>
+            {{ form_end(form, {'render_rest': false}) }}
         </div>
     </main>
 {% endblock %}

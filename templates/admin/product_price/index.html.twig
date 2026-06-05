@@ -60,7 +60,7 @@
     <main class="content" {{ stimulus_controller('reload-card') }}>
         <div class="container-fluid p-0">
             <div class="row">
-                <div class="col-xxl-4 col-xl-5 col-lg-6">
+                <div class="col-xxl-5 col-xl-5 col-lg-6">
                     {{ include('admin/_components/card/_tab_card.html.twig', {
                         tab_head: [
                             include('admin/_components/tab_icon/_show.html.twig')
@@ -73,7 +73,7 @@
                         ]
                     }) }}
                 </div>
-                <div class="col-xxl-8 col-xl-7 col-lg-6">
+                <div class="col-xxl-7 col-xl-7 col-lg-6">
                     {{ include('admin/_components/card/_table_card.html.twig', {
                         actions: table_actions,
                         table_title: 'Product prices',

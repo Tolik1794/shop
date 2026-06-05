@@ -39,40 +39,17 @@ button.eye-password {
   color: var(--bs-body-color);
 }
 
-.select2-container .select2-selection--multiple .select2-selection__choice {
-  border: 0;
-  border-radius: 4px;
-  background-color: #f1f5f9;
-}
-
-.select2-container--default {
-  .select2-selection--multiple .select2-selection__choice__remove {
-    border-right: 0;
-    padding: 0 6px;
-  }
-
-  .select2-results__option--selected {
-    display: none;
-  }
-
-  .select2-selection--multiple,
-  .select2-selection--single {
-    border: 1px solid #cbd5e1;
-  }
-
-  .select2-search--dropdown .select2-search__field {
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-  }
-
-  &.select2-container--open.select2-container--below {
-    .select2-selection--single,
-    .select2-selection--multiple {
-      border: 1px solid #cbd5e1;
-    }
-  }
-}
-
-input.select2-search__field:focus-visible {
-  outline: none
+// Reusable sticky form action bar (templates/admin/_components/_form_actions.html.twig).
+// A standalone, card-like panel placed after the form card so it reads as a separate
+// element; its horizontal padding matches the card body so the content lines up with the
+// cards above. Keeps Save / Save-and-continue / Cancel reachable without scrolling down.
+.form-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  width: 100%;
+  padding: $spacer * 0.75 $card-spacer-x;
+  background: $white;
+  border-radius: $card-border-radius;
+  box-shadow: 0 -0.25rem 0.5rem rgba($black, 0.05);
 }

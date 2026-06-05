@@ -39,7 +39,8 @@ class ProductTypeTest extends KernelTestCase
 		$form = $this->formFactory->create(ProductType::class, $product);
 
 		self::assertTrue($form->has('category'));
-		self::assertFalse($form->has('productParameters'));
+		self::assertTrue($form->has('productParameters'));
+		self::assertCount(0, $form->get('productParameters'));
 	}
 
 	public function testEditProductFormContainsParametersForExistingCategory(): void
@@ -91,6 +92,93 @@ class ProductTypeTest extends KernelTestCase
 		self::assertSame($chair->getId(), $relation->getRelatedProduct()->getId());
 		self::assertSame('accessory', $relation->getType()->value);
 		self::assertSame($table, $relation->getProduct());
+	}
+
+	public function testProductFormSubmitsProductParametersCollection(): void
+	{
+		$store = $this->persistStore('parameter-submit-store-' . uniqid());
+		$category = $this->persistCategory($store, 'Shoes');
+		$unit = $this->persistUnit($store, 'pcs-' . uniqid());
+		$size = $this->persistCategoryProductParameterName($category, 'Size');
+		$product = (new Product())
+			->setStore($store)
+			->setName('Sneaker')
+			->setCode('SN-' . uniqid())
+			->setCanBeSold(true)
+			->setCanBePurchased(false)
+			->setCanBeManufactured(false);
+
+		$form = $this->formFactory->create(ProductType::class, $product, ['csrf_protection' => false]);
+		$form->submit([
+			'name' => $product->getName(),
+			'code' => $product->getCode(),
+			'unit' => (string) $unit->getId(),
+			'productKind' => $product->getProductKind()->value,
+			'category' => (string) $category->getId(),
+			'canBeSold' => '1',
+			'productParameters' => [
+				['productParameterName' => (string) $size->getId(), 'value' => '42'],
+			],
+		]);
+
+		self::assertTrue($form->isValid(), (string) $form->getErrors(true));
+		self::assertCount(1, $product->getProductParameters());
+
+		$parameter = $product->getProductParameters()->first();
+		self::assertSame($size->getId(), $parameter->getProductParameterName()->getId());
+		self::assertSame('42', $parameter->getValue());
+		self::assertSame($product, $parameter->getProduct());
+	}
+
+	public function testProductFormRejectsDuplicateProductParameters(): void
+	{
+		$store = $this->persistStore('parameter-duplicate-store-' . uniqid());
+		$category = $this->persistCategory($store, 'Shoes');
+		$unit = $this->persistUnit($store, 'pcs-' . uniqid());
+		$size = $this->persistCategoryProductParameterName($category, 'Size');
+		$product = $this->persistProduct($store, $category, $unit, 'Sneaker');
+
+		$form = $this->formFactory->create(ProductType::class, $product, ['csrf_protection' => false]);
+		$form->submit([
+			'name' => $product->getName(),
+			'code' => $product->getCode(),
+			'unit' => (string) $unit->getId(),
+			'productKind' => $product->getProductKind()->value,
+			'category' => (string) $category->getId(),
+			'canBeSold' => '1',
+			'productParameters' => [
+				['productParameterName' => (string) $size->getId(), 'value' => '42'],
+				['productParameterName' => (string) $size->getId(), 'value' => '43'],
+			],
+		]);
+
+		self::assertFalse($form->isValid());
+		self::assertStringContainsString('This product parameter is already added.', (string) $form->getErrors(true));
+	}
+
+	public function testProductFormRejectsParameterOutsideSelectedCategory(): void
+	{
+		$store = $this->persistStore('parameter-outside-store-' . uniqid());
+		$category = $this->persistCategory($store, 'Shoes');
+		$otherCategory = $this->persistCategory($store, 'Tables');
+		$unit = $this->persistUnit($store, 'pcs-' . uniqid());
+		$material = $this->persistCategoryProductParameterName($otherCategory, 'Material');
+		$product = $this->persistProduct($store, $category, $unit, 'Sneaker');
+
+		$form = $this->formFactory->create(ProductType::class, $product, ['csrf_protection' => false]);
+		$form->submit([
+			'name' => $product->getName(),
+			'code' => $product->getCode(),
+			'unit' => (string) $unit->getId(),
+			'productKind' => $product->getProductKind()->value,
+			'category' => (string) $category->getId(),
+			'canBeSold' => '1',
+			'productParameters' => [
+				['productParameterName' => (string) $material->getId(), 'value' => 'Wood'],
+			],
+		]);
+
+		self::assertFalse($form->isValid());
 	}
 
 	private function persistProduct(Store $store, Category $category, Unit $unit, string $name): Product
@@ -173,7 +261,7 @@ class ProductTypeTest extends KernelTestCase
 		return $category;
 	}
 
-	private function persistCategoryProductParameterName(Category $category, string $name): void
+	private function persistCategoryProductParameterName(Category $category, string $name): ProductParameterName
 	{
 		$productParameterName = new ProductParameterName()
 			->setName($name)
@@ -187,5 +275,7 @@ class ProductTypeTest extends KernelTestCase
 		$this->entityManager->persist($productParameterName);
 		$this->entityManager->persist($categoryProductParameterName);
 		$this->entityManager->flush();
+
+		return $productParameterName;
 	}
 }

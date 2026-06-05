@@ -1,0 +1,69 @@
+// Product edit form: compact parameter / relation rows + sticky action bar
+
+.product-parameter-row,
+.product-relation-row {
+  margin-bottom: $spacer * 0.75;
+
+  // Mobile: each row reads as a self-contained card with stacked, labelled fields.
+  @include media-breakpoint-down(md) {
+    border: 1px solid $border-color;
+    border-radius: $border-radius;
+    padding: $spacer * 0.5;
+
+    .product-parameter-row__cell:not(:last-child),
+    .product-relation-row__cell:not(:last-child) {
+      margin-bottom: $spacer * 0.5;
+    }
+  }
+
+  // Desktop: compact, table-like grid (columns defined per row type below).
+  @include media-breakpoint-up(md) {
+    display: grid;
+    gap: $spacer * 0.5;
+    align-items: center;
+    margin-bottom: $spacer * 0.25;
+
+    .form-control,
+    .form-select {
+      margin-bottom: 0;
+    }
+  }
+
+  // Header rows are layout-only: never show the mobile card frame.
+  &--head {
+    margin-bottom: $spacer * 0.25;
+    border: 0;
+    padding: 0;
+  }
+}
+
+@include media-breakpoint-up(md) {
+  // параметр / значення / дія
+  .product-parameter-row {
+    grid-template-columns: minmax(260px, 38%) 1fr 44px;
+  }
+
+  // пов'язаний товар / тип зв'язку / дія
+  .product-relation-row {
+    grid-template-columns: 1fr minmax(260px, 320px) 44px;
+  }
+}
+
+// Let the parameter select shrink inside the flex row so the required badge can sit on
+// the same line as the name without overflowing.
+.product-parameter-row__field {
+  min-width: 0;
+}
+
+// Action cell — keep the delete button aligned with the row controls.
+.product-parameter-row__action,
+.product-relation-row__action {
+  @include media-breakpoint-up(md) {
+    display: flex;
+    justify-content: center;
+  }
+
+  @include media-breakpoint-down(md) {
+    text-align: end;
+  }
+}

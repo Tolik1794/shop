@@ -10,13 +10,13 @@
 
 	<main class="content" data-controller="select-two payment-form">
 		<div class="container-fluid p-0">
+			{{ form_start(form, {attr: {'data-select-two-target': 'form'}}) }}
 			<div class="row">
 				<div class="card">
 					<div class="card-header">
 						<h5 class="card-title mb-0">{{ 'Payment'|trans }}</h5>
 					</div>
 					<div class="card-body">
-						{{ form_start(form, {attr: {'data-select-two-target': 'form'}}) }}
 						{% if form.vars.errors|length > 0 %}
 							<div class="form-error">
 								{{ form_errors(form) }}
@@ -46,22 +46,16 @@
 							</div>
 						</div>
 
-						<div class="row">
-							<div class="form-control-lg">
-								<button type="submit" class="btn btn-primary btn mb-1 me-2">{{ 'admin.common.save'|trans }}</button>
-								<button name="save" value="stay" type="submit" class="btn btn-primary mb-1 me-2">{{ 'admin.common.save_and_continue'|trans }}</button>
-								<a href="{{ path('app_admin_payment_index', app.request.query.all|merge(app.request.attributes.get('_route_params'))) }}" class="btn btn-text mb-1">{{ 'admin.common.cancel'|trans }}</a>
-							</div>
-						</div>
-
 						{% if form._token is defined %}
 							{{ form_widget(form._token) }}
 						{% endif %}
-
-						{{ form_end(form, {'render_rest': false}) }}
 					</div>
 				</div>
+				{{ include('admin/_components/_form_actions.html.twig', {
+					cancel_url: path('app_admin_payment_index', app.request.query.all|merge(app.request.attributes.get('_route_params')))
+				}) }}
 			</div>
+			{{ form_end(form, {'render_rest': false}) }}
 		</div>
 	</main>
 {% endblock %}

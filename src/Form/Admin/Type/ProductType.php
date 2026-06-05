@@ -6,6 +6,7 @@ use App\Entity\Category;
 use App\Entity\CategoryProductParameterName;
 use App\Entity\Product;
 use App\Entity\ProductParameter;
+use App\Entity\ProductParameterName;
 use App\Entity\Unit;
 use App\Enum\ProductKindEnum;
 use App\Repository\CategoryRepository;
@@ -17,6 +18,7 @@ use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -89,6 +91,30 @@ class ProductType extends AbstractType
 			);
 		});
 
+	    $builder->addEventListener(FormEvents::PRE_SUBMIT, function (FormEvent $event): void {
+		    $data = $event->getData();
+
+		    if (!is_array($data) || !isset($data['productParameters']) || !is_array($data['productParameters'])) {
+			    return;
+		    }
+
+		    foreach ($data['productParameters'] as $key => $parameterData) {
+			    if (!is_array($parameterData)) {
+				    unset($data['productParameters'][$key]);
+				    continue;
+			    }
+
+			    $parameterName = trim((string) ($parameterData['productParameterName'] ?? ''));
+			    $value = trim((string) ($parameterData['value'] ?? ''));
+
+			    if ($parameterName === '' || $value === '') {
+				    unset($data['productParameters'][$key]);
+			    }
+		    }
+
+		    $event->setData($data);
+	    });
+
 		$builder->get('category')->addEventListener(FormEvents::POST_SUBMIT, function (FormEvent $event): void {
 			$category = $event->getForm()->getData();
 			if (!$category instanceof Category) return;
@@ -103,36 +129,91 @@ class ProductType extends AbstractType
 				$category
 			);
 		});
+
+	    $builder->addEventListener(FormEvents::POST_SUBMIT, function (FormEvent $event): void {
+		    $form = $event->getForm();
+		    /** @var Product|null $product */
+		    $product = $event->getData();
+
+		    if (!$product instanceof Product || !$form->has('productParameters')) {
+			    return;
+		    }
+
+		    $category = $product->getCategory();
+		    $allowedParameterNameIds = $category instanceof Category
+			    ? array_fill_keys(array_map(
+				    static fn (ProductParameterName $parameterName): int => (int) $parameterName->getId(),
+				    $this->findAllowedParameterNames($category)
+			    ), true)
+			    : [];
+		    $usedParameterNameIds = [];
+
+		    foreach ($form->get('productParameters') as $parameterForm) {
+			    /** @var ProductParameter|null $parameter */
+			    $parameter = $parameterForm->getData();
+			    $parameterName = $parameter instanceof ProductParameter ? $parameter->getProductParameterName() : null;
+
+			    if (!$parameterName instanceof ProductParameterName || !$parameterName->getId()) {
+				    continue;
+			    }
+
+			    $parameterNameId = (int) $parameterName->getId();
+			    if (!isset($allowedParameterNameIds[$parameterNameId])) {
+				    $parameterForm->get('productParameterName')->addError(new FormError('This product parameter is not available for the selected category.'));
+			    }
+
+			    if (isset($usedParameterNameIds[$parameterNameId])) {
+				    $parameterForm->get('productParameterName')->addError(new FormError('This product parameter is already added.'));
+				    continue;
+			    }
+
+			    $usedParameterNameIds[$parameterNameId] = true;
+		    }
+	    });
     }
 
 	private function addProductParametersField(?FormInterface $form, Product $product, ?Category $category): void
 	{
-		if (!$form || !$category) return;
+		if (!$form) return;
 
 		$form->add('productParameters', CollectionType::class, [
 			'entry_type' => ProductParameterType::class,
 			'data' => $this->buildProductParameters($product, $category),
-			'entry_options' => ['label' => false],
+			'entry_options' => [
+				'label' => false,
+				'parameter_name_choices' => $this->buildParameterNameChoices($product, $category),
+			],
 			'mapped' => true,
 			'by_reference' => false,
+			'allow_add' => true,
 			'allow_delete' => true,
+			'prototype' => true,
+			'prototype_options' => [
+				'label' => false,
+				'parameter_name_choices' => $category instanceof Category ? $this->findAllowedParameterNames($category) : [],
+			],
+			'label' => 'admin.product.parameters.title',
 		]);
 	}
 
-	private function buildProductParameters(Product $product, Category $category): Collection
+	private function buildProductParameters(Product $product, ?Category $category): Collection
 	{
 		$productParameters = new ArrayCollection();
 		foreach ($product->getProductParameters() as $productParameter) {
-			$productParameters->set($productParameter->getProductParameterName()->getName(), $productParameter);
+			$productParameterName = $productParameter->getProductParameterName();
+			if (!$productParameterName instanceof ProductParameterName) {
+				continue;
+			}
+
+			$productParameters->set($productParameterName->getName(), $productParameter);
 		}
 
-		$categoryProductParameterNames = $this->em->getRepository(CategoryProductParameterName::class)
-			->findAllByCategory($category);
+		if (!$category instanceof Category) {
+			return $productParameters;
+		}
 
-		foreach ($categoryProductParameterNames as $categoryProductParameterName) {
-			$productParameterName = $categoryProductParameterName->getProductParameterName();
+		foreach ($this->findAllowedParameterNames($category) as $productParameterName) {
 			if ($productParameters->get($productParameterName->getName())) continue;
-
 			$productParameter = new ProductParameter();
 			$productParameter->setProductParameterName($productParameterName)
 				->setProduct($product);
@@ -141,6 +222,55 @@ class ProductType extends AbstractType
 		}
 
 		return $productParameters;
+	}
+
+	/**
+	 * @return ProductParameterName[]
+	 */
+	private function buildParameterNameChoices(Product $product, ?Category $category): array
+	{
+		$choices = [];
+
+		if ($category instanceof Category) {
+			foreach ($this->findAllowedParameterNames($category) as $parameterName) {
+				if ($parameterName->getId()) {
+					$choices[$parameterName->getId()] = $parameterName;
+				}
+			}
+		}
+
+		foreach ($product->getProductParameters() as $productParameter) {
+			$parameterName = $productParameter->getProductParameterName();
+			if ($parameterName instanceof ProductParameterName && $parameterName->getId()) {
+				$choices[$parameterName->getId()] = $parameterName;
+			}
+		}
+
+		return array_values($choices);
+	}
+
+	/**
+	 * @return ProductParameterName[]
+	 */
+	private function findAllowedParameterNames(Category $category): array
+	{
+		$parameterNames = [];
+		$categoryProductParameterNames = $this->em->getRepository(CategoryProductParameterName::class)
+			->findAllByCategory($category);
+
+		foreach ($categoryProductParameterNames as $categoryProductParameterName) {
+			$productParameterName = $categoryProductParameterName->getProductParameterName();
+			if ($productParameterName instanceof ProductParameterName && $productParameterName->getId()) {
+				$parameterNames[$productParameterName->getId()] = $productParameterName;
+			}
+		}
+
+		uasort(
+			$parameterNames,
+			static fn (ProductParameterName $left, ProductParameterName $right): int => strcmp($left->getName(), $right->getName())
+		);
+
+		return array_values($parameterNames);
 	}
 
     public function configureOptions(OptionsResolver $resolver): void

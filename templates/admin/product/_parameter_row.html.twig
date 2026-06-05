@@ -1,0 +1,24 @@
+<div class="product-parameter-row" {{ stimulus_target('product-parameters', 'row') }}>
+    <div class="product-parameter-row__cell">
+        {{ form_label(parameter.productParameterName, 'admin.product.parameters.parameter'|trans, {label_attr: {class: 'form-label d-md-none'}}) }}
+        <div class="d-flex align-items-center gap-2">
+            <div class="product-parameter-row__field flex-grow-1">
+                {{ form_widget(parameter.productParameterName) }}
+                <input type="text" class="form-control d-none" tabindex="-1" readonly aria-readonly="true" {{ stimulus_target('product-parameters', 'parameterNameDisplay') }}>
+            </div>
+            <span class="badge bg-warning text-dark flex-shrink-0 d-none" {{ stimulus_target('product-parameters', 'requiredBadge') }}></span>
+        </div>
+        {{ form_errors(parameter.productParameterName) }}
+    </div>
+    <div class="product-parameter-row__cell">
+        {{ form_label(parameter.value, 'admin.product.parameters.value'|trans, {label_attr: {class: 'form-label d-md-none'}}) }}
+        {{ form_widget(parameter.value, {attr: {class: 'form-control'}}) }}
+        {{ form_errors(parameter.value) }}
+        <div class="text-danger small mt-1 d-none" {{ stimulus_target('product-parameters', 'warning') }}></div>
+    </div>
+    <div class="product-parameter-row__action">
+        <button type="button" class="btn btn-sm btn-outline-danger" data-action="product-parameters#removeEntry" {{ stimulus_target('product-parameters', 'removeButton') }} title="{{ 'admin.product.parameters.remove'|trans }}" aria-label="{{ 'admin.product.parameters.remove'|trans }}">
+            <i class="fa-solid fa-trash"></i>
+        </button>
+    </div>
+</div>
