@@ -603,7 +603,9 @@
 .order-show-grid {
 	display: grid;
 	gap: 1rem;
-	grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+	// Single column so info sections (Customer, Payment, …) always stack vertically,
+	// regardless of the order card width.
+	grid-template-columns: minmax(0, 1fr);
 }
 
 .order-show-section {
