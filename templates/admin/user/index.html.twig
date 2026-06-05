@@ -2,6 +2,14 @@
 
 {% block title %}User list{% endblock %}
 
+{% block navbar_breadcrumb %}
+    {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+        section_label: 'Managers',
+        section_url: path('admin_user_index'),
+        current_label: first_entity ? first_entity.email : ''
+    }) }}
+{% endblock %}
+
 {% set table_actions %}{% endset %}
 
 {% set table_head %}
@@ -20,6 +28,7 @@
                 class="{{ entity.nickname == first_entity.nickname ? 'table-active' : '' }}"
                 data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
                 data-link="{{ path('admin_user_show', {user_id: entity.nickname}) }}"
+                data-breadcrumb-label="{{ entity.email }}"
                 onclick="document.getElementById('first-tab').click()"
         >
             <td>{{ entity.email }}</td>

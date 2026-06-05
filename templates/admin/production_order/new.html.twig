@@ -2,6 +2,14 @@
 
 {% block title %}New production order{% endblock %}
 
+{% block navbar_breadcrumb %}
+	{{ include('admin/_components/_resource_breadcrumb.html.twig', {
+		section_label: 'Production orders',
+		section_url: path('app_admin_production_order_index', {store_id: app.request.attributes.get('store_id')}),
+		current_label: 'New'
+	}) }}
+{% endblock %}
+
 {% block main_content %}
 	<main class="content" {{ stimulus_controller('select-two') }}>
 		<div class="container-fluid p-0">

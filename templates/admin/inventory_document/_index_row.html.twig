@@ -2,9 +2,10 @@
 		id="{{ entity.id }}"
 		data-id-column="id"
 		class="{{ first_entity and entity.id == first_entity.id ? 'table-active' : '' }}"
-		data-action="click->reload-card#reloadDocumentCards click->reload-card#tableActivate"
-		data-show-link="{{ path('app_admin_inventory_document_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
-		data-history-link="{{ path('app_admin_inventory_document_history', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+	data-action="click->reload-card#reloadDocumentCards click->reload-card#tableActivate"
+	data-show-link="{{ path('app_admin_inventory_document_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+	data-history-link="{{ path('app_admin_inventory_document_history', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+	data-breadcrumb-label="{{ entity.number }}"
 >
 	<td>{{ entity.documentDate|date('Y-m-d') }}</td>
 	<td><strong>{{ entity.number }}</strong></td>

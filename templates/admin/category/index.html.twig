@@ -2,6 +2,14 @@
 
 {% block title %}Category list{% endblock %}
 
+{% block navbar_breadcrumb %}
+    {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+        section_label: 'Categories',
+        section_url: path('admin_category_index', {store_id: app.request.attributes.get('store_id')}),
+        current_label: first_entity ? first_entity.name : ''
+    }) }}
+{% endblock %}
+
 {% set category_filter_params = app.request.query.all(filter_form.vars.name) %}
 {% set category_filter_collapse_id = filter_form.vars.id ~ '-filters' %}
 
@@ -26,6 +34,7 @@
                 class="{{ entity.id == first_entity.id ? 'table-active' : '' }}"
                 data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
                 data-link="{{ path('admin_category_show', {store_id: app.request.attributes.get('store_id'), category_id: entity.id}) }}"
+                data-breadcrumb-label="{{ entity.name }}"
                 onclick="document.getElementById('first-tab').click()"
         >
             {% if entity.level > 0 %}

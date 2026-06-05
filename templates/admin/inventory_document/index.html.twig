@@ -2,6 +2,14 @@
 
 {% block title %}Inventory documents{% endblock %}
 
+{% block navbar_breadcrumb %}
+	{{ include('admin/_components/_resource_breadcrumb.html.twig', {
+		section_label: 'Inventory documents',
+		section_url: path('app_admin_inventory_document_index', {store_id: app.request.attributes.get('store_id')}),
+		current_label: first_entity ? first_entity.number : ''
+	}) }}
+{% endblock %}
+
 {% set table_actions %}
 	<div class="dropdown d-inline-block">
 		<button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">

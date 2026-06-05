@@ -23,9 +23,13 @@ export default class extends Controller {
     async reloadCard(event) {
         let eventTarget = event.currentTarget
 
-        if (this.cardTarget.dataset.cardId === eventTarget.id) return
+        if (this.cardTarget.dataset.cardId === eventTarget.id) {
+            this.updateNavbarBreadcrumb(eventTarget)
+            return
+        }
 
         await this.replaceCard(this.cardTarget, eventTarget.dataset.link)
+        this.updateNavbarBreadcrumb(eventTarget)
     }
 
     async reloadOrderCards(event) {
@@ -33,11 +37,13 @@ export default class extends Controller {
 
         if (this.hasCardTarget && this.cardTarget.dataset.cardId === eventTarget.id) {
             this.updatePaymentTabIcon(eventTarget)
+            this.updateNavbarBreadcrumb(eventTarget)
             return
         }
 
         await this.reloadCardsForRow(eventTarget)
         this.updatePaymentTabIcon(eventTarget)
+        this.updateNavbarBreadcrumb(eventTarget)
     }
 
     async reloadDocumentCards(event) {
@@ -45,11 +51,13 @@ export default class extends Controller {
 
         if (this.hasCardTarget && this.cardTarget.dataset.cardId === eventTarget.id) {
             this.updatePaymentTabIcon(eventTarget)
+            this.updateNavbarBreadcrumb(eventTarget)
             return
         }
 
         await this.reloadCardsForRow(eventTarget)
         this.updatePaymentTabIcon(eventTarget)
+        this.updateNavbarBreadcrumb(eventTarget)
     }
 
     async reloadCardsForRow(row) {
@@ -143,6 +151,7 @@ export default class extends Controller {
                 currentRow.replaceWith(row)
                 row.classList.add('table-active')
                 this.updatePaymentTabIcon(row)
+                this.updateNavbarBreadcrumb(row)
             }
         }
 
@@ -283,6 +292,7 @@ export default class extends Controller {
 
         this.activateTableRow(row)
         this.updatePaymentTabIcon(row)
+        this.updateNavbarBreadcrumb(row)
         this.activateTabFromLocation()
     }
 
@@ -348,5 +358,25 @@ export default class extends Controller {
 
         this.paymentTabIconTarget.classList.toggle('text-success', isComplete)
         this.paymentTabIconTarget.classList.toggle('text-danger', !isComplete)
+    }
+
+    updateNavbarBreadcrumb(row) {
+        if (!row.dataset.breadcrumbLabel) {
+            return
+        }
+
+        const breadcrumbContainer = document.getElementById('admin-navbar-breadcrumb')
+
+        if (!breadcrumbContainer) {
+            return
+        }
+
+        const currentItem = breadcrumbContainer.querySelector('[data-admin-breadcrumb-current]')
+
+        if (!currentItem) {
+            return
+        }
+
+        currentItem.textContent = row.dataset.breadcrumbLabel
     }
 }

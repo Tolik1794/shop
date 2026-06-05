@@ -9,6 +9,7 @@
 		data-history-link="{{ path('app_admin_order_history', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
 		data-payments-link="{{ path('app_admin_payment_order_document', {store_id: app.request.attributes.get('store_id'), order_id: entity.id}) }}"
 		data-payment-complete="{{ entity.paymentStatus.value in ['paid', 'overpaid'] ? '1' : '0' }}"
+		data-breadcrumb-label="{{ entity.number }}"
 >
 	<td>
 		{% set entry_count = entity.orderEntries|length %}

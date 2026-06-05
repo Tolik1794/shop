@@ -3,9 +3,8 @@
 {% block title %}Product prices{% endblock %}
 
 {% block navbar_breadcrumb %}
-    {{ include('admin/_components/_breadcrumb.html.twig', {
-        breadcrumb_class: 'mb-0',
-        items: [
+    {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+        parent_items: [
             {
                 label: 'Products',
                 url: path('admin_product_index', {store_id: app.request.attributes.get('store_id')})
@@ -13,11 +12,11 @@
             {
                 label: product.name,
                 url: path('admin_product_index', {store_id: app.request.attributes.get('store_id'), id: product.id, page: product_index_page})
-            },
-            {
-                label: 'Prices'
             }
-        ]
+        ],
+        section_label: 'Prices',
+        section_url: path('app_admin_product_price_index', {store_id: app.request.attributes.get('store_id'), product_id: product.id}),
+        current_label: first_entity ? first_entity.type.value ~ ' price' : ''
     }) }}
 {% endblock %}
 
@@ -45,6 +44,7 @@
                 class="{{ first_entity and entity.id == first_entity.id ? 'table-active' : '' }}"
                 data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
                 data-link="{{ path('app_admin_product_price_show', {store_id: app.request.attributes.get('store_id'), product_id: product.id, id: entity.id}) }}"
+                data-breadcrumb-label="{{ entity.type.value }} price"
                 onclick="document.getElementById('first-tab').click()"
         >
             <td>{{ entity.type.value }}</td>

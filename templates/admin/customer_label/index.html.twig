@@ -2,6 +2,14 @@
 
 {% block title %}Customer labels{% endblock %}
 
+{% block navbar_breadcrumb %}
+    {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+        section_label: 'Customer labels',
+        section_url: path('app_admin_customer_label_index', {store_id: app.request.attributes.get('store_id')}),
+        current_label: first_entity ? first_entity.name : ''
+    }) }}
+{% endblock %}
+
 {% set table_actions %}
     {% if is_granted('customer_label.manage') %}
         <a class="btn btn-light btn-sm" href="{{ path('app_admin_customer_label_new', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-plus me-1"></i>{{ 'New'|trans }}</a>
@@ -25,6 +33,7 @@
                 class="{{ first_entity and entity.id == first_entity.id ? 'table-active' : '' }}"
                 data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
                 data-link="{{ path('app_admin_customer_label_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+                data-breadcrumb-label="{{ entity.name }}"
                 onclick="document.getElementById('first-tab').click()"
         >
             <td><span class="badge rounded-pill {{ entity.color|default('bg-light text-dark border') }}">{{ entity.name }}</span></td>

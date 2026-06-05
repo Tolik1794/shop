@@ -2,6 +2,20 @@
 
 {% block title %}Hello MainController!{% endblock %}
 
+{% block navbar_breadcrumb %}
+    {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+        parent_items: [
+            {
+                label: 'Categories',
+                url: path('admin_category_index', {store_id: app.request.attributes.get('store_id')})
+            }
+        ],
+        section_label: 'Category product parameter names',
+        section_url: path('admin_category_edit', app.request.attributes.get('_route_params')),
+        current_label: form.vars.data.id ? form.vars.data.productParameterName : 'New'
+    }) }}
+{% endblock %}
+
 {% block main_content %}
     <main class="content">
         <div class="container-fluid p-0">

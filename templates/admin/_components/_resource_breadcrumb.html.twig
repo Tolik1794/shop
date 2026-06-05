@@ -1,0 +1,17 @@
+{% set breadcrumb_items = parent_items|default([]) %}
+{% set breadcrumb_items = breadcrumb_items|merge([
+    section_url|default(null)
+        ? {label: section_label, url: section_url}
+        : {label: section_label}
+]) %}
+
+{% if current_label|default('') is not same as('') %}
+    {% set breadcrumb_items = breadcrumb_items|merge([
+        {label: current_label, dynamic: true}
+    ]) %}
+{% endif %}
+
+{{ include('admin/_components/_breadcrumb.html.twig', {
+    breadcrumb_class: breadcrumb_class|default('mb-0'),
+    items: breadcrumb_items
+}) }}

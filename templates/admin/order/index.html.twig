@@ -3,21 +3,10 @@
 {% block title %}Orders{% endblock %}
 
 {% block navbar_breadcrumb %}
-    {{ include('admin/_components/_breadcrumb.html.twig', {
-        breadcrumb_class: 'mb-0',
-        items: first_entity ? [
-            {
-                label: 'Orders',
-                url: path('app_admin_order_index', {store_id: app.request.attributes.get('store_id')})
-            },
-            {
-                label: first_entity.number
-            }
-        ] : [
-            {
-                label: 'Orders'
-            }
-        ]
+    {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+        section_label: 'Orders',
+        section_url: path('app_admin_order_index', {store_id: app.request.attributes.get('store_id')}),
+        current_label: first_entity ? first_entity.number : ''
     }) }}
 {% endblock %}
 

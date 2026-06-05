@@ -2,6 +2,14 @@
 
 {% block title %}Hello MainController!{% endblock %}
 
+{% block navbar_breadcrumb %}
+    {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+        section_label: 'Managers',
+        section_url: path('admin_user_index'),
+        current_label: entity is defined and entity.nickname ? entity.email : 'New'
+    }) }}
+{% endblock %}
+
 {% block main_content %}
     <main class="content">
         <div class="container-fluid p-0">

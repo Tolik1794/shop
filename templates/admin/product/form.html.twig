@@ -2,6 +2,14 @@
 
 {% block title %}{{ entity.id ? 'Edit'|trans : 'New'|trans }} {{ 'Product'|trans }}{% endblock %}
 
+{% block navbar_breadcrumb %}
+    {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+        section_label: 'Products',
+        section_url: path('admin_product_index', {store_id: app.request.attributes.get('store_id')}),
+        current_label: entity.id ? entity.name : 'New'
+    }) }}
+{% endblock %}
+
 {% block main_content %}
     <main class="content">
         <div class="container-fluid p-0">

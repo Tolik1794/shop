@@ -11,9 +11,10 @@
                     <div
                             id="{{ item.id }}"
                             data-id-column="id"
-                            class="{{ item.id == first_entity.id ? 'table-active' : '' }} data-hover"
+                            class="{{ first_entity is defined and item.id == first_entity.id ? 'table-active' : '' }} data-hover"
                             data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
                             data-link="{{ path('admin_category_show', {store_id: app.request.attributes.get('store_id'), category_id: item.id}) }}"
+                            data-breadcrumb-label="{{ item.name }}"
                             onclick="document.getElementById('first-tab').click()"
                     >
 
@@ -28,7 +29,7 @@
                         <div id="{{ collapse }}" class="collapse" aria-labelledby="{{ heading }}"
                              data-bs-parent="#accordionExample" style="">
                             <div class="card-body">
-                                {{ include('admin/_components/card/_collapse_table_card.html.twig', {items: item.children}) }}
+                                {{ include('admin/_components/card/_collapse_table_card.html.twig', {items: item.children, first_entity: first_entity|default(null)}) }}
                             </div>
                         </div>
                     {% endif %}

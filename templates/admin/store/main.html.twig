@@ -2,6 +2,12 @@
 
 {% block title %}{{ 'admin.dashboard.title'|trans }} - {{ store().name }}{% endblock %}
 
+{% block navbar_breadcrumb %}
+    {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+        section_label: 'admin.dashboard.title'
+    }) }}
+{% endblock %}
+
 {% macro money_value(value, currency) %}
     {{ value|default(0)|money }}{% if currency %} {{ currency }}{% endif %}
 {% endmacro %}

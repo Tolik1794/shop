@@ -3,9 +3,8 @@
 {% block title %}Warehouse stock{% endblock %}
 
 {% block navbar_breadcrumb %}
-    {{ include('admin/_components/_breadcrumb.html.twig', {
-        breadcrumb_class: 'mb-0',
-        items: [
+    {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+        parent_items: [
             {
                 label: 'Warehouses',
                 url: path('app_admin_warehouse_index', {store_id: app.request.attributes.get('store_id')})
@@ -13,11 +12,11 @@
             {
                 label: warehouse.name,
                 url: path('app_admin_warehouse_index', {store_id: app.request.attributes.get('store_id'), id: warehouse.id, page: warehouse_index_page})
-            },
-            {
-                label: 'Stock'
             }
-        ]
+        ],
+        section_label: 'Stock',
+        section_url: path('app_admin_warehouse_stock_index', {store_id: app.request.attributes.get('store_id'), warehouse_id: warehouse.id}),
+        current_label: first_entity ? first_entity.product.name : ''
     }) }}
 {% endblock %}
 
@@ -43,6 +42,7 @@
                 class="{{ first_entity and entity.id == first_entity.id ? 'table-active' : '' }}"
                 data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
                 data-link="{{ path('app_admin_warehouse_stock_show', {store_id: app.request.attributes.get('store_id'), warehouse_id: warehouse.id, id: entity.id}) }}"
+                data-breadcrumb-label="{{ entity.product.name }}"
                 onclick="document.getElementById('first-tab').click()"
         >
             <td>{{ entity.product.name }}</td>

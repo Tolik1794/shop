@@ -3,7 +3,7 @@
         {% if item.url is defined and item.url %}
             <a href="{{ item.url }}">{{ item.label|trans }}</a>
         {% else %}
-            <span>{{ item.label|trans }}</span>
+            <span{% if item.dynamic|default(false) %} data-admin-breadcrumb-current{% endif %}>{{ item.label|trans }}</span>
         {% endif %}
 
         {% if not loop.last %}

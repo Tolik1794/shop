@@ -219,6 +219,8 @@ class OrderBuilderControllerTest extends WebTestCase
 
 		self::assertResponseIsSuccessful();
 		self::assertSelectorExists(sprintf('tr.table-active[id="%d"]', $firstOrder->getId()));
+		self::assertSelectorExists(sprintf('tr[id="%d"][data-breadcrumb-label="%s"]', $firstOrder->getId(), $firstOrder->getNumber()));
+		self::assertSelectorTextContains('#admin-navbar-breadcrumb', $firstOrder->getNumber());
 		self::assertSelectorTextContains('.order-show-card', 'First Customer');
 	}
 

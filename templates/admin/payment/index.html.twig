@@ -2,6 +2,14 @@
 
 {% block title %}Payments{% endblock %}
 
+{% block navbar_breadcrumb %}
+	{{ include('admin/_components/_resource_breadcrumb.html.twig', {
+		section_label: 'Payments',
+		section_url: path('app_admin_payment_index', {store_id: app.request.attributes.get('store_id')}),
+		current_label: first_entity ? 'Payment'|trans ~ ' #' ~ first_entity.id : ''
+	}) }}
+{% endblock %}
+
 {% set table_actions %}
 	{% if is_granted('payment.create') %}
 		<a class="btn btn-light btn-sm" href="{{ path('app_admin_payment_new', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-plus me-1"></i>{{ 'New'|trans }}</a>
@@ -34,6 +42,7 @@
 				class="{{ first_entity and entity.id == first_entity.id ? 'table-active' : '' }}"
 				data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
 				data-link="{{ path('app_admin_payment_show', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
+				data-breadcrumb-label="{{ 'Payment'|trans ~ ' #' ~ entity.id }}"
 				onclick="document.getElementById('first-tab').click()"
 		>
 			<td>{{ entity.paidAt|date('Y-m-d H:i') }}</td>

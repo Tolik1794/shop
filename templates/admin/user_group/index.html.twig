@@ -2,6 +2,12 @@
 
 {% block title %}User groups{% endblock %}
 
+{% block navbar_breadcrumb %}
+    {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+        section_label: 'User groups'
+    }) }}
+{% endblock %}
+
 {% block main_content %}
     <main class="content">
         <div class="container-fluid p-0">
