@@ -15,3 +15,85 @@
 .table tr td {
 	word-break: break-all;
 }
+
+// Universal list-card table: applied by default to index lists via
+// templates/admin/_components/card/_table_card.html.twig. Rows read as spaced cards;
+// the selected row (.table-active, toggled by reload-card#tableActivate) gets a blue
+// left stripe, a light-primary highlight and a primary outline, and other rows get a
+// subtle grey hover.
+.document-list-table {
+	border-collapse: separate;
+	border-spacing: 0 .5rem;
+	margin-top: -.5rem;
+
+	> thead > tr > th {
+		border-bottom: 0;
+		padding-bottom: .25rem;
+	}
+
+	> tbody > tr {
+		-webkit-tap-highlight-color: transparent;
+		background: $white;
+		box-shadow: 0 .125rem .35rem rgba($black, .06);
+		outline: 1px solid $gray-200;
+		transition: box-shadow .15s ease-in-out, outline-color .15s ease-in-out;
+	}
+
+	> tbody > tr.table-active {
+		background: $white;
+		outline-color: rgba($primary, .32);
+		box-shadow: 0 .125rem .45rem rgba($primary, .1);
+	}
+
+	> tbody > tr:hover {
+		outline-color: rgba($primary, .25);
+		box-shadow: 0 .125rem .45rem rgba($black, .08);
+		cursor: pointer;
+	}
+
+	> tbody > tr.table-active:hover {
+		outline-color: rgba($primary, .42);
+		box-shadow: 0 .125rem .5rem rgba($primary, .12);
+	}
+
+	> tbody > tr > td {
+		position: relative;
+		border-top: 0;
+		padding: .625rem .75rem;
+		word-break: normal;
+		background-color: $white !important;
+		box-shadow: none !important;
+		transition: background-color .15s ease-in-out, box-shadow .15s ease-in-out;
+	}
+
+	> tbody > tr:hover > td {
+		background-color: mix($gray-100, $white, 35%) !important;
+	}
+
+	> tbody > tr:active > *,
+	> tbody > tr.table-active > *,
+	> tbody > tr.table-active:hover > * {
+		--bs-table-accent-bg: transparent !important;
+		--bs-table-active-bg: transparent !important;
+		--bs-table-hover-bg: transparent !important;
+		--bs-table-active-color: #{$body-color};
+		--bs-table-hover-color: #{$body-color};
+
+		background-color: mix($primary, $white, 3%) !important;
+		box-shadow: none !important;
+		color: $body-color !important;
+	}
+
+	// Single left stripe per row (first cell only) so it works for both the single-cell
+	// document rows (orders/purchases) and multi-column lists.
+	> tbody > tr.table-active > td:first-child::before {
+		content: "";
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: 3px;
+		background: rgba($primary, .6);
+		pointer-events: none;
+	}
+}

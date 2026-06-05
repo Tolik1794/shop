@@ -2,6 +2,7 @@
 {% set card_filter_params = card_filter_form ? app.request.query.all(card_filter_form.vars.name) : {} %}
 {% set card_filter_collapse_id = card_filter_form ? card_filter_form.vars.id ~ '-filters' : '' %}
 {% set show_header = show_header|default(true) %}
+{% set list_table = list_table|default(true) %}
 
 <div class="card">
     {% if show_header %}
@@ -42,7 +43,7 @@
             {{ before_table|raw }}
         {% endif %}
 
-        <table class="table table-hover {{ table_class|default('') }}">
+        <table class="table table-hover {{ list_table ? 'document-list-table' : '' }} {{ table_class|default('') }}">
             <thead>
             {{ table_head }}
             </thead>
