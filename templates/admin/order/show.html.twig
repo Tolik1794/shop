@@ -5,6 +5,7 @@
 {% set customer_phone = entity.customerPhoneSnapshot|default('')|trim %}
 {% set customer_email = entity.customerEmailSnapshot|default('')|trim %}
 {% set delivery_address = entity.deliveryAddress|default('')|trim %}
+{% set payment_summary = payment_summary|default(null) %}
 {% set payment_review = payment_review|default(null) %}
 
 {% set primary_order_action %}
@@ -13,7 +14,7 @@
               action="{{ path('app_admin_order_confirm', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
               class="d-inline" data-action="submit->reload-card#submitQuickAction">
             <input type="hidden" name="_token" value="{{ csrf_token('confirm_order_' ~ entity.id) }}">
-            <button class="btn btn-success btn-sm"
+            <button class="btn btn-success btn-sm order-primary-action"
                     type="submit" {{ entity.orderEntries|length == 0 ? 'disabled' : '' }}>{{ 'admin.order.actions.confirm'|trans }}</button>
         </form>
     {% endif %}
@@ -23,7 +24,7 @@
               action="{{ path('app_admin_order_ship', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
               class="d-inline">
             <input type="hidden" name="_token" value="{{ csrf_token('ship_order_' ~ entity.id) }}">
-            <button class="btn btn-success btn-sm" type="submit"><i
+            <button class="btn btn-success btn-sm order-primary-action" type="submit"><i
                         class="fa-solid fa-truck me-1"></i>{{ 'admin.order.actions.ship'|trans }}</button>
         </form>
     {% endif %}
@@ -33,7 +34,7 @@
               action="{{ path('app_admin_order_mark_delivered', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
               class="d-inline" data-action="submit->reload-card#submitQuickAction">
             <input type="hidden" name="_token" value="{{ csrf_token('mark_delivered_order_' ~ entity.id) }}">
-            <button class="btn btn-success btn-sm"
+            <button class="btn btn-success btn-sm order-primary-action"
                     type="submit">{{ 'admin.order.actions.mark_delivered'|trans }}</button>
         </form>
     {% endif %}
@@ -44,7 +45,7 @@
               class="d-inline" data-action="submit->reload-card#submitQuickAction"
               data-confirm-message="{{ 'admin.order.confirm.complete'|trans }}">
             <input type="hidden" name="_token" value="{{ csrf_token('complete_order_' ~ entity.id) }}">
-            <button class="btn btn-success btn-sm" type="submit">{{ 'admin.order.actions.complete'|trans }}</button>
+            <button class="btn btn-success btn-sm order-primary-action" type="submit">{{ 'admin.order.actions.complete'|trans }}</button>
         </form>
     {% endif %}
 {% endset %}
@@ -93,43 +94,61 @@
     {% endif %}
 {% endset %}
 {% set show_more_actions = secondary_order_actions|trim or not primary_order_action|trim %}
-{% set header_badges %}
-    {{ include('admin/_components/status/_badge.html.twig', {context: 'order', value: entity.status.value}) }}
-    {{ include('admin/_components/status/_badge.html.twig', {context: 'payment', value: entity.paymentStatus.value}) }}
-{% endset %}
 
 <div class="card show-card order-show-card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
     {{ include('admin/_components/show_card/_header.html.twig', {
         title: entity.number,
         subtitle: customer_name,
-        badges: header_badges,
+        badges: '',
         primary_action: primary_order_action,
         secondary_actions: secondary_order_actions,
         show_more: show_more_actions
     }) }}
     <div class="card-body">
+        <div class="order-show-summary">
+            <div class="order-show-summary__item order-show-summary__item--identity">
+                <span class="order-show-summary__label">{{ 'admin.order.summary.number'|trans }}</span>
+                <strong class="order-show-summary__copyable order-show-copyable">
+                    <span>{{ entity.number }}</span>
+                    {{ include('admin/order/_copy_button.html.twig', {
+                        value: entity.number,
+                        title: 'admin.order.actions.copy_number'|trans
+                    }) }}
+                </strong>
+            </div>
+            <div class="order-show-summary__item">
+                <span class="order-show-summary__label">{{ 'admin.order.summary.customer'|trans }}</span>
+                <strong>{{ customer_name is not empty ? customer_name : empty_text }}</strong>
+            </div>
+            {% if customer_phone is not empty %}
+                <div class="order-show-summary__item">
+                    <span class="order-show-summary__label">{{ 'admin.common.phone'|trans }}</span>
+                    <strong class="order-show-summary__copyable order-show-copyable">
+                        <span>{{ customer_phone }}</span>
+                        {{ include('admin/order/_copy_button.html.twig', {
+                            value: customer_phone,
+                            title: 'admin.order.customer.copy_phone'|trans
+                        }) }}
+                    </strong>
+                </div>
+            {% endif %}
+            <div class="order-show-summary__item order-show-summary__item--amount">
+                <span class="order-show-summary__label">{{ 'admin.order.summary.total'|trans }}</span>
+                <strong>{{ entity.totalAmount|money }} {{ currency_code }}</strong>
+            </div>
+            <div class="order-show-summary__item order-show-summary__item--statuses order-show-summary__item--wide">
+                <span class="order-show-summary__label">{{ 'admin.order.summary.statuses'|trans }}</span>
+                <strong class="order-show-summary__statuses">
+                    {{ include('admin/_components/status/_badge.html.twig', {context: 'order', value: entity.status.value}) }}
+                    {{ include('admin/_components/status/_badge.html.twig', {context: 'payment', value: entity.paymentStatus.value}) }}
+                </strong>
+            </div>
+        </div>
+
         <div class="order-show-grid">
             <section class="order-show-section">
-                <h6>{{ 'admin.order.sections.customer'|trans }}</h6>
+                <h6>{{ 'admin.order.sections.customer_details'|trans }}</h6>
                 <dl class="order-show-fields">
-                    <div>
-                        <dt>{{ 'admin.order.fields.customer'|trans }}</dt>
-                        <dd>{{ customer_name is not empty ? customer_name : empty_text }}</dd>
-                    </div>
-                    <div>
-                        <dt>{{ 'admin.common.phone'|trans }}</dt>
-                        <dd class="order-show-copyable">
-                            {% if customer_phone is not empty %}
-                                <span>{{ customer_phone }}</span>
-                                {{ include('admin/order/_copy_button.html.twig', {
-                                    value: customer_phone,
-                                    title: 'admin.order.customer.copy_phone'|trans
-                                }) }}
-                            {% else %}
-                                {{ empty_text }}
-                            {% endif %}
-                        </dd>
-                    </div>
                     <div>
                         <dt>{{ 'admin.common.email'|trans }}</dt>
                         <dd>{{ customer_email is not empty ? customer_email : empty_text }}</dd>
@@ -152,18 +171,28 @@
                         <div class="small mt-1">{{ 'Net paid amount'|trans }}: {{ payment_review.paidAmountBase|money }}</div>
                     </div>
                 {% endif %}
-                <dl class="order-show-money-list">
-                    <div>
-                        <dt>{{ 'admin.common.total'|trans }}</dt>
-                        <dd>{{ entity.totalAmount|money }} {{ currency_code }}</dd>
+                <div class="order-show-payment-totals">
+                    <div class="order-show-payment-total order-show-payment-total--due">
+                        <span>{{ 'admin.order.fields.amount_to_pay'|trans }}</span>
+                        <strong>{{ payment_summary ? payment_summary.amountDue|money : entity.totalAmount|money }} {{ currency_code }}</strong>
                     </div>
+                    <div class="order-show-payment-total order-show-payment-total--paid">
+                        <span>{{ 'admin.order.fields.paid_amount'|trans }}</span>
+                        <strong>{{ payment_summary ? payment_summary.paidAmount|money : entity.paidAmountBase|money }} {{ currency_code }}</strong>
+                    </div>
+                </div>
+                <dl class="order-show-money-list order-show-payment-meta">
                     <div>
                         <dt>{{ 'admin.order.fields.discount'|trans }}</dt>
                         <dd>{{ entity.discountAmount is not null ? entity.discountAmount|money ~ ' ' ~ currency_code : dash_text }}</dd>
                     </div>
                     <div>
+                        <dt>{{ 'admin.order.fields.amount_due_base'|trans }}</dt>
+                        <dd>{{ payment_summary ? payment_summary.amountDueBase|money : entity.totalAmountBase|money }}</dd>
+                    </div>
+                    <div>
                         <dt>{{ 'admin.order.fields.paid_amount_base'|trans }}</dt>
-                        <dd>{{ entity.paidAmountBase|money }}</dd>
+                        <dd>{{ payment_summary ? payment_summary.paidAmountBase|money : entity.paidAmountBase|money }}</dd>
                     </div>
                     <div>
                         <dt>{{ 'admin.order.fields.paid_at'|trans }}</dt>

@@ -204,6 +204,7 @@ admin:
     sections:
       general: 'General settings'
       customer: 'Customer'
+      customer_details: 'Customer details'
       delivery: 'Delivery'
       entries: 'Order entries'
       summary: 'Summary'
@@ -212,12 +213,22 @@ admin:
     filters:
       active_filters: 'Active filters'
       clear_filter: 'Clear %label% filter'
+      quick_filters: 'Quick filters'
       quick_search: 'Quick search'
       quick_search_placeholder: 'Search by order number'
+      quick:
+        all: 'All'
+        drafts: 'Drafts'
+        unpaid: 'Unpaid'
+        paid: 'Paid'
+        canceled: 'Canceled'
     fields:
+      amount_to_pay: 'Amount to pay'
+      amount_due_base: 'Amount due base'
       customer: 'Customer'
       delivery_address: 'Delivery address'
       exchange_rate: 'Exchange rate'
+      paid_amount: 'Paid'
       paid_amount_base: 'Paid amount base'
       paid_at: 'Paid at'
       payment: 'Payment'
@@ -229,6 +240,7 @@ admin:
       availability: 'Availability'
     actions:
       confirm: 'Confirm'
+      copy_number: 'Copy order number'
       copy_product: 'Copy'
       return_to_draft: 'Return to draft'
       rollback_status: 'Rollback status'
@@ -247,6 +259,9 @@ admin:
       entries: 'No entries added yet.'
       products: 'No products.'
     summary:
+      number: 'Order number'
+      customer: 'Customer'
+      statuses: 'Statuses'
       recalculating: 'Recalculating...'
       entry_count: 'Entry count'
       subtotal: 'Product subtotal'
@@ -318,6 +333,24 @@ admin:
     active: 'Active'
     inactive: 'Inactive'
     deleted: 'Deleted'
+    order:
+      draft: 'Draft'
+      confirmed: 'Confirmed'
+      awaiting_stock: 'Awaiting stock'
+      ready_to_ship: 'Ready to ship'
+      partially_shipped: 'Partially shipped'
+      shipped: 'Shipped'
+      delivered: 'Delivered'
+      completed: 'Completed'
+      canceled: 'Canceled'
+      partially_returned: 'Partially returned'
+      returned: 'Returned'
+    payment:
+      unpaid: 'Unpaid'
+      partially_paid: 'Partially paid'
+      paid: 'Paid'
+      overpaid: 'Overpaid'
+      refunded: 'Refunded'
   production:
     order: 'Production order'
     recipe: 'Production recipe'

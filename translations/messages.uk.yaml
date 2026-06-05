@@ -224,6 +224,7 @@ admin:
     sections:
       general: 'Загальні налаштування'
       customer: 'Клієнт'
+      customer_details: 'Дані клієнта'
       delivery: 'Доставка'
       entries: 'Позиції замовлення'
       summary: 'Підсумки'
@@ -232,12 +233,22 @@ admin:
     filters:
       active_filters: 'Активні фільтри'
       clear_filter: 'Скинути фільтр %label%'
+      quick_filters: 'Швидкі фільтри'
       quick_search: 'Швидкий пошук'
       quick_search_placeholder: 'Пошук за номером замовлення'
+      quick:
+        all: 'Усі'
+        drafts: 'Чернетки'
+        unpaid: 'Не оплачені'
+        paid: 'Оплачені'
+        canceled: 'Скасовані'
     fields:
+      amount_to_pay: 'До сплати'
+      amount_due_base: 'До сплати у базовій валюті'
       customer: 'Клієнт'
       delivery_address: 'Адреса доставки'
       exchange_rate: 'Курс обміну'
+      paid_amount: 'Сплачено'
       paid_amount_base: 'Сплачено у базовій валюті'
       paid_at: 'Дата оплати'
       payment: 'Оплата'
@@ -249,6 +260,7 @@ admin:
       availability: 'Наявність'
     actions:
       confirm: 'Підтвердити'
+      copy_number: 'Копіювати номер замовлення'
       copy_product: 'Скопіювати'
       return_to_draft: 'Повернути в чернетку'
       rollback_status: 'Відкотити статус'
@@ -267,6 +279,9 @@ admin:
       entries: 'Позиції ще не додані.'
       products: 'Товари відсутні.'
     summary:
+      number: 'Номер замовлення'
+      customer: 'Клієнт'
+      statuses: 'Статуси'
       recalculating: 'Перерахунок...'
       entry_count: 'Кількість позицій'
       subtotal: 'Сума товарів'
@@ -340,6 +355,24 @@ admin:
     active: 'Активний'
     inactive: 'Неактивний'
     deleted: 'Видалений'
+    order:
+      draft: 'Чернетка'
+      confirmed: 'Підтверджено'
+      awaiting_stock: 'Очікує на склад'
+      ready_to_ship: 'Готове до відвантаження'
+      partially_shipped: 'Частково відвантажено'
+      shipped: 'Відвантажено'
+      delivered: 'Доставлено'
+      completed: 'Завершено'
+      canceled: 'Скасовано'
+      partially_returned: 'Частково повернено'
+      returned: 'Повернено'
+    payment:
+      unpaid: 'Не оплачено'
+      partially_paid: 'Частково оплачено'
+      paid: 'Оплачено'
+      overpaid: 'Переплачено'
+      refunded: 'Повернено'
   production:
     order: 'Виробниче замовлення'
     recipe: 'Виробничий рецепт'

@@ -71,8 +71,69 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSelectorExists('#order-quick-search');
 		self::assertSelectorExists('button[data-bs-target="#order_filter-advanced-filters"]');
 		self::assertSelectorExists('#order_filter-advanced-filters form[name="order_filter"]');
+		self::assertSelectorExists('.order-quick-filters');
+		self::assertSelectorTextContains('.order-quick-filters', 'All');
+		self::assertSelectorTextContains('.order-quick-filters', 'Drafts');
+		self::assertSelectorTextContains('.order-quick-filters', 'Unpaid');
 		self::assertSelectorExists('.order-filter-chips');
 		self::assertSelectorNotExists('.tab-search-link');
+	}
+
+	public function testOrderIndexQuickUnpaidFilterIncludesUnpaidAndPartiallyPaidOrders(): void
+	{
+		$this->client->loginUser($this->createUser('order-index-quick-unpaid-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-index-quick-unpaid-store-' . uniqid());
+		$unpaidOrder = $this->createOrder(
+			$store,
+			'SO unpaid quick ' . uniqid(),
+			OrderStatus::CONFIRMED,
+			PaymentStatusEnum::UNPAID,
+		);
+		$partiallyPaidOrder = $this->createOrder(
+			$store,
+			'SO partially paid quick ' . uniqid(),
+			OrderStatus::CONFIRMED,
+			PaymentStatusEnum::PARTIALLY_PAID,
+		);
+		$paidOrder = $this->createOrder(
+			$store,
+			'SO paid quick ' . uniqid(),
+			OrderStatus::COMPLETED,
+			PaymentStatusEnum::PAID,
+		);
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/?order_filter%%5Bquick%%5D=unpaid', $store->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorExists('.order-quick-filter-chip.is-active');
+		self::assertSelectorTextContains('.order-quick-filter-chip.is-active', 'Unpaid');
+		self::assertSelectorTextContains('body', $unpaidOrder->getNumber());
+		self::assertSelectorTextContains('body', $partiallyPaidOrder->getNumber());
+		self::assertStringNotContainsString($paidOrder->getNumber(), $this->client->getResponse()->getContent());
+	}
+
+	public function testOrderIndexNumberSearchIgnoresCaseAndExtraSpaces(): void
+	{
+		$this->client->loginUser($this->createUser('order-index-number-search-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-index-number-search-store-' . uniqid());
+		$matchingOrder = $this->createOrder(
+			$store,
+			'SO Search Match ' . uniqid(),
+			OrderStatus::CONFIRMED,
+			PaymentStatusEnum::UNPAID,
+		);
+		$otherOrder = $this->createOrder(
+			$store,
+			'SO Other Number ' . uniqid(),
+			OrderStatus::CONFIRMED,
+			PaymentStatusEnum::UNPAID,
+		);
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/?order_filter%%5Bnumber%%5D=%%20so%%20%%20%%20search%%20match%%20', $store->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('body', $matchingOrder->getNumber());
+		self::assertStringNotContainsString($otherOrder->getNumber(), $this->client->getResponse()->getContent());
 	}
 
 	public function testOrderIndexRestoresActiveTabFromQuery(): void
@@ -197,20 +258,78 @@ class OrderBuilderControllerTest extends WebTestCase
 		$this->client->request('GET', sprintf('/admin/store/%d/order/%d/show', $store->getId(), $order->getId()));
 
 		self::assertResponseIsSuccessful();
+		self::assertSelectorExists('.order-show-summary');
+		self::assertSelectorTextContains('.order-show-summary', $order->getNumber());
+		self::assertSelectorTextContains('.order-show-summary', 'Marina Kurceva');
+		self::assertSelectorTextContains('.order-show-summary', '+380956554307');
+		self::assertSelectorTextContains('.order-show-summary', 'Draft');
+		self::assertSelectorTextContains('.order-show-summary', 'Unpaid');
+		self::assertSelectorExists('.order-show-summary__item--identity .order-copy-action[aria-label="Copy order number"]');
+		self::assertSelectorExists('.order-show-summary__copyable .order-copy-action[data-copy-text="+380956554307"]');
+		self::assertSelectorExists('.order-show-summary__item--statuses.order-show-summary__item--wide .order-show-summary__statuses');
 		self::assertSelectorExists('.order-show-grid');
-		self::assertSelectorTextContains('.order-show-card', 'Customer');
+		self::assertSelectorTextContains('.order-show-card', 'Customer details');
 		self::assertSelectorTextContains('.order-show-card', 'Payment');
 		self::assertSelectorTextContains('.order-show-card', 'Delivery');
 		self::assertSelectorTextContains('.order-show-card', 'Products');
 		self::assertSelectorTextContains('.order-show-card', 'Inventory documents');
 		self::assertSelectorTextContains('.order-show-card', 'Not specified');
-		self::assertSelectorTextContains('.order-show-money-list', '10 000.00 UAH');
+		self::assertSelectorTextContains('.order-show-payment-total--due', '10 000.00 UAH');
+		self::assertSelectorTextContains('.order-show-payment-total--paid', '0.00 UAH');
 		self::assertSelectorTextContains('.order-show-product-card', 'Show card desk');
 		self::assertSelectorTextContains('.order-show-product-card', '1 pc');
 		self::assertSelectorTextContains('.order-show-product-card', '10 000.00 UAH');
 		self::assertSelectorExists('.order-show-product-card .order-copy-action[data-copy-feedback="Copied"]');
 		self::assertSelectorExists('.order-show-product-card [data-copy-feedback][aria-live="polite"]');
 		self::assertSelectorExists('.order-show-product-action[aria-label="Open product"]');
+	}
+
+	public function testOrderShowPaymentSummaryShowsRemainingDueAndPaidAmounts(): void
+	{
+		$this->client->loginUser($this->createUser('order-show-payment-summary-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-show-payment-summary-store-' . uniqid());
+		$partiallyPaidOrder = $this->createOrder(
+			$store,
+			'SO-payment-summary-partial-' . uniqid(),
+			OrderStatus::CONFIRMED,
+			PaymentStatusEnum::PARTIALLY_PAID,
+		)
+			->setTotalAmount('10000.0000')
+			->setTotalAmountBase('10000.0000')
+			->setPaidAmountBase('2500.0000');
+
+		$this->entityManager->flush();
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/%d/show', $store->getId(), $partiallyPaidOrder->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('.order-show-payment-total--due', '7 500.00 UAH');
+		self::assertSelectorTextContains('.order-show-payment-total--paid', '2 500.00 UAH');
+		self::assertSelectorTextContains('.order-show-payment-meta', '7 500.00');
+		self::assertSelectorTextContains('.order-show-payment-meta', '2 500.00');
+	}
+
+	public function testOrderShowPaidPaymentSummaryShowsZeroDue(): void
+	{
+		$this->client->loginUser($this->createUser('order-show-payment-paid-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-show-payment-paid-store-' . uniqid());
+		$paidOrder = $this->createOrder(
+			$store,
+			'SO-payment-summary-paid-' . uniqid(),
+			OrderStatus::COMPLETED,
+			PaymentStatusEnum::PAID,
+		)
+			->setTotalAmount('10000.0000')
+			->setTotalAmountBase('10000.0000')
+			->setPaidAmountBase('10000.0000');
+
+		$this->entityManager->flush();
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/%d/show', $store->getId(), $paidOrder->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('.order-show-payment-total--due', '0.00 UAH');
+		self::assertSelectorTextContains('.order-show-payment-total--paid', '10 000.00 UAH');
 	}
 
 	public function testOrderPaymentsTabUsesPaymentCardsInsteadOfTable(): void
@@ -1341,6 +1460,30 @@ class OrderBuilderControllerTest extends WebTestCase
 		$this->entityManager->flush();
 
 		return $currency;
+	}
+
+	private function createOrder(
+		Store $store,
+		string $number,
+		OrderStatus $status = OrderStatus::DRAFT,
+		PaymentStatusEnum $paymentStatus = PaymentStatusEnum::UNPAID,
+	): Order
+	{
+		$order = (new Order())
+			->setStore($store)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber($number)
+			->setStatus($status)
+			->setCustomerNameSnapshot('Filter Customer')
+			->setTotalAmount('100.0000')
+			->setTotalAmountBase('100.0000')
+			->setPaidAmountBase($paymentStatus === PaymentStatusEnum::UNPAID ? '0.0000' : '50.0000')
+			->setPaymentStatus($paymentStatus);
+
+		$this->entityManager->persist($order);
+		$this->entityManager->flush();
+
+		return $order;
 	}
 
 	private function createExchangeRate(Currency $fromCurrency, ?Currency $toCurrency, Store $store, string $rate): ExchangeRate

@@ -305,6 +305,42 @@
 	color: $text-muted;
 }
 
+.order-quick-filters {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .35rem;
+	margin-top: .65rem;
+}
+
+.order-quick-filter-chip {
+	display: inline-flex;
+	align-items: center;
+	min-height: 1.875rem;
+	padding: .25rem .65rem;
+	color: $body-color;
+	background: $white;
+	border: 1px solid $gray-200;
+	border-radius: 999px;
+	font-size: $font-size-sm;
+	line-height: 1.2;
+	text-decoration: none;
+	white-space: nowrap;
+
+	&:hover,
+	&:focus {
+		color: $body-color;
+		background: $gray-100;
+		text-decoration: none;
+	}
+
+	&.is-active {
+		color: $primary;
+		background: mix($primary, $white, 8%);
+		border-color: rgba($primary, .35);
+		font-weight: 600;
+	}
+}
+
 .order-filter-chips {
 	display: flex;
 	flex-wrap: wrap;
@@ -600,6 +636,96 @@
 	}
 }
 
+.order-primary-action {
+	box-shadow: 0 .25rem .65rem rgba($success, .22);
+	font-weight: 600;
+}
+
+.order-show-summary {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(8.75rem, 1fr));
+	gap: .65rem;
+	margin-bottom: 1rem;
+	padding: .75rem;
+	border: 1px solid rgba($primary, .18);
+	border-radius: $border-radius;
+	background: mix($primary, $white, 4%);
+}
+
+.order-show-summary__item {
+	min-width: 0;
+
+	> .order-show-summary__label {
+		display: block;
+		margin-bottom: .2rem;
+		color: $text-muted;
+		font-size: $font-size-sm;
+		font-weight: 500;
+	}
+
+	strong {
+		display: block;
+		min-width: 0;
+		line-height: 1.25;
+		overflow-wrap: anywhere;
+	}
+}
+
+.order-show-summary__copyable {
+	display: inline-flex !important;
+	align-items: center;
+	gap: .15rem;
+	max-width: 100%;
+	white-space: nowrap;
+
+	> span {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.order-copy-action {
+		flex: 0 0 auto;
+		margin-left: 0;
+		min-height: 1.5rem;
+		min-width: 1.5rem;
+	}
+}
+
+.order-show-summary__item--wide {
+	grid-column: 1 / -1;
+}
+
+.order-show-summary__item--amount strong {
+	font-size: 1rem;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.order-show-summary__item--statuses {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .45rem .65rem;
+	align-items: center;
+
+	> .order-show-summary__label {
+		margin-bottom: 0;
+	}
+}
+
+.order-show-summary__statuses {
+	display: inline-flex !important;
+	flex-wrap: wrap;
+	gap: .35rem;
+	align-items: center;
+	min-width: 0;
+
+	.badge,
+	.badge span {
+		color: $white !important;
+	}
+}
+
 .order-show-grid {
 	display: grid;
 	gap: 1rem;
@@ -656,6 +782,48 @@
 		font-variant-numeric: tabular-nums;
 		white-space: nowrap;
 	}
+}
+
+.order-show-payment-totals {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+	gap: .65rem;
+	margin-bottom: .75rem;
+}
+
+.order-show-payment-total {
+	display: flex;
+	gap: .75rem;
+	align-items: baseline;
+	justify-content: space-between;
+	padding: .75rem;
+	border: 1px solid rgba($success, .2);
+	border-radius: $border-radius;
+	background: mix($success, $white, 5%);
+
+	span {
+		color: $text-muted;
+		font-size: $font-size-sm;
+		font-weight: 500;
+	}
+
+	strong {
+		font-size: 1.15rem;
+		font-variant-numeric: tabular-nums;
+		line-height: 1.2;
+		text-align: right;
+		white-space: nowrap;
+	}
+}
+
+.order-show-payment-total--paid {
+	border-color: rgba($primary, .2);
+	background: mix($primary, $white, 5%);
+}
+
+.order-show-payment-meta {
+	color: $text-muted;
+	font-size: $font-size-sm;
 }
 
 .order-show-products,

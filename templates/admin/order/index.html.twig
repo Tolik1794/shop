@@ -2,6 +2,25 @@
 
 {% block title %}Orders{% endblock %}
 
+{% block navbar_breadcrumb %}
+    {{ include('admin/_components/_breadcrumb.html.twig', {
+        breadcrumb_class: 'mb-0',
+        items: first_entity ? [
+            {
+                label: 'Orders',
+                url: path('app_admin_order_index', {store_id: app.request.attributes.get('store_id')})
+            },
+            {
+                label: first_entity.number
+            }
+        ] : [
+            {
+                label: 'Orders'
+            }
+        ]
+    }) }}
+{% endblock %}
+
 {% set table_actions %}
     {% if is_granted('order.create') %}
         <a class="btn btn-light btn-sm" href="{{ path('app_admin_order_new', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-plus me-1"></i>{{ 'New'|trans }}</a>
@@ -22,16 +41,31 @@
 {% endset %}
 
 {% set order_filter_params = app.request.query.all(filter_form.vars.name) %}
+{% set active_order_quick_filter = order_filter_params.quick|default('') %}
 {% set active_order_filters = {} %}
 {% for filter_name, filter_value in order_filter_params %}
-    {% if filter_value is not iterable and filter_value is not same as('') and filter_value is not null %}
+    {% if filter_name != 'quick' and filter_value is not iterable and filter_value is not same as('') and filter_value is not null %}
         {% set active_order_filters = active_order_filters|merge({(filter_name): filter_value}) %}
     {% endif %}
 {% endfor %}
+{% set active_order_filter_count = active_order_filters|length + (active_order_quick_filter ? 1 : 0) %}
 {% set order_filter_labels = {
     number: 'Number'|trans,
     customer: 'Customer'|trans,
     status: 'Status'|trans
+} %}
+{% set order_quick_filters = [
+    {value: '', label: 'admin.order.filters.quick.all'|trans},
+    {value: 'draft', label: 'admin.order.filters.quick.drafts'|trans},
+    {value: 'unpaid', label: 'admin.order.filters.quick.unpaid'|trans},
+    {value: 'paid', label: 'admin.order.filters.quick.paid'|trans},
+    {value: 'canceled', label: 'admin.order.filters.quick.canceled'|trans}
+] %}
+{% set order_quick_filter_labels = {
+    draft: 'admin.order.filters.quick.drafts'|trans,
+    unpaid: 'admin.order.filters.quick.unpaid'|trans,
+    paid: 'admin.order.filters.quick.paid'|trans,
+    canceled: 'admin.order.filters.quick.canceled'|trans
 } %}
 {% set order_filter_collapse_id = filter_form.vars.id ~ '-advanced-filters' %}
 {% set order_filters_open = filter_form.vars.errors|length > 0 %}
@@ -54,6 +88,9 @@
                             <input type="hidden" name="{{ filter_form.vars.full_name }}[{{ filter_name }}]" value="{{ filter_value }}">
                         {% endif %}
                     {% endfor %}
+                    {% if active_order_quick_filter %}
+                        <input type="hidden" name="{{ filter_form.vars.full_name }}[quick]" value="{{ active_order_quick_filter }}">
+                    {% endif %}
                     <label class="visually-hidden" for="order-quick-search">{{ 'admin.order.filters.quick_search'|trans }}</label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
@@ -72,19 +109,43 @@
                         aria-expanded="{{ order_filters_open ? 'true' : 'false' }}"
                         aria-controls="{{ order_filter_collapse_id }}">
                     <i class="fa-solid fa-filter me-1"></i>{{ 'admin.common.filters'|trans }}
-                    {% if active_order_filters %}
-                        <span class="badge bg-danger ms-1">{{ active_order_filters|length }}</span>
+                    {% if active_order_filter_count > 0 %}
+                        <span class="badge bg-danger ms-1">{{ active_order_filter_count }}</span>
                     {% endif %}
                 </button>
                 {{ table_actions }}
             </div>
         </div>
 
-        {% if active_order_filters %}
+        <div class="order-quick-filters" aria-label="{{ 'admin.order.filters.quick_filters'|trans }}">
+            {% for quick_filter in order_quick_filters %}
+                {% set quick_filter_params = order_filter_params|merge({quick: quick_filter.value}) %}
+                <a class="order-quick-filter-chip{{ active_order_quick_filter == quick_filter.value ? ' is-active' : '' }}"
+                   href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge({(filter_form.vars.name): quick_filter_params})) }}">
+                    {{ quick_filter.label }}
+                </a>
+            {% endfor %}
+        </div>
+
+        {% if active_order_filters or active_order_quick_filter %}
             <div class="order-filter-chips" aria-label="{{ 'admin.order.filters.active_filters'|trans }}">
+                {% if active_order_quick_filter %}
+                    {% set quick_filter_label = order_quick_filter_labels[active_order_quick_filter]|default(active_order_quick_filter|replace({'_': ' '})|title) %}
+                    {% set next_filter_params = order_filter_params|merge({quick: ''}) %}
+                    <a class="order-filter-chip"
+                       href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge({(filter_form.vars.name): next_filter_params})) }}"
+                       aria-label="{{ 'admin.order.filters.clear_filter'|trans({'%label%': 'admin.order.filters.quick_filters'|trans}) }}">
+                        <span>{{ 'admin.order.filters.quick_filters'|trans }}: {{ quick_filter_label }}</span>
+                        <i class="fa-solid fa-xmark"></i>
+                    </a>
+                {% endif %}
                 {% for filter_name, filter_value in active_order_filters %}
                     {% set filter_label = order_filter_labels[filter_name]|default(filter_name|replace({'_': ' '})|capitalize) %}
-                    {% set filter_display_value = filter_name == 'status' ? filter_value|replace({'_': ' '})|title : filter_value %}
+                    {% set status_translation_key = 'admin.status.order.' ~ filter_value %}
+                    {% set status_translation = status_translation_key|trans %}
+                    {% set filter_display_value = filter_name == 'status'
+                        ? (status_translation == status_translation_key ? filter_value|replace({'_': ' '})|title : status_translation)
+                        : filter_value %}
                     {% set next_filter_params = order_filter_params|merge({(filter_name): ''}) %}
                     <a class="order-filter-chip"
                        href="{{ path(app.request.attributes.get('_route'), app.request.attributes.get('_route_params')|merge({(filter_form.vars.name): next_filter_params})) }}"

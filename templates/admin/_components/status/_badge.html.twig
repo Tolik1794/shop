@@ -42,7 +42,10 @@
     }
 } %}
 {% set value = value|default('') %}
-{% set label = label|default(value|replace({'_': ' '})|capitalize) %}
+{% set default_label = value|replace({'_': ' '})|capitalize %}
+{% set translation_key = 'admin.status.' ~ context ~ '.' ~ value %}
+{% set translated_label = translation_key|trans %}
+{% set label = label|default(translated_label == translation_key ? default_label : translated_label) %}
 {% set context_classes = status_classes[context]|default({}) %}
 {% set badge_class = context_classes[value]|default('bg-light text-dark border') %}
 

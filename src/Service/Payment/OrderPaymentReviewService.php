@@ -31,6 +31,20 @@ class OrderPaymentReviewService
 		return $this->orderPaymentEligibilityService->canRecordIncomingPayment($order);
 	}
 
+	public function paymentSummary(Order $order): OrderPaymentSummary
+	{
+		$exchangeRateToBase = $this->numberValue($order->getExchangeRateToBase());
+		$paidAmountBase = $this->numberValue($order->getPaidAmountBase());
+		$amountDueBase = max(0.0, $this->numberValue($order->getTotalAmountBase()) - $paidAmountBase);
+
+		return new OrderPaymentSummary(
+			amountDue: $this->formatMoney($this->documentAmount($amountDueBase, $exchangeRateToBase)),
+			amountDueBase: $this->formatMoney($amountDueBase),
+			paidAmount: $this->formatMoney($this->documentAmount($paidAmountBase, $exchangeRateToBase)),
+			paidAmountBase: $this->formatMoney($paidAmountBase),
+		);
+	}
+
 	public function canceledPaidReview(Order $order): ?CanceledOrderPaymentReview
 	{
 		if ($order->getStatus() !== OrderStatus::CANCELED) {
@@ -52,6 +66,11 @@ class OrderPaymentReviewService
 			amount: $this->formatMoney($exchangeRateToBase > 0 ? $amountBase / $exchangeRateToBase : 0.0),
 			amountBase: $this->formatMoney($amountBase),
 		);
+	}
+
+	private function documentAmount(float $amountBase, float $exchangeRateToBase): float
+	{
+		return $exchangeRateToBase > 0 ? $amountBase / $exchangeRateToBase : 0.0;
 	}
 
 	private function numberValue(mixed $value): float
