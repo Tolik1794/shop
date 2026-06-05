@@ -28,6 +28,7 @@ admin:
     logout: 'Вийти'
   common:
     actions: 'Дії'
+    no_records: 'Записів немає'
     add: 'Додати'
     add_item: 'Додати позицію'
     archive: 'Архівувати'
@@ -373,11 +374,33 @@ admin:
       paid: 'Оплачено'
       overpaid: 'Переплачено'
       refunded: 'Повернено'
+    payment_direction:
+      incoming: 'Вхідний'
+      outgoing: 'Вихідний'
+    payment_type:
+      cash: 'Готівка'
+      card: 'Картка'
+      bank_transfer: 'Банківський переказ'
+      online: 'Онлайн'
+      other: 'Інше'
   production:
     order: 'Виробниче замовлення'
     recipe: 'Виробничий рецепт'
   payment:
     title: 'Платіж'
+    index:
+      subtitle: 'Вхідні та вихідні платежі за документами.'
+    sections:
+      main: 'Основна інформація'
+      additional: 'Додатково'
+    empty:
+      title: 'Платежів ще немає'
+      text: 'Платежі зʼявляться тут після їх створення.'
+    reverse:
+      title: 'Сторнування платежу'
+      placeholder: 'Опишіть причину сторнування'
+      hint: 'Після сторнування буде створено коригуючий запис.'
+      submit: 'Сторнувати платіж'
 auth:
   login:
     title: 'З поверненням'
@@ -520,7 +543,7 @@ Quantity change: 'Зміна кількості'
 Unit cost: 'Собівартість одиниці'
 Balance after: 'Залишок після'
 Amount: 'Сума'
-Amount base: 'Сума у базовій валюті'
+Amount base: 'Базова сума'
 External reference: 'Зовнішнє посилання'
 Reversal reason: 'Причина сторнування'
 Reason for reversal: 'Причина сторнування'

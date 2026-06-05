@@ -1,0 +1,30 @@
+{#
+    Universal index toolbar search. Standalone GET form bound to an existing text filter
+    field, so it reuses the page's backend filter logic. Active filters are preserved via
+    hidden inputs for the other filter fields.
+
+    Params:
+    - filter_form (FormView, required): the page filter form.
+    - search_field (string, required): name of the text field to search on (e.g. externalReference).
+    - placeholder (string, optional): input placeholder.
+#}
+{% if filter_form is defined and filter_form and filter_form.children[search_field] is defined %}
+    {% set field = filter_form.children[search_field] %}
+    <form method="get" role="search" class="index-search">
+        {% for child in filter_form %}
+            {% if child.vars.name != search_field and child.vars.name != '_token'
+                and child.vars.value is not empty and child.vars.value is not iterable %}
+                <input type="hidden" name="{{ child.vars.full_name }}" value="{{ child.vars.value }}">
+            {% endif %}
+        {% endfor %}
+        <div class="input-group input-group-sm">
+            <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+            <input type="search"
+                   name="{{ field.vars.full_name }}"
+                   value="{{ field.vars.value }}"
+                   class="form-control"
+                   placeholder="{{ placeholder|default('admin.common.search'|trans) }}"
+                   aria-label="{{ 'admin.common.search'|trans }}">
+        </div>
+    </form>
+{% endif %}

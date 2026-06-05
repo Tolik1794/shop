@@ -20,6 +20,17 @@
         overpaid: 'bg-info text-dark',
         refunded: 'bg-secondary'
     },
+    payment_direction: {
+        incoming: 'bg-success',
+        outgoing: 'bg-warning text-dark'
+    },
+    payment_type: {
+        cash: 'bg-info text-dark',
+        card: 'bg-primary',
+        bank_transfer: 'bg-secondary',
+        online: 'bg-info text-dark',
+        other: 'bg-light text-dark border'
+    },
     purchase: {
         draft: 'bg-secondary',
         ordered: 'bg-primary',
@@ -47,6 +58,6 @@
 {% set translated_label = translation_key|trans %}
 {% set label = label|default(translated_label == translation_key ? default_label : translated_label) %}
 {% set context_classes = status_classes[context]|default({}) %}
-{% set badge_class = context_classes[value]|default('bg-light text-dark border') %}
+{% set badge_class = soft|default(false) ? 'badge-soft' : context_classes[value]|default('bg-light text-dark border') %}
 
 <span class="badge rounded-pill order-status-badge {{ badge_class }}">{{ label }}</span>

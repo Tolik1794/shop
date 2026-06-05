@@ -3,10 +3,17 @@
 {% block title %}Payments{% endblock %}
 
 {% block navbar_breadcrumb %}
-	{{ include('admin/_components/_resource_breadcrumb.html.twig', {
-		section_label: 'Payments',
-		section_url: path('app_admin_payment_index', {store_id: app.request.attributes.get('store_id')}),
-		current_label: first_entity ? 'Payment'|trans ~ ' #' ~ first_entity.id : ''
+	{% set payment_breadcrumb %}
+		{{ include('admin/_components/_resource_breadcrumb.html.twig', {
+			section_label: 'Payments',
+			section_url: path('app_admin_payment_index', {store_id: app.request.attributes.get('store_id')}),
+			current_label: first_entity ? 'Payment'|trans ~ ' #' ~ first_entity.id : ''
+		}) }}
+	{% endset %}
+	{{ include('admin/_components/_navbar_header.html.twig', {
+		title: 'Payments'|trans,
+		subtitle: 'admin.payment.index.subtitle'|trans,
+		breadcrumb: payment_breadcrumb
 	}) }}
 {% endblock %}
 
@@ -19,23 +26,20 @@
 {% set table_head %}
 	<tr>
 		<th>{{ 'Date'|trans }}</th>
+		<th>{{ 'Document'|trans }}</th>
 		<th>{{ 'Direction'|trans }}</th>
 		<th>{{ 'Type'|trans }}</th>
-		<th>{{ 'Document'|trans }}</th>
-		<th>{{ 'Amount'|trans }}</th>
+		<th class="text-end">{{ 'Amount'|trans }}</th>
 		<th>{{ 'Correction'|trans }}</th>
-		<th>{{ 'Reason'|trans }}</th>
 	</tr>
 {% endset %}
 
 {% set table_body %}
 	{% for entity in pagination %}
 		{% set correction = entity.reversesPayment
-			? 'Reversal of #' ~ entity.reversesPayment.id
-			: (entity.reversedByPayment ? 'Reversed by #' ~ entity.reversedByPayment.id : '') %}
-		{% set reversalReason = entity.reversesPayment
-			? entity.comment
-			: (entity.reversedByPayment ? entity.reversedByPayment.comment : '') %}
+			? 'Reversal of #'|trans ~ entity.reversesPayment.id
+			: (entity.reversedByPayment ? 'Reversed by #'|trans ~ entity.reversedByPayment.id : '') %}
+		{% set is_incoming = entity.direction.value == 'incoming' %}
 		<tr
 				id="{{ entity.id }}"
 				data-id-column="id"
@@ -45,44 +49,71 @@
 				data-breadcrumb-label="{{ 'Payment'|trans ~ ' #' ~ entity.id }}"
 				onclick="document.getElementById('first-tab').click()"
 		>
-			<td>{{ entity.paidAt|date('Y-m-d H:i') }}</td>
-			<td>{{ entity.direction.value }}</td>
-			<td>{{ entity.type.value }}</td>
-			<td>{{ entity.order ? entity.order.number : entity.purchase.number }}</td>
-			<td>{{ entity.amount|money }} {{ entity.currency.code }}</td>
-			<td>{{ correction ?: '—' }}</td>
-			<td>{{ reversalReason ?: '—' }}</td>
+			<td class="text-muted text-nowrap">{{ entity.paidAt|date('Y-m-d H:i') }}</td>
+			<td class="text-nowrap admin-row-key">{{ entity.order ? entity.order.number : entity.purchase.number }}</td>
+			<td>{{ include('admin/_components/status/_badge.html.twig', {context: 'payment_direction', value: entity.direction.value}) }}</td>
+			<td>{{ include('admin/_components/status/_badge.html.twig', {context: 'payment_type', value: entity.type.value, soft: true}) }}</td>
+			<td class="text-end text-nowrap">{{ include('admin/_components/_money.html.twig', {
+				amount: entity.amount,
+				currency: entity.currency.code,
+				sign: is_incoming ? '+' : '−',
+				tone: is_incoming ? 'positive' : 'negative'
+			}) }}</td>
+			<td class="text-muted small text-nowrap">{{ correction ?: '—' }}</td>
 		</tr>
 	{% endfor %}
 {% endset %}
 
-{% block main_content %}
-	<main class="content" {{ stimulus_controller('reload-card') }}>
-		<div class="container-fluid p-0">
-			<div class="row">
-				<div class="col-xxl-5 col-xl-5 col-lg-6">
-					{{ include('admin/_components/card/_tab_card.html.twig', {
-						tab_head: [
-							include('admin/_components/tab_icon/_show.html.twig'),
-						],
-						tab_body: [
-							first_entity ? render(controller(
-								'App\\Controller\\Admin\\PaymentController::show',
-								{ store_id: app.request.attributes.get('store_id'), id: first_entity.id, 'request': app.request }
-							)) : '<div class="card"><div class="card-body">' ~ 'Nothing to show...'|trans ~ '</div></div>',
-						]
-					}) }}
-				</div>
-				<div class="col-xxl-7 col-xl-7 col-lg-6">
-					{{ include('admin/_components/card/_table_card.html.twig', {
-						actions: table_actions,
-						table_title: 'Payments',
-						table_head: table_head,
-						table_body: table_body,
-						filter_form: filter_form
-					}) }}
-				</div>
-			</div>
+{% set empty_detail %}
+	<div class="card">
+		<div class="card-body">
+			{{ include('admin/_components/_empty_state.html.twig', {
+				icon: 'fa-solid fa-receipt',
+				title: 'admin.payment.empty.title'|trans,
+				text: 'admin.payment.empty.text'|trans
+			}) }}
 		</div>
-	</main>
+	</div>
+{% endset %}
+
+{% set payment_detail %}
+	{{ include('admin/_components/card/_tab_card.html.twig', {
+		tab_head: [
+			include('admin/_components/tab_icon/_show.html.twig'),
+		],
+		tab_body: [
+			first_entity ? render(controller(
+				'App\\Controller\\Admin\\PaymentController::show',
+				{ store_id: app.request.attributes.get('store_id'), id: first_entity.id, 'request': app.request }
+			)) : empty_detail,
+		]
+	}) }}
+{% endset %}
+
+{% set payment_search %}
+	{{ include('admin/_components/_index_search.html.twig', {
+		filter_form: filter_form,
+		search_field: 'externalReference',
+		placeholder: 'admin.common.search'|trans
+	}) }}
+{% endset %}
+
+{% set payment_list %}
+	{{ include('admin/_components/card/_table_card.html.twig', {
+		actions: table_actions,
+		toolbar_search: payment_search,
+		table_title: 'Payments',
+		table_head: table_head,
+		table_body: table_body,
+		filter_form: filter_form,
+		empty_state_title: 'admin.payment.empty.title'|trans,
+		empty_state_text: 'admin.payment.empty.text'|trans
+	}) }}
+{% endset %}
+
+{% block main_content %}
+	{{ include('admin/_components/_index_layout.html.twig', {
+		list: payment_list,
+		detail: payment_detail
+	}) }}
 {% endblock %}

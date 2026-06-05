@@ -39,26 +39,35 @@
 		transition: box-shadow .15s ease-in-out, outline-color .15s ease-in-out;
 	}
 
+	// Selected row: marked mainly by the left accent stripe + a soft fill — kept calm
+	// (neutral outline, no heavy primary glow) so it doesn't read like an alert.
 	> tbody > tr.table-active {
 		background: $white;
-		outline-color: rgba($primary, .32);
-		box-shadow: 0 .125rem .45rem rgba($primary, .1);
+		outline-color: $gray-200;
+		box-shadow: 0 .125rem .4rem rgba($black, .08);
 	}
 
+	// Hover: light, neutral grey — intentionally weaker than the selected state.
 	> tbody > tr:hover {
-		outline-color: rgba($primary, .25);
-		box-shadow: 0 .125rem .45rem rgba($black, .08);
+		outline-color: $gray-300;
+		box-shadow: 0 .125rem .4rem rgba($black, .07);
 		cursor: pointer;
 	}
 
 	> tbody > tr.table-active:hover {
-		outline-color: rgba($primary, .42);
-		box-shadow: 0 .125rem .5rem rgba($primary, .12);
+		outline-color: rgba($primary, .3);
+		box-shadow: 0 .125rem .45rem rgba($black, .1);
+	}
+
+	// Key cell (e.g. document) of the selected row reads a touch stronger.
+	> tbody > tr.table-active .admin-row-key {
+		font-weight: 600;
 	}
 
 	> tbody > tr > td {
 		position: relative;
 		border-top: 0;
+		border-bottom: 0;
 		padding: .625rem .75rem;
 		word-break: normal;
 		background-color: $white !important;
@@ -67,7 +76,7 @@
 	}
 
 	> tbody > tr:hover > td {
-		background-color: mix($gray-100, $white, 35%) !important;
+		background-color: mix($gray-100, $white, 45%) !important;
 	}
 
 	> tbody > tr:active > *,
@@ -79,7 +88,7 @@
 		--bs-table-active-color: #{$body-color};
 		--bs-table-hover-color: #{$body-color};
 
-		background-color: mix($primary, $white, 3%) !important;
+		background-color: mix($primary, $white, 4%) !important;
 		box-shadow: none !important;
 		color: $body-color !important;
 	}
@@ -92,8 +101,8 @@
 		top: 0;
 		bottom: 0;
 		left: 0;
-		width: 3px;
-		background: rgba($primary, .6);
+		width: 4px;
+		background: $primary;
 		pointer-events: none;
 	}
 }

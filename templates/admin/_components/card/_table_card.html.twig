@@ -4,29 +4,43 @@
 {% set show_header = show_header|default(true) %}
 {% set list_table = list_table|default(true) %}
 
+{% set is_empty = pagination is defined and pagination|length == 0 %}
+
 <div class="card">
     {% if show_header %}
         <div class="card-header pb-0">
-            {% set header_actions %}
-                {% if card_filter_form %}
-                    <button class="btn btn-light btn-sm"
-                            type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#{{ card_filter_collapse_id }}"
-                            aria-expanded="{{ card_filter_params ? 'true' : 'false' }}"
-                            aria-controls="{{ card_filter_collapse_id }}">
-                        <i class="fa-solid fa-filter me-1"></i>{{ 'admin.common.filter'|trans }}
-                        {% if card_filter_params %}
-                            <span class="badge bg-danger ms-1">{{ card_filter_params|length }}</span>
-                        {% endif %}
-                    </button>
-                {% endif %}
-                {{ actions|default('') }}
-            {% endset %}
-            {% if header_actions|trim %}
-                {{ include('admin/_components/card/_actions.html.twig', {actions: header_actions}) }}
-            {% endif %}
-{#            <h5 class="card-title mb-0">{{ table_title|trans }}</h5>#}
+            {# Universal index toolbar: title + record count on the left, search / filter /
+               create / future actions on the right (orders-style). #}
+            <div class="admin-index-toolbar">
+                <div class="admin-index-toolbar__title">
+                    {% if table_title|default('') %}
+                        <h5 class="card-title mb-0">{{ table_title|trans }}</h5>
+                    {% endif %}
+                    {% if pagination is defined and pagination %}
+                        <span class="text-muted small">{{ 'admin.pagination.records'|trans({'%count%': pagination.getTotalItemCount}) }}</span>
+                    {% endif %}
+                </div>
+                <div class="admin-index-toolbar__controls">
+                    {% if toolbar_search|default('')|trim %}
+                        <div class="admin-index-toolbar__search">{{ toolbar_search|raw }}</div>
+                    {% endif %}
+                    {% if card_filter_form %}
+                        <button class="btn btn-light btn-sm"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#{{ card_filter_collapse_id }}"
+                                aria-expanded="{{ card_filter_params ? 'true' : 'false' }}"
+                                aria-controls="{{ card_filter_collapse_id }}">
+                            <i class="fa-solid fa-filter me-1"></i>{{ 'admin.common.filter'|trans }}
+                            {% if card_filter_params %}
+                                <span class="badge bg-danger ms-1">{{ card_filter_params|length }}</span>
+                            {% endif %}
+                        </button>
+                    {% endif %}
+                    {{ actions|default('') }}
+                    {{ toolbar_extra|default('') }}
+                </div>
+            </div>
         </div>
     {% endif %}
     <div class="card-body">
@@ -43,16 +57,25 @@
             {{ before_table|raw }}
         {% endif %}
 
-        <table class="table table-hover {{ list_table ? 'document-list-table' : '' }} {{ table_class|default('') }}">
-            <thead>
-            {{ table_head }}
-            </thead>
-            <tbody>
-            {{ table_body }}
-            </tbody>
-        </table>
+        {% if is_empty %}
+            {{ include('admin/_components/_empty_state.html.twig', {
+                title: empty_state_title|default('admin.common.no_records'|trans),
+                text: empty_state_text|default('')
+            }) }}
+        {% else %}
+            <div class="list-table-responsive">
+                <table class="table table-hover {{ list_table ? 'document-list-table' : '' }} {{ table_class|default('') }}">
+                    <thead>
+                    {{ table_head }}
+                    </thead>
+                    <tbody>
+                    {{ table_body }}
+                    </tbody>
+                </table>
+            </div>
 
-        {{ include('admin/_components/pagination.html.twig', {pagination: pagination}) }}
+            {{ include('admin/_components/pagination.html.twig', {pagination: pagination}) }}
+        {% endif %}
 
     </div>
 </div>

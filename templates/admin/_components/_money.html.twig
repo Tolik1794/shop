@@ -1,0 +1,10 @@
+{#
+    Reusable money value.
+
+    Params:
+    - amount (numeric, required): value passed through the `money` filter.
+    - currency (string, optional): currency code shown muted after the amount.
+    - sign (string, optional): leading sign, e.g. '+' or '−'.
+    - tone (string, optional): 'positive' | 'negative' — colours the sign only.
+#}
+<span class="admin-money-value{{ tone|default('') ? ' admin-money-value--' ~ tone : '' }}">{% if sign|default('') %}<span class="admin-money-value__sign">{{ sign }}</span>{% endif %}{{ amount|money }}{% if currency|default('') %} <span class="admin-money-value__currency">{{ currency }}</span>{% endif %}</span>

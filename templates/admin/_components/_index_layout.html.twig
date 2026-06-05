@@ -1,0 +1,21 @@
+{#
+    Reusable CRUD index + preview layout: the main list on the left (hero, wide) and a
+    secondary detail/preview panel on the right (narrow). Wraps the `reload-card`
+    controller used for row selection. Below lg the columns stack (list first).
+
+    Params:
+    - list (html, required): the main list (e.g. a _table_card).
+    - detail (html, required): the detail/preview panel (e.g. a tab card with the show view).
+#}
+<main class="content" {{ stimulus_controller('reload-card') }}>
+    <div class="container-fluid p-0">
+        <div class="row admin-index-layout">
+            <div class="col-12 col-xl-7 col-lg-7 admin-index-main">
+                {{ list|raw }}
+            </div>
+            <div class="col-12 col-xl-5 col-lg-5 admin-index-preview">
+                {{ detail|raw }}
+            </div>
+        </div>
+    </div>
+</main>

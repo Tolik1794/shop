@@ -1,0 +1,16 @@
+{#
+    Reusable detail-panel section: a titled group of label/value rows.
+
+    Params:
+    - title (string, required): section heading.
+    - body (html, required): section content (e.g. a .detail-list).
+    - hint (string, optional): muted helper line under the title.
+    - variant (string, optional): visual modifier, adds `detail-section--{variant}`.
+#}
+<section class="detail-section{{ variant|default('') ? ' detail-section--' ~ variant : '' }}">
+    <h6 class="detail-section__title">{{ title }}</h6>
+    {% if hint|default('')|trim %}
+        <p class="detail-section__hint">{{ hint }}</p>
+    {% endif %}
+    {{ body|raw }}
+</section>

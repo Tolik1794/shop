@@ -1,43 +1,96 @@
 {% set header_badges %}
-	{{ include('admin/_components/status/_badge.html.twig', {value: entity.direction.value}) }}
-	{{ include('admin/_components/status/_badge.html.twig', {value: entity.type.value}) }}
+	{{ include('admin/_components/status/_badge.html.twig', {context: 'payment_direction', value: entity.direction.value}) }}
+	{{ include('admin/_components/status/_badge.html.twig', {context: 'payment_type', value: entity.type.value, soft: true}) }}
 {% endset %}
+
+{% set document_number = entity.order ? entity.order.number : entity.purchase.number %}
+{% set correction_text = entity.reversesPayment
+	? 'Reversal of #'|trans ~ entity.reversesPayment.id
+	: (entity.reversedByPayment ? 'Reversed by #'|trans ~ entity.reversedByPayment.id : '') %}
+{% set is_reversal_related = entity.reversesPayment or entity.reversedByPayment %}
+{% set can_reverse = entity.type.value != 'refund' and not entity.reversedByPayment %}
 
 <div class="card show-card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
 	{{ include('admin/_components/show_card/_header.html.twig', {
-		title: entity.direction.value ~ ' ' ~ ('payment'|trans),
-		subtitle: entity.order ? entity.order.number : entity.purchase.number,
+		title: 'Payment'|trans ~ ' #' ~ entity.id,
+		subtitle: document_number,
 		badges: header_badges
 	}) }}
 	<div class="card-body">
-		<table class="table table-sm mt-2 mb-0">
-			<tbody>
-			<tr><th>{{ 'Date'|trans }}</th><td>{{ entity.paidAt|date('Y-m-d H:i') }}</td></tr>
-			<tr><th>{{ 'Direction'|trans }}</th><td>{{ entity.direction.value }}</td></tr>
-			<tr><th>{{ 'Type'|trans }}</th><td>{{ entity.type.value }}</td></tr>
-			<tr><th>{{ 'Document'|trans }}</th><td>{{ entity.order ? entity.order.number : entity.purchase.number }}</td></tr>
-			<tr><th>{{ 'Amount'|trans }}</th><td>{{ entity.amount|money }} {{ entity.currency.code }}</td></tr>
-			<tr><th>{{ 'Amount base'|trans }}</th><td>{{ entity.amountBase|money }}</td></tr>
-			<tr><th>{{ 'Exchange rate'|trans }}</th><td>{{ entity.exchangeRateToBase }}</td></tr>
-			<tr><th>{{ 'External reference'|trans }}</th><td>{{ entity.externalReference }}</td></tr>
-			<tr><th>{{ 'Correction'|trans }}</th><td>{{ entity.reversesPayment ? 'Reversal of #'|trans ~ entity.reversesPayment.id : (entity.reversedByPayment ? 'Reversed by #'|trans ~ entity.reversedByPayment.id : '') }}</td></tr>
-			{% if entity.reversesPayment %}
-				<tr><th>{{ 'Reversal reason'|trans }}</th><td>{{ entity.comment }}</td></tr>
-			{% elseif entity.reversedByPayment %}
-				<tr><th>{{ 'Reversal reason'|trans }}</th><td>{{ entity.reversedByPayment.comment }}</td></tr>
-			{% else %}
-				<tr><th>{{ 'Comment'|trans }}</th><td>{{ entity.comment }}</td></tr>
-			{% endif %}
-			</tbody>
-		</table>
+		{% set is_incoming = entity.direction.value == 'incoming' %}
+		<div class="detail-panel__amount">
+			<span class="detail-panel__amount-value">{{ include('admin/_components/_money.html.twig', {
+				amount: entity.amount,
+				currency: entity.currency.code,
+				sign: is_incoming ? '+' : '−',
+				tone: is_incoming ? 'positive' : 'negative'
+			}) }}</span>
+			<span class="detail-panel__amount-base text-muted">{{ 'Amount base'|trans }}: {{ include('admin/_components/_money.html.twig', {amount: entity.amountBase}) }}</span>
+		</div>
 
-		{% if entity.type.value != 'refund' and not entity.reversedByPayment %}
-			<form method="post" action="{{ path('app_admin_payment_reverse', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="mt-3" onsubmit="return confirm('{{ 'Reverse this payment?'|trans|e('js') }}');">
-				<input type="hidden" name="_token" value="{{ csrf_token('reverse_payment_' ~ entity.id) }}">
-				<label for="payment-reversal-reason-{{ entity.id }}" class="form-label">{{ 'Reason for reversal'|trans }}</label>
-				<textarea id="payment-reversal-reason-{{ entity.id }}" name="reason" class="form-control form-control-sm mb-2" rows="2" required></textarea>
-				<button class="btn btn-light btn-sm" type="submit"><i class="fa-solid fa-rotate-left me-1"></i>{{ 'Reverse'|trans }}</button>
-			</form>
+		{% set main_fields %}
+			<dl class="detail-list">
+				<div>
+					<dt>{{ 'Date'|trans }}</dt>
+					<dd>{{ entity.paidAt|date('Y-m-d H:i') }}</dd>
+				</div>
+				<div>
+					<dt>{{ 'Document'|trans }}</dt>
+					<dd>{{ document_number }}</dd>
+				</div>
+			</dl>
+		{% endset %}
+		{{ include('admin/_components/detail/_section.html.twig', {title: 'admin.payment.sections.main'|trans, body: main_fields}) }}
+
+		{% set additional_fields %}
+			<dl class="detail-list">
+				<div>
+					<dt>{{ 'Exchange rate'|trans }}</dt>
+					<dd class="text-muted">{{ entity.exchangeRateToBase ?: '—' }}</dd>
+				</div>
+				<div>
+					<dt>{{ 'External reference'|trans }}</dt>
+					<dd class="text-muted">{{ entity.externalReference ?: '—' }}</dd>
+				</div>
+				{% if not is_reversal_related %}
+					<div>
+						<dt>{{ 'Comment'|trans }}</dt>
+						<dd>{{ entity.comment ?: '—' }}</dd>
+					</div>
+				{% endif %}
+			</dl>
+		{% endset %}
+		{{ include('admin/_components/detail/_section.html.twig', {title: 'admin.payment.sections.additional'|trans, body: additional_fields}) }}
+
+		{% if is_reversal_related or can_reverse %}
+			{% set reversal_body %}
+				{% if is_reversal_related %}
+					<dl class="detail-list mb-3">
+						<div>
+							<dt>{{ 'Correction'|trans }}</dt>
+							<dd class="text-muted">{{ correction_text }}</dd>
+						</div>
+						<div>
+							<dt>{{ 'Reversal reason'|trans }}</dt>
+							<dd>{{ (entity.reversesPayment ? entity.comment : entity.reversedByPayment.comment) ?: '—' }}</dd>
+						</div>
+					</dl>
+				{% endif %}
+				{% if can_reverse %}
+					<form method="post" action="{{ path('app_admin_payment_reverse', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" onsubmit="return confirm('{{ 'Reverse this payment?'|trans|e('js') }}');">
+						<input type="hidden" name="_token" value="{{ csrf_token('reverse_payment_' ~ entity.id) }}">
+						<label for="payment-reversal-reason-{{ entity.id }}" class="form-label">{{ 'Reason for reversal'|trans }}</label>
+						<textarea id="payment-reversal-reason-{{ entity.id }}" name="reason" class="form-control form-control-sm mb-2" rows="2" required placeholder="{{ 'admin.payment.reverse.placeholder'|trans }}"></textarea>
+						<button class="btn btn-outline-danger btn-sm" type="submit"><i class="fa-solid fa-rotate-left me-1"></i>{{ 'admin.payment.reverse.submit'|trans }}</button>
+					</form>
+				{% endif %}
+			{% endset %}
+			{{ include('admin/_components/detail/_section.html.twig', {
+				title: 'admin.payment.reverse.title'|trans,
+				hint: can_reverse ? 'admin.payment.reverse.hint'|trans : '',
+				variant: 'reverse',
+				body: reversal_body
+			}) }}
 		{% endif %}
 	</div>
 </div>

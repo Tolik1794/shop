@@ -1,0 +1,329 @@
+// Reusable building blocks for admin CRUD index pages (page header, index toolbar,
+// detail panel field list, empty state). Kept generic so other index pages can adopt them.
+
+// Navbar page header: title + subtitle on the left, breadcrumb on the right with a divider.
+.navbar-page-header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: .15rem 1rem;
+	width: 100%;
+	min-width: 0;
+}
+
+.navbar-page-header__main {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	line-height: 1.15;
+}
+
+.navbar-page-header__title {
+	font-weight: 600;
+	font-size: 1rem;
+	color: $headings-color;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.navbar-page-header__subtitle {
+	color: $text-muted;
+	font-size: $font-size-sm;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+// Breadcrumb is auxiliary navigation: keep it quiet next to the page title/subtitle.
+.navbar-page-header__breadcrumb {
+	margin-left: auto;
+	padding-left: 1rem;
+	border-left: 1px solid $gray-200;
+	min-width: 0;
+	font-size: $font-size-sm;
+
+	.breadcrumb,
+	nav {
+		margin-bottom: 0;
+	}
+
+	a {
+		color: $text-muted;
+
+		&:hover {
+			color: $body-color;
+		}
+	}
+
+	span {
+		color: $text-muted;
+	}
+}
+
+@include media-breakpoint-down(lg) {
+	.navbar-page-header__subtitle {
+		display: none;
+	}
+}
+
+@include media-breakpoint-down(md) {
+	.navbar-page-header__breadcrumb {
+		margin-left: 0;
+		padding-left: 0;
+		border-left: 0;
+	}
+}
+
+// Horizontal scroll wrapper so wide list tables scroll inside their card on small screens
+// instead of overflowing the column. overflow-y is hidden to avoid a stray vertical
+// scrollbar from the card-row table's negative top margin / row shadows.
+.list-table-responsive {
+	overflow-x: auto;
+	overflow-y: hidden;
+}
+
+.page-header {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5rem 1rem;
+	align-items: flex-start;
+	justify-content: space-between;
+	margin-bottom: $spacer;
+}
+
+.page-header__title {
+	margin: 0;
+	font-size: 1.4rem;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.page-header__subtitle {
+	margin: .2rem 0 0;
+	color: $text-muted;
+	font-size: $font-size-sm;
+}
+
+.page-header__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5rem;
+	align-items: center;
+}
+
+// Toolbar above the list table: title + record count on the left, search / filter /
+// create on the right (mirrors the orders list toolbar).
+.admin-index-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .75rem;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.admin-index-toolbar__title {
+	display: grid;
+	gap: .1rem;
+	min-width: 0;
+}
+
+.admin-index-toolbar__controls {
+	display: flex;
+	flex: 1 1 auto;
+	flex-wrap: wrap;
+	gap: .5rem;
+	align-items: center;
+	justify-content: flex-end;
+	min-width: 0;
+}
+
+.admin-index-toolbar__search {
+	flex: 1 1 16rem;
+	max-width: 22rem;
+	min-width: 12rem;
+}
+
+@include media-breakpoint-down(md) {
+	.admin-index-toolbar {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.admin-index-toolbar__controls,
+	.admin-index-toolbar__search {
+		width: 100%;
+		max-width: none;
+	}
+}
+
+// Detail / preview panel.
+.detail-panel__amount {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: .25rem .75rem;
+	margin-bottom: 1rem;
+}
+
+.detail-panel__amount-value {
+	font-size: 1.5rem;
+	font-weight: 600;
+	line-height: 1.1;
+}
+
+.detail-panel__amount-base {
+	font-size: $font-size-sm;
+}
+
+.detail-list {
+	display: grid;
+	gap: .5rem;
+	margin: 0;
+
+	> div {
+		display: grid;
+		grid-template-columns: minmax(0, 10rem) minmax(0, 1fr);
+		gap: .5rem 1rem;
+		align-items: baseline;
+		padding-bottom: .5rem;
+		border-bottom: 1px solid $gray-200;
+	}
+
+	> div:last-child {
+		padding-bottom: 0;
+		border-bottom: 0;
+	}
+
+	dt {
+		margin: 0;
+		color: $text-muted;
+		font-weight: 500;
+		font-size: $font-size-sm;
+	}
+
+	dd {
+		margin: 0;
+		overflow-wrap: anywhere;
+	}
+}
+
+.detail-panel__actions {
+	margin-top: 1rem;
+	padding-top: 1rem;
+	border-top: 1px solid $gray-200;
+}
+
+.detail-panel__actions-title {
+	margin-bottom: .5rem;
+	font-weight: 600;
+	font-size: $font-size-sm;
+}
+
+// Index toolbar search.
+.index-search {
+	margin: 0;
+	width: 100%;
+
+	.input-group-text {
+		background: $white;
+		color: $text-muted;
+	}
+}
+
+// Secondary, low-emphasis badge variant (e.g. payment type vs direction).
+.badge-soft {
+	background: $gray-100;
+	color: $gray-700;
+	border: 1px solid $gray-300;
+	font-weight: 500;
+}
+
+// Money value: tabular figures keep amounts vertically aligned.
+.admin-money-value {
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.admin-money-value__currency {
+	color: $text-muted;
+}
+
+// Direction sign (+/−): subtle colour on the sign only, keeps the amount neutral.
+.admin-money-value__sign {
+	font-weight: 600;
+}
+
+.admin-money-value--positive .admin-money-value__sign {
+	color: $success;
+}
+
+.admin-money-value--negative .admin-money-value__sign {
+	color: $danger;
+}
+
+// Detail panel section.
+.detail-section {
+	& + & {
+		margin-top: 1rem;
+		padding-top: 1rem;
+		border-top: 1px solid $gray-200;
+	}
+}
+
+.detail-section__title {
+	margin-bottom: .5rem;
+	font-size: $font-size-sm;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: .02em;
+	color: $text-muted;
+}
+
+.detail-section__hint {
+	margin-top: -.25rem;
+	margin-bottom: .75rem;
+	font-size: $font-size-sm;
+	color: $text-muted;
+}
+
+// Reversal block: a clearly separated, low-key boxed section (overrides the generic
+// adjacent-section separator so it reads as a standalone box, not just a divided row).
+.detail-section.detail-section--reverse {
+	margin-top: 1rem;
+	padding: .875rem 1rem;
+	border: 1px solid $gray-200;
+	border-radius: $border-radius;
+	background: mix($gray-100, $white, 55%);
+}
+
+// Empty / nothing-to-show state.
+.empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	gap: .35rem;
+	padding: 2rem 1rem;
+	color: $text-muted;
+}
+
+.empty-state__icon {
+	font-size: 1.75rem;
+	opacity: .55;
+	margin-bottom: .25rem;
+}
+
+.empty-state__title {
+	color: $body-color;
+	font-weight: 600;
+}
+
+.empty-state__text {
+	font-size: $font-size-sm;
+}
+
+.empty-state__action {
+	margin-top: .5rem;
+}

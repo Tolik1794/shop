@@ -1,0 +1,20 @@
+{#
+    Navbar page header: page title + optional subtitle on the left, optional breadcrumb on
+    the right (with a visual divider). Rendered inside the navbar's breadcrumb slot.
+
+    Params:
+    - title (string, required): page title.
+    - subtitle (string, optional): short description under the title.
+    - breadcrumb (html, optional): breadcrumb markup, placed on the right.
+#}
+<div class="navbar-page-header">
+    <div class="navbar-page-header__main">
+        <span class="navbar-page-header__title">{{ title }}</span>
+        {% if subtitle|default('')|trim %}
+            <span class="navbar-page-header__subtitle">{{ subtitle }}</span>
+        {% endif %}
+    </div>
+    {% if breadcrumb|default('')|trim %}
+        <div class="navbar-page-header__breadcrumb">{{ breadcrumb|raw }}</div>
+    {% endif %}
+</div>

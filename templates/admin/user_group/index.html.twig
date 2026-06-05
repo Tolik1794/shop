@@ -3,9 +3,12 @@
 {% block title %}User groups{% endblock %}
 
 {% block navbar_breadcrumb %}
+    {% set page_breadcrumb %}
     {{ include('admin/_components/_resource_breadcrumb.html.twig', {
         section_label: 'User groups'
     }) }}
+    {% endset %}
+    {{ include('admin/_components/_navbar_header.html.twig', {title: 'User groups'|trans, breadcrumb: page_breadcrumb}) }}
 {% endblock %}
 
 {% block main_content %}

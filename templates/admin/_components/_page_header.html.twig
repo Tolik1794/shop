@@ -1,0 +1,21 @@
+{#
+    Reusable CRUD page header.
+
+    Params:
+    - title (string, required): page title.
+    - subtitle (string, optional): short description under the title.
+    - actions (html, optional): right-aligned action slot (e.g. primary create button).
+#}
+<div class="page-header">
+    <div class="page-header__main">
+        <h1 class="page-header__title">{{ title }}</h1>
+        {% if subtitle|default('')|trim %}
+            <p class="page-header__subtitle">{{ subtitle }}</p>
+        {% endif %}
+    </div>
+    {% if actions|default('')|trim %}
+        <div class="page-header__actions">
+            {{ actions|raw }}
+        </div>
+    {% endif %}
+</div>

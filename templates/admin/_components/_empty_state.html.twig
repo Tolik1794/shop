@@ -1,0 +1,21 @@
+{#
+    Reusable empty / nothing-to-show state.
+
+    Params:
+    - icon (string, optional): Font Awesome icon class (default a tray icon).
+    - title (string, optional): bold headline.
+    - text (string, optional): muted helper line.
+    - action (html, optional): optional call-to-action slot.
+#}
+<div class="empty-state">
+    <i class="empty-state__icon {{ icon|default('fa-solid fa-inbox') }}"></i>
+    {% if title|default('')|trim %}
+        <div class="empty-state__title">{{ title }}</div>
+    {% endif %}
+    {% if text|default('')|trim %}
+        <div class="empty-state__text">{{ text }}</div>
+    {% endif %}
+    {% if action|default('')|trim %}
+        <div class="empty-state__action">{{ action|raw }}</div>
+    {% endif %}
+</div>
