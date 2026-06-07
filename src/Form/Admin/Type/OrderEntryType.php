@@ -224,7 +224,7 @@ class OrderEntryType extends AbstractType
 			->add('discountRule', EntityType::class, [
 				'class' => ProductDiscountRule::class,
 				'choices' => $rules,
-				'choice_label' => static fn (ProductDiscountRule $rule): string => sprintf('%s (%s%%)', $rule->getName(), $rule->getPercent()),
+				'choice_label' => static fn (ProductDiscountRule $rule): string => self::discountRuleLabel($rule),
 				'choice_attr' => static fn (ProductDiscountRule $rule): array => [
 					'data-percent' => $rule->getPercent(),
 					'data-name' => $rule->getName(),
@@ -252,6 +252,35 @@ class OrderEntryType extends AbstractType
 					]),
 				],
 			]);
+	}
+
+	/**
+	 * Trims trailing zeros from a stored percent for display ("10.0000" -> "10", "10.5000" -> "10.5").
+	 */
+	private static function formatPercent(?string $percent): string
+	{
+		$percent = (string) ($percent ?? '');
+
+		if ($percent === '') {
+			return '0';
+		}
+
+		return str_contains($percent, '.') ? rtrim(rtrim($percent, '0'), '.') : $percent;
+	}
+
+	/**
+	 * Builds a compact rule label, avoiding "10 % (10%)" when the name already shows the percent.
+	 */
+	private static function discountRuleLabel(ProductDiscountRule $rule): string
+	{
+		$percent = self::formatPercent($rule->getPercent());
+		$name = (string) $rule->getName();
+
+		if (str_contains($name, $percent . '%') || str_contains($name, $percent . ' %')) {
+			return $name;
+		}
+
+		return sprintf('%s (%s%%)', $name, $percent);
 	}
 
 	/**

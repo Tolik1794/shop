@@ -4,15 +4,20 @@
     <input type="hidden" name="_token" value="{{ csrf_token('add_order_comment_' ~ entity.id) }}">
     <label for="order-comment-body-{{ entity.id }}" class="form-label">{{ 'Add comment'|trans }}</label>
     {% if comment_templates|default([]) %}
-        <div class="d-flex flex-wrap gap-1 mb-2" aria-label="{{ 'Comment templates'|trans }}">
+        <div class="order-comment-template-chips d-flex flex-wrap gap-1 mb-2" aria-label="{{ 'Comment templates'|trans }}">
             {% for template in comment_templates %}
+                {% set chip_label = ('admin.order.comment_template.' ~ template.key)|trans %}
+                {% if chip_label == 'admin.order.comment_template.' ~ template.key %}
+                    {% set chip_label = template.label|trans %}
+                {% endif %}
                 <button type="button"
-                        class="btn btn-outline-secondary btn-sm"
+                        class="order-comment-template-chip"
                         data-action="order-discussion#applyTemplate"
                         data-template-body="{{ template.body|trans }}"
                         data-template-type="{{ template.type.value }}"
-                        data-template-important="{{ template.important ? '1' : '0' }}">
-                    {{ template.label|trans }}
+                        data-template-important="{{ template.important ? '1' : '0' }}"
+                        title="{{ template.label|trans }}">
+                    {{ chip_label }}
                 </button>
             {% endfor %}
         </div>

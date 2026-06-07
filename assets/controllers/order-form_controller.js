@@ -251,7 +251,7 @@ export default class extends Controller {
         const warehouseSelect = row.querySelector('[data-order-entry-target~="warehouse"]')
         const layers = Array.isArray(product.batchLayers) ? product.batchLayers : []
 
-        this.entriesTarget.appendChild(row)
+        this.entriesTarget.prepend(row)
         this.initializeRow(row)
         this.setProduct(productSelect, product)
 
@@ -554,6 +554,17 @@ export default class extends Controller {
         if (sourceMetaTarget) {
             sourceMetaTarget.textContent = sourceLabel
         }
+
+        // Production lines have no stock: hide the "Availability: 0" hint, show a neutral note.
+        const isProduction = sourceType === 'production'
+        const availEl = row.querySelector('.order-entry-head__avail')
+        const noteEl = row.querySelector('.order-entry-head__production')
+        if (availEl) {
+            availEl.classList.toggle('d-none', isProduction)
+        }
+        if (noteEl) {
+            noteEl.classList.toggle('d-none', !isProduction)
+        }
     }
 
     setUnit(row, unit) {
@@ -655,7 +666,7 @@ export default class extends Controller {
         ruleSelect.innerHTML = `<option value="">${this.escapeHtml(trans('order.discount.none', 'No discount'))}</option>`
 
         rules.forEach((rule) => {
-            const option = new Option(`${rule.name} (${rule.percent}%)`, rule.id, false, false)
+            const option = new Option(this.discountRuleLabel(rule), rule.id, false, false)
             option.dataset.percent = rule.percent || ''
             option.dataset.name = rule.name || ''
             ruleSelect.appendChild(option)
@@ -672,7 +683,7 @@ export default class extends Controller {
         const selected = ruleSelect.selectedOptions[0]
         if (selected && selected.value) {
             if (modeInput) modeInput.value = 'rule'
-            if (percentInput) percentInput.value = selected.dataset.percent || ''
+            if (percentInput) percentInput.value = selected.dataset.percent ? this.formatPercent(selected.dataset.percent) : ''
         } else if (modeInput && modeInput.value !== 'manual_override') {
             modeInput.value = 'none'
             if (percentInput) percentInput.value = ''
@@ -680,12 +691,15 @@ export default class extends Controller {
 
         const discountMeta = row.querySelector('[data-order-entry-target~="discountMeta"]')
         if (discountMeta) {
-            discountMeta.textContent = selected && selected.value && selected.dataset.percent ? `${selected.dataset.percent}%` : ''
+            discountMeta.textContent = selected && selected.value && selected.dataset.percent ? `${this.formatPercent(selected.dataset.percent)}%` : ''
         }
     }
 
     entryChanged(event) {
-        this.syncProductData(event.detail.row)
+        if (event.detail.productChanged) {
+            this.syncProductData(event.detail.row)
+        }
+
         this.recalculateRow(event.detail.row)
         this.requestSummaryCalculation()
     }
@@ -797,10 +811,14 @@ export default class extends Controller {
     }
 
     applySummary(data) {
-        this.summaryCountTarget.textContent = String(data.count || 0)
+        // summaryCount/summaryTotal can appear twice (summary card + sticky footer mirror),
+        // so update every matching target; subtotal/discount live only in the summary card.
+        const count = String(data.count || 0)
+        const total = this.formatMoney(data.total || '0.00')
+        this.summaryCountTargets.forEach((target) => { target.textContent = count })
+        this.summaryTotalTargets.forEach((target) => { target.textContent = total })
         this.summarySubtotalTarget.textContent = this.formatMoney(data.subtotal || '0.00')
         this.summaryDiscountTarget.textContent = this.formatMoney(data.discount || '0.00')
-        this.summaryTotalTarget.textContent = this.formatMoney(data.total || '0.00')
 
         Object.entries(data.lineTotals || {}).forEach(([index, total]) => {
             const row = this.entriesTarget.querySelector(`[data-index="${index}"]`)
@@ -968,13 +986,30 @@ export default class extends Controller {
     }
 
     format(value) {
-        return value.toFixed(4)
+        // Trim trailing zeros so price inputs read as "6900" / "6900.5", not "6900.0000".
+        return String(Number.parseFloat(value.toFixed(4)))
     }
 
     formatMoney(value) {
         const number = this.numberValue(value)
 
         return number.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+    }
+
+    formatPercent(value) {
+        const number = this.numberValue(value)
+
+        return String(Number.parseFloat(number.toFixed(2)))
+    }
+
+    // Avoid "10 % (10%)" when the rule name already contains the percent.
+    discountRuleLabel(rule) {
+        const percent = this.formatPercent(rule.percent)
+        const name = rule.name || ''
+
+        return name.includes(`${percent}%`) || name.includes(`${percent} %`)
+            ? name
+            : `${name} (${percent}%)`
     }
 
     formatQuantity(value, precision) {
@@ -984,7 +1019,7 @@ export default class extends Controller {
             return String(Math.trunc(value))
         }
 
-        return value.toFixed(unitPrecision)
+        return value.toFixed(unitPrecision).replace(/\.?0+$/, '')
     }
 
     applyQuantityPrecision(input, precision) {

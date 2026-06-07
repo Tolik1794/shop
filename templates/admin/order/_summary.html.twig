@@ -7,19 +7,28 @@
         <div class="order-summary-grid">
             <div class="order-summary-item">
                 <span>{{ 'admin.order.summary.entry_count'|trans }}</span>
-                <strong data-order-form-target="summaryCount">0</strong>
+                <strong data-order-form-target="summaryCount">{{ form.orderEntries|length }}</strong>
             </div>
             <div class="order-summary-item">
                 <span>{{ 'admin.order.summary.subtotal'|trans }}</span>
-                <strong data-order-form-target="summarySubtotal">0.00</strong>
+                <div class="order-summary-value">
+                    <strong data-order-form-target="summarySubtotal">0.00</strong>
+                    <span class="order-summary-currency" data-order-currency-label>{{ entity.currency ? entity.currency.code : '' }}</span>
+                </div>
             </div>
             <div class="order-summary-item">
                 <span>{{ 'admin.order.summary.discount'|trans }}</span>
-                <strong data-order-form-target="summaryDiscount">0.00</strong>
+                <div class="order-summary-value">
+                    <strong data-order-form-target="summaryDiscount">0.00</strong>
+                    <span class="order-summary-currency" data-order-currency-label>{{ entity.currency ? entity.currency.code : '' }}</span>
+                </div>
             </div>
             <div class="order-summary-item order-summary-total">
-                <span>{{ 'admin.order.summary.total'|trans }}</span>
-                <strong data-order-form-target="summaryTotal">0.00</strong>
+                <span>{{ 'admin.order.fields.amount_to_pay'|trans }}</span>
+                <div class="order-summary-value">
+                    <strong data-order-form-target="summaryTotal">{{ entity.totalAmount ? entity.totalAmount|money : '0.00' }}</strong>
+                    <span class="order-summary-currency" data-order-currency-label>{{ entity.currency ? entity.currency.code : '' }}</span>
+                </div>
             </div>
         </div>
     </div>

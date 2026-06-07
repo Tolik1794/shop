@@ -16,8 +16,10 @@
                 {{ include('admin/order/_entry_row.html.twig', {entry: entry, currency: form.currency.vars.data|default(null)}) }}
             {% endfor %}
         </div>
-        <div class="text-muted {{ form.orderEntries|length > 0 ? 'd-none' : '' }}" data-order-form-target="emptyState">
-            {{ 'admin.order.empty.entries'|trans }}
+        <div class="order-entries-empty text-center text-muted {{ form.orderEntries|length > 0 ? 'd-none' : '' }}" data-order-form-target="emptyState">
+            <i class="fa-solid fa-box-open order-entries-empty__icon"></i>
+            <div class="order-entries-empty__title">{{ 'admin.order.empty.entries'|trans }}</div>
+            <div class="order-entries-empty__hint small">{{ 'admin.order.empty.entries_hint'|trans }}</div>
         </div>
     </div>
 </div>

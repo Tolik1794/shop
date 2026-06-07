@@ -224,7 +224,7 @@ admin:
       new: 'Нове замовлення'
       edit: 'Редагування замовлення'
     sections:
-      general: 'Загальні налаштування'
+      general: 'Клієнт і доставка'
       customer: 'Клієнт'
       customer_details: 'Дані клієнта'
       delivery: 'Доставка'
@@ -259,6 +259,8 @@ admin:
       discount: 'Знижка'
       discount_amount: 'Сума знижки'
       manual_discount_percent: 'Ручний %'
+      manual_discount_toggle: 'Ручна знижка'
+      delivery_address_placeholder: 'Місто, відділення Нової Пошти або вулиця, будинок, квартира'
       availability: 'Наявність'
     actions:
       confirm: 'Підтвердити'
@@ -279,6 +281,7 @@ admin:
       cancel: 'Скасувати замовлення?'
     empty:
       entries: 'Позиції ще не додані.'
+      entries_hint: 'Скористайтеся пошуком вище, щоб додати товари до замовлення.'
       products: 'Товари відсутні.'
     summary:
       number: 'Номер замовлення'
@@ -295,7 +298,7 @@ admin:
       none: 'Без знижки'
     source:
       stock: 'Склад'
-      production: 'Під виробництво'
+      production: 'Виготовити під замовлення'
       preorder: 'Під замовлення'
       service: 'Послуга'
       material: 'Матеріал'
@@ -306,6 +309,7 @@ admin:
       placeholder: 'Назва або артикул товару'
       available: 'Доступно'
       price: 'Ціна'
+      add: 'Додати'
       details: 'Деталі товару'
       copy_name: 'Копіювати назву товару'
       copy_code: 'Копіювати код товару'
@@ -318,6 +322,29 @@ admin:
       copy_phone: 'Копіювати телефон клієнта'
     validation:
       insufficient_stock: 'Недостатньо на складі'
+    history:
+      toggle: 'Розгорнути або згорнути всю історію'
+      event:
+        status_changed: 'Статус змінено'
+        created: 'Замовлення створено'
+        updated: 'Замовлення оновлено'
+        customer_changed: 'Клієнта змінено'
+        entry_added: 'Позицію додано'
+        entry_updated: 'Позицію оновлено'
+        entry_removed: 'Позицію видалено'
+        comment_added: 'Коментар додано'
+        comment_edited: 'Коментар змінено'
+        comment_deleted: 'Коментар видалено'
+      discount_mode:
+        none: 'Без знижки'
+        rule: 'За правилом'
+        manual_override: 'Вручну'
+    comment_template:
+      customer_no_answer: 'Не відповів'
+      callback_needed: 'Передзвонити'
+      customer_confirmed: 'Підтвердив'
+      customer_clarify: 'Уточнити деталі'
+      customer_declined: 'Відмовився'
   purchase:
     title:
       new: 'Нова закупівля'
@@ -483,6 +510,7 @@ Name: 'Назва'
 First name: 'Імʼя'
 Last name: 'Прізвище'
 Phone: 'Телефон'
+Delivery address: 'Адреса доставки'
 Email: 'Email'
 Status: 'Статус'
 Price: 'Ціна'

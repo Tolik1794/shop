@@ -22,6 +22,7 @@ use App\Entity\User\User;
 use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
 use App\Entity\WarehouseStockBatch;
+use App\Enum\OrderDiscountModeEnum;
 use App\Enum\PaymentDirectionEnum;
 use App\Enum\PaymentStatusEnum;
 use App\Enum\PaymentTypeEnum;
@@ -719,6 +720,64 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertInstanceOf(Order::class, $order);
 		self::assertSame('18.0000', $order->getTotalAmount());
 		self::assertCount(1, $order->getOrderEntries());
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/edit', $store->getId(), $order->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorCount(2, '[data-order-form-target~="entries"] [data-order-entry-target~="discountRule"] option');
+		self::assertSelectorTextContains('[data-order-form-target~="entries"] [data-order-entry-target~="discountRule"]', 'No discount');
+		self::assertSelectorTextContains('[data-order-form-target~="entries"] [data-order-entry-target~="discountRule"]', $discountRule->getName());
+		self::assertSelectorTextContains('[data-order-form-target~="entries"] .order-entry-head__avail', (string) $product->getUnit()?->getCode());
+		self::assertSelectorExists('[data-order-form-target~="entries"] .order-entry-discount.col-md-4');
+		self::assertSelectorExists('[data-order-form-target~="entries"] .order-entry-discount > .order-entry-discount-select .form-select.form-select-sm');
+		self::assertSelectorExists('[data-order-form-target~="entries"] .order-entry-discount > .order-entry-manual-field .input-group.input-group-sm');
+		self::assertSelectorExists('[data-order-form-target~="entries"] .order-entry-total.col-md-4');
+	}
+
+	public function testExplicitNoDiscountDoesNotApplyDefaultRule(): void
+	{
+		$this->client->loginUser($this->createUser('order-builder-no-discount-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-builder-no-discount-store-' . uniqid());
+		$customer = $this->createCustomer($store);
+		$product = $this->createProduct($store);
+		$this->createProductDiscountRule($store, $product, '10.0000');
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
+		$token = $crawler->filter('input[name="order[_token]"]')->attr('value');
+
+		$this->client->request('POST', sprintf('/admin/store/%d/order/new', $store->getId()), [
+			'order' => [
+				'customer' => $customer->getId(),
+				'customerPhone' => $customer->getPhone(),
+				'customerName' => $customer->getName(),
+				'customerLastName' => $customer->getLastName(),
+				'currency' => $store->getBaseCurrency()?->getCode(),
+				'orderEntries' => [
+					[
+						'product' => $product->getId(),
+						'quantity' => '2',
+						'unitPrice' => '10.0000',
+						'discountMode' => 'none',
+						'discountRule' => '',
+						'discountPercent' => '',
+					],
+				],
+				'_token' => $token,
+			],
+		]);
+
+		self::assertResponseRedirects(sprintf('/admin/store/%d/order/', $store->getId()));
+
+		$order = $this->entityManager->getRepository(Order::class)->findOneBy([
+			'store' => $store,
+			'customer' => $customer,
+		]);
+
+		self::assertInstanceOf(Order::class, $order);
+		self::assertSame('20.0000', $order->getTotalAmount());
+		self::assertNull($order->getDiscountAmount());
+		self::assertSame(OrderDiscountModeEnum::NONE, $order->getOrderEntries()->first()->getDiscountMode());
+		self::assertNull($order->getOrderEntries()->first()->getDiscountRule());
 	}
 
 	public function testOrderEntryValidationErrorsAreRendered(): void
@@ -913,6 +972,29 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertCount(1, $data['products']);
 		self::assertSame($product->getId(), $data['products'][0]['id']);
 		self::assertSame('10.0000', $data['products'][0]['price']);
+	}
+
+	public function testProductSearchReturnsDefaultDiscountForDiscountedPricePreview(): void
+	{
+		$this->client->loginUser($this->createUser('order-builder-discount-search-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-builder-discount-search-store-' . uniqid());
+		$product = $this->createProduct($store, 'Discount search product');
+		$discountRule = $this->createProductDiscountRule($store, $product, '10.0000');
+
+		$this->client->request('GET', sprintf(
+			'/api/admin/store/%d/order/product-search?q=Discount%%20search',
+			$store->getId(),
+		));
+
+		self::assertResponseIsSuccessful();
+
+		$data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+		self::assertCount(1, $data['products']);
+		self::assertSame('10.0000', $data['products'][0]['price']);
+		self::assertSame($discountRule->getId(), $data['products'][0]['defaultDiscountRuleId']);
+		self::assertSame('10.0000', $data['products'][0]['discountRules'][0]['percent']);
+		self::assertTrue($data['products'][0]['discountRules'][0]['isDefault']);
 	}
 
 	public function testProductSearchKeepsProductWithoutResolvablePriceAvailableForManualPricing(): void
@@ -1271,6 +1353,7 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertInstanceOf(Order::class, $order);
 
 		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/edit', $store->getId(), $order->getId()));
+		self::assertSelectorNotExists('.order-history-compact__toggle');
 		$commentForm = $crawler->selectButton('Add comment')->form([
 			'body' => 'Visible on edit page',
 		]);
@@ -1283,6 +1366,13 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSelectorTextContains('body', 'Visible on edit page');
 		self::assertSelectorTextContains('body', 'History');
 		self::assertSelectorTextContains('body', 'Order created');
+		self::assertSelectorExists(sprintf('.order-history-compact [data-bs-target="#order-history-%d-details"]', $order->getId()));
+		self::assertSelectorExists('.order-history-compact__scroll-frame > .order-history-compact__scroll > .order-history-compact__entry');
+		self::assertSelectorExists(sprintf('.order-history-compact__scroll-frame > .order-history-compact__scroll > #order-history-%d-details', $order->getId()));
+		self::assertSelectorNotExists(sprintf('#order-history-%d-details .order-history-compact__scroll-frame', $order->getId()));
+		self::assertSelectorExists('.order-history-compact__toggle-icon--closed.fa-chevron-down');
+		self::assertSelectorExists('.order-history-compact__toggle-icon--open.fa-chevron-up');
+		self::assertSelectorNotExists('.order-history-compact a');
 	}
 
 	public function testCommentsCardOnIndexPageIsPreparedForAjaxRefresh(): void

@@ -194,10 +194,10 @@ export default class extends Controller {
         return `
             <div class="order-product-result">
                 <div class="order-product-result-header">
-                    <strong>${this.escapeHtml(product.name || '')}</strong>
-                    <span>${this.escapeHtml(product.code || '')}</span>
+                    <strong class="order-product-result-name">${this.escapeHtml(product.name || '')}</strong>
+                    <span class="order-product-result-code">${this.escapeHtml(product.code || '')}</span>
                 </div>
-                <div class="order-product-result-options">
+                <div class="order-product-result-rows">
                     ${options}
                 </div>
             </div>
@@ -206,15 +206,11 @@ export default class extends Controller {
 
     renderStockOption(product, option) {
         const batchLayers = option.batchLayers || []
-        const batchLabel = option.batchId ? ` · Batch #${option.batchId}` : ''
-        const receivedMeta = option.batchReceivedAt ? ` · ${option.batchReceivedAt}` : ''
-        const available = this.formatQuantity(this.numberValue(option.available), product.unitPrecision)
 
         return this.renderOptionButton({
             product: product,
             sourceType: 'stock',
-            label: `${trans('order.source.stock', 'Stock')}: ${option.warehouseName || ''}${batchLabel}`,
-            meta: `${trans('order.product.available', 'Available')}: ${available} · ${trans('order.product.price', 'Price')}: ${this.formatMoney(option.price || product.price || '0.00')}${receivedMeta}`,
+            label: option.warehouseName || trans('order.source.stock', 'Stock'),
             available: option.available,
             price: option.price || product.price,
             warehouseId: option.warehouseId || '',
@@ -227,20 +223,21 @@ export default class extends Controller {
     }
 
     renderProductionOption(product, option) {
-        const productionLabel = trans('order.source.production', 'For production')
+        // Ignore the DTO's English label and use the (translatable) project term instead.
+        const productionLabel = trans('order.source.production', 'Make to order')
 
         return this.renderOptionButton({
             product: product,
             sourceType: 'production',
-            label: option.label || productionLabel,
-            meta: `${trans('order.product.price', 'Price')}: ${this.formatMoney(option.price || product.price || '0.00')}`,
-            available: '0.0000',
+            modifier: 'order-product-result-row--production',
+            label: productionLabel,
+            available: '',
             price: option.price || product.price,
             warehouseId: '',
             warehouseName: '',
             batchId: '',
             batchReceivedAt: '',
-            sourceDetail: option.label || productionLabel,
+            sourceDetail: productionLabel,
             batchLayers: [],
         })
     }
@@ -251,9 +248,9 @@ export default class extends Controller {
         return this.renderOptionButton({
             product: product,
             sourceType: 'stock',
+            modifier: 'order-product-result-row--unavailable',
             label: unavailableLabel,
-            meta: `${trans('order.product.price', 'Price')}: ${this.formatMoney(product.price || '0.00')}`,
-            available: '0.0000',
+            available: '',
             price: product.price,
             warehouseId: '',
             warehouseName: '',
@@ -264,14 +261,27 @@ export default class extends Controller {
         })
     }
 
-    renderOptionButton({product, sourceType, label, meta, available, price, warehouseId, warehouseName, batchId, batchReceivedAt, sourceDetail, batchLayers}) {
+    renderOptionButton({product, sourceType, label, available, price, warehouseId, warehouseName, batchId, batchReceivedAt, sourceDetail, batchLayers, modifier}) {
         const batchLayersJson = JSON.stringify(batchLayers || [])
         const discountRulesJson = JSON.stringify(product.discountRules || [])
+        const modifierClass = modifier ? ` ${modifier}` : ''
+
+        const infoParts = [`<span class="oprr-cell oprr-cell--source">${this.escapeHtml(label)}</span>`]
+        if (batchId) {
+            infoParts.push(`<span class="oprr-cell oprr-cell--batch">#${this.escapeHtml(batchId)}</span>`)
+        }
+        if (available !== '' && available !== undefined && available !== null && sourceType === 'stock' && (batchId || warehouseId)) {
+            infoParts.push(`<span class="oprr-cell oprr-cell--available">${this.escapeHtml(trans('order.product.available', 'Available'))}: ${this.escapeHtml(this.formatQuantity(this.numberValue(available), product.unitPrecision))}</span>`)
+        }
+        infoParts.push(this.priceHtml(product, price))
+        if (batchReceivedAt) {
+            infoParts.push(`<span class="oprr-cell oprr-cell--date">${this.escapeHtml(batchReceivedAt)}</span>`)
+        }
 
         return `
             <button
                     type="button"
-                    class="order-product-result-option"
+                    class="order-product-result-row${modifierClass}"
                     data-action="product-search#choose"
                     data-product-id="${this.escapeHtml(product.id)}"
                     data-product-text="${this.escapeHtml(product.name)}"
@@ -290,8 +300,8 @@ export default class extends Controller {
                     data-discount-rules="${this.escapeHtml(discountRulesJson)}"
                     data-default-discount-rule-id="${this.escapeHtml(product.defaultDiscountRuleId || '')}"
             >
-                <span>${this.escapeHtml(label)}</span>
-                <small>${this.escapeHtml(meta)}</small>
+                <span class="order-product-result-row__info">${infoParts.join('')}</span>
+                <span class="order-product-result-row__action"><i class="fa-solid fa-plus"></i><span>${this.escapeHtml(trans('order.product.add', 'Add'))}</span></span>
             </button>
         `
     }
@@ -392,6 +402,31 @@ export default class extends Controller {
         return number.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
     }
 
+    priceHtml(product, price) {
+        const basePrice = price || product.price
+        const formattedBasePrice = this.escapeHtml(this.formatMoney(basePrice || '0.00'))
+        const defaultRule = this.defaultDiscountRule(product)
+
+        if (!basePrice || !defaultRule) {
+            return `<span class="oprr-cell oprr-cell--price">${formattedBasePrice}</span>`
+        }
+
+        const percent = this.numberValue(defaultRule.percent)
+        const discountedPrice = this.numberValue(basePrice) * (1 - percent / 100)
+
+        return `<span class="oprr-cell oprr-cell--price oprr-cell--price-discounted"><span class="oprr-price-original">${formattedBasePrice}</span><span class="oprr-price-discounted">${this.escapeHtml(this.formatMoney(discountedPrice))}</span></span>`
+    }
+
+    defaultDiscountRule(product) {
+        const defaultRuleId = product.defaultDiscountRuleId ? String(product.defaultDiscountRuleId) : ''
+
+        if (!defaultRuleId || !Array.isArray(product.discountRules)) {
+            return null
+        }
+
+        return product.discountRules.find((rule) => String(rule.id) === defaultRuleId) || null
+    }
+
     formatQuantity(value, precision) {
         const unitPrecision = this.normalizedUnitPrecision(precision)
 
@@ -399,7 +434,8 @@ export default class extends Controller {
             return String(Math.trunc(value))
         }
 
-        return value.toFixed(unitPrecision)
+        // Trim trailing zeros so quantities read as "12.5" / "100" instead of "12.5000".
+        return value.toFixed(unitPrecision).replace(/\.?0+$/, '')
     }
 
     normalizedUnitPrecision(precision) {

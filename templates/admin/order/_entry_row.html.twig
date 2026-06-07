@@ -48,7 +48,7 @@
 >
     <button
             type="button"
-            class="btn btn-sm btn-outline-danger order-entry-remove"
+            class="btn btn-sm order-entry-remove"
             data-action="order-entry#remove"
             title="{{ 'admin.common.delete'|trans }}"
             aria-label="{{ 'admin.common.delete'|trans }}"
@@ -56,9 +56,8 @@
         <i class="fa-solid fa-trash"></i>
     </button>
 
-    <div class="row g-3 align-items-start">
-        <div class="col-12 col-xl-6">
-            <label class="form-label">{{ 'admin.menu.products'|trans }}</label>
+    <div class="order-entry-head">
+        <div class="order-entry-head__product">
             {{ form_widget(entry.product, {
                 attr: {
                     class: 'd-none order-entry-product',
@@ -66,41 +65,27 @@
                     'data-action': 'change->order-entry#changed'
                 }
             }) }}
-            <div class="form-control-plaintext fw-semibold py-1" data-order-entry-target="productLabel">
-                {{ productName }}
-            </div>
-            <div class="text-muted small" data-order-entry-target="productMeta">
-                {{ productCode }}
-            </div>
+            <div class="order-entry-head__name fw-semibold" data-order-entry-target="productLabel">{{ productName }}</div>
+            <div class="order-entry-head__code text-muted small" data-order-entry-target="productMeta">{{ productCode }}</div>
         </div>
-        <div class="col-12 col-md-6 col-xl-3">
-            <label class="form-label">{{ 'admin.common.source'|trans }}</label>
-            {{ form_widget(entry.warehouse, {
-                attr: {
-                    class: 'd-none',
-                    'data-order-entry-target': 'warehouse'
-                }
-            }) }}
+        <div class="order-entry-head__source">
+            {{ form_widget(entry.warehouse, {attr: {class: 'd-none', 'data-order-entry-target': 'warehouse'}}) }}
             {{ form_widget(entry.warehouseStockBatchId) }}
-            <div class="form-control-plaintext py-1" data-order-entry-target="sourceLabel">
-                {{ sourceDetail ?: 'admin.order.source.undefined'|trans }}
-            </div>
-            <div class="text-muted small" data-order-entry-target="sourceMeta">
-                {{ sourceLabel }}
-            </div>
-        </div>
-        <div class="col-12 col-md-6 col-xl-3">
-            <label class="form-label">{{ 'admin.order.fields.availability'|trans }}</label>
-            <div class="form-control-plaintext py-1">
-                <span data-order-entry-target="available">{{ available|number_format(unitPrecision, '.', '') }}</span>
-                <span class="text-muted ms-1" data-order-entry-target="unitLabel">{{ unitCode }}</span>
+            <div class="order-entry-head__source-label fw-semibold" data-order-entry-target="sourceLabel">{{ sourceDetail ?: 'admin.order.source.undefined'|trans }}</div>
+            <div class="order-entry-head__source-meta text-muted small">
+                <span data-order-entry-target="sourceMeta">{{ sourceLabel }}</span>
+                <span class="order-entry-head__avail {{ sourceType == 'production' ? 'd-none' : '' }}">· {{ 'admin.order.fields.availability'|trans }}:
+                    <span data-order-entry-target="available">{{ available|number_format(unitPrecision, '.', '') }}</span>
+                    <span data-order-entry-target="unitLabel">{{ unitCode }}</span>
+                </span>
+                <span class="order-entry-head__production {{ sourceType == 'production' ? '' : 'd-none' }}">· {{ 'admin.order.source.unavailable'|trans }}</span>
             </div>
             <div class="text-warning small d-none" data-order-entry-target="availabilityWarning">{{ 'admin.order.validation.insufficient_stock'|trans }}</div>
         </div>
     </div>
 
-    <div class="row g-3 align-items-start mt-0">
-        <div class="col-6 col-md-3">
+    <div class="order-entry-main row g-2 align-items-start mt-0">
+        <div class="col-4 col-md-2">
             <label class="form-label">{{ 'admin.common.quantity'|trans }}</label>
             {{ form_widget(entry.quantity, {
                 attr: {
@@ -109,9 +94,8 @@
                     'data-action': 'input->order-entry#changed'
                 }
             }) }}
-            {{ form_help(entry.quantity) }}
         </div>
-        <div class="col-6 col-md-3">
+        <div class="col-4 col-md-2">
             <label class="form-label">{{ 'admin.common.price'|trans }}</label>
             {{ form_widget(entry.unitPrice, {
                 attr: {
@@ -120,56 +104,70 @@
                     'data-action': 'input->order-entry#changed'
                 }
             }) }}
-            {{ form_help(entry.unitPrice) }}
         </div>
-        <div class="col-12 col-md-4">
-            <label class="form-label">{{ 'admin.order.fields.discount'|trans }}</label>
-            {{ form_widget(entry.discountRule, {
-                attr: {
-                    class: 'form-select form-select-sm',
-                    'data-order-entry-target': 'discountRule',
-                    'data-action': 'change->order-entry#changed'
-                }
-            }) }}
+        {% set isManualOverride = entryData and entryData.discountMode and entryData.discountMode.value == 'manual_override' %}
+        <div class="col-12 col-md-4 order-entry-discount">
+            <div class="order-entry-discount-head">
+                <label class="form-label mb-0">{{ 'admin.order.fields.discount'|trans }}</label>
+                {% if can_discount_override|default(false) %}
+                    <div class="form-check form-switch order-entry-manual-switch mb-0">
+                        <input type="checkbox" role="switch" class="form-check-input"
+                               id="{{ entry.vars.id }}_manual"
+                               data-order-entry-target="manualToggle"
+                               data-action="change->order-entry#toggleManualDiscount"
+                               {{ isManualOverride ? 'checked' : '' }}>
+                        <label class="form-check-label small" for="{{ entry.vars.id }}_manual">{{ 'admin.order.fields.manual_discount_toggle'|trans }}</label>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="order-entry-discount-select {{ (can_discount_override|default(false) and isManualOverride) ? 'd-none' : '' }}" data-order-entry-target="discountSelect">
+                {{ form_widget(entry.discountRule, {
+                    attr: {
+                        class: 'form-select form-select-sm',
+                        'data-order-entry-target': 'discountRule',
+                        'data-action': 'change->order-entry#changed'
+                    }
+                }) }}
+            </div>
             {{ form_widget(entry.discountMode, {
                 attr: {
                     class: 'd-none',
                     'data-order-entry-target': 'discountMode'
                 }
             }) }}
-            <div class="text-muted small" data-order-entry-target="discountMeta"></div>
+            {% if can_discount_override|default(false) %}
+                <div class="order-entry-manual-field {{ isManualOverride ? '' : 'd-none' }}" data-order-entry-target="manualDiscount">
+                    <label class="form-label visually-hidden" for="{{ entry.discountPercent.vars.id }}">{{ 'admin.order.fields.manual_discount_percent'|trans }}</label>
+                    <div class="input-group input-group-sm">
+                        {{ form_widget(entry.discountPercent, {
+                            attr: entry.discountPercent.vars.attr|merge({
+                                class: 'form-control form-control-sm order-entry-number',
+                                'data-order-entry-target': 'discountPercent',
+                                'data-action': 'input->order-entry#changed'
+                            })
+                        }) }}
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+            {% else %}
+                {{ form_widget(entry.discountPercent, {
+                    attr: entry.discountPercent.vars.attr|merge({
+                        class: 'd-none',
+                        'data-order-entry-target': 'discountPercent'
+                    })
+                }) }}
+            {% endif %}
         </div>
-        <div class="col-6 col-md-3 {{ can_discount_override|default(false) ? '' : 'd-none' }}">
-            <label class="form-label">{{ 'admin.order.fields.manual_discount_percent'|trans }}</label>
-            {{ form_widget(entry.discountPercent, {
-                attr: entry.discountPercent.vars.attr|merge({
-                    class: 'form-control form-control-sm order-entry-number',
-                    'data-order-entry-target': 'discountPercent',
-                    'data-action': 'input->order-entry#changed'
-                })
-            }) }}
-            <div class="form-text">%</div>
-        </div>
-        {% if not can_discount_override|default(false) %}
-            {{ form_widget(entry.discountPercent, {
-                attr: entry.discountPercent.vars.attr|merge({
-                    class: 'd-none',
-                    'data-order-entry-target': 'discountPercent'
-                })
-            }) }}
-        {% endif %}
-        <div class="col-6 col-md-2">
-            <label class="form-label">{{ 'admin.order.fields.discount_amount'|trans }}</label>
-            <div class="form-control-plaintext py-1">
-                <span data-order-entry-target="discountAmount">{{ entryData and entryData.discountAmount ? entryData.discountAmount|money : '0.00' }}</span>
-                <span class="text-muted ms-1" data-order-currency-label>{{ currencyCode }}</span>
-            </div>
-        </div>
-        <div class="col-6 col-md-2">
+        <div class="col-12 col-md-4 order-entry-total">
             <label class="form-label">{{ 'admin.common.total'|trans }}</label>
-            <div class="form-control-plaintext fw-bold py-1">
+            <div class="order-entry-total__value fw-bold">
                 <span data-order-entry-target="lineTotal">{{ entryData ? entryData.totalPrice|money : '0.00' }}</span>
-                <span class="text-muted ms-1" data-order-currency-label>{{ currencyCode }}</span>
+                <span class="text-muted" data-order-currency-label>{{ currencyCode }}</span>
+            </div>
+            <div class="order-entry-total__discount text-muted small">
+                {{ 'admin.order.fields.discount_amount'|trans }}:
+                <span data-order-entry-target="discountAmount">{{ entryData and entryData.discountAmount ? entryData.discountAmount|money : '0.00' }}</span>
+                <span data-order-currency-label>{{ currencyCode }}</span>
             </div>
         </div>
     </div>

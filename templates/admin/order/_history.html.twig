@@ -1,4 +1,70 @@
-<h5 class="card-title mb-3">{{ 'History'|trans }}</h5>
-<div class="order-discussion-scroll-frame">
-    {{ include('admin/_components/document_history/_timeline.html.twig') }}
+{% macro status_label(value) %}
+{%- set key = 'admin.status.order.' ~ value -%}
+{%- set label = key|trans -%}
+{{- label == key ? (value|replace({'_': ' '})|capitalize) : label -}}
+{% endmacro %}
+{% import _self as h %}
+{% set latest_history = history_entries|default([])|first %}
+{% set remaining_history = history_entries|default([])|slice(1) %}
+{% set history_collapse_id = 'order-history-' ~ entity.id ~ '-details' %}
+{% set history_title_map = {
+    'Order status changed': 'admin.order.history.event.status_changed'|trans,
+    'Order created': 'admin.order.history.event.created'|trans,
+    'Order updated': 'admin.order.history.event.updated'|trans,
+    'Order customer changed': 'admin.order.history.event.customer_changed'|trans,
+    'Order entry added': 'admin.order.history.event.entry_added'|trans,
+    'Order entry updated': 'admin.order.history.event.entry_updated'|trans,
+    'Order entry removed': 'admin.order.history.event.entry_removed'|trans,
+    'Comment added': 'admin.order.history.event.comment_added'|trans,
+    'Comment edited': 'admin.order.history.event.comment_edited'|trans,
+    'Comment deleted': 'admin.order.history.event.comment_deleted'|trans,
+} %}
+<div class="order-history-compact">
+    <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+        <h5 class="card-title mb-0">{{ 'History'|trans }}</h5>
+    </div>
+    <div class="order-discussion-scroll-frame order-history-compact__scroll-frame">
+        <div class="order-history-compact__scroll">
+            {% if latest_history %}
+                <div class="order-history-compact__entry border-start ps-3">
+                    <div class="d-flex justify-content-between gap-2">
+                        <strong>{{ history_title_map[latest_history.title]|default(latest_history.title) }}</strong>
+                        <span class="text-muted small">{{ latest_history.occurredAt|date('Y-m-d H:i') }}</span>
+                    </div>
+                    <div class="text-muted small">
+                        {{ latest_history.source }}
+                        {% if latest_history.actorName %} · {{ latest_history.actorName }}{% endif %}
+                    </div>
+                    {% if latest_history.changes.status is defined %}
+                        <div class="small">{% if latest_history.changes.status.from %}{{ h.status_label(latest_history.changes.status.from) }} → {% endif %}{{ h.status_label(latest_history.changes.status.to) }}</div>
+                    {% elseif latest_history.description %}
+                        <div class="small">{{ latest_history.description }}</div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <p class="text-muted small mb-0">{{ 'No history yet.'|trans }}</p>
+            {% endif %}
+
+            {% if remaining_history|length > 0 %}
+                <div class="collapse order-history-compact__collapse" id="{{ history_collapse_id }}">
+                    {{ include('admin/_components/document_history/_timeline.html.twig', {history_entries: remaining_history}) }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if remaining_history|length > 0 %}
+        <button
+                class="order-history-compact__toggle"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#{{ history_collapse_id }}"
+                aria-expanded="false"
+                aria-controls="{{ history_collapse_id }}"
+                aria-label="{{ 'admin.order.history.toggle'|trans }}"
+        >
+            <i class="fa-solid fa-chevron-down order-history-compact__toggle-icon--closed" aria-hidden="true"></i>
+            <i class="fa-solid fa-chevron-up order-history-compact__toggle-icon--open" aria-hidden="true"></i>
+        </button>
+    {% endif %}
 </div>

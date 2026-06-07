@@ -203,7 +203,7 @@ admin:
       new: 'New order'
       edit: 'Edit order'
     sections:
-      general: 'General settings'
+      general: 'Client and delivery'
       customer: 'Customer'
       customer_details: 'Customer details'
       delivery: 'Delivery'
@@ -238,6 +238,8 @@ admin:
       discount: 'Discount'
       discount_amount: 'Discount amount'
       manual_discount_percent: 'Manual %'
+      manual_discount_toggle: 'Manual discount'
+      delivery_address_placeholder: 'City, post office or street, building, apartment'
       availability: 'Availability'
     actions:
       confirm: 'Confirm'
@@ -258,6 +260,7 @@ admin:
       cancel: 'Cancel order?'
     empty:
       entries: 'No entries added yet.'
+      entries_hint: 'Use the search above to add products to the order.'
       products: 'No products.'
     summary:
       number: 'Order number'
@@ -274,7 +277,7 @@ admin:
       none: 'No discount'
     source:
       stock: 'Stock'
-      production: 'For production'
+      production: 'Make to order'
       preorder: 'Preorder'
       service: 'Service'
       material: 'Material'
@@ -285,6 +288,7 @@ admin:
       placeholder: 'Product name or code'
       available: 'Available'
       price: 'Price'
+      add: 'Add'
       details: 'Product details'
       copy_name: 'Copy product name'
       copy_code: 'Copy product code'
@@ -295,6 +299,29 @@ admin:
       batch_received_at: 'Batch received at'
     validation:
       insufficient_stock: 'Insufficient stock'
+    history:
+      toggle: 'Toggle full history'
+      event:
+        status_changed: 'Status changed'
+        created: 'Order created'
+        updated: 'Order updated'
+        customer_changed: 'Customer changed'
+        entry_added: 'Item added'
+        entry_updated: 'Item updated'
+        entry_removed: 'Item removed'
+        comment_added: 'Comment added'
+        comment_edited: 'Comment edited'
+        comment_deleted: 'Comment deleted'
+      discount_mode:
+        none: 'No discount'
+        rule: 'By rule'
+        manual_override: 'Manual'
+    comment_template:
+      customer_no_answer: 'No answer'
+      callback_needed: 'Call back'
+      customer_confirmed: 'Confirmed'
+      customer_clarify: 'Clarify details'
+      customer_declined: 'Declined'
   purchase:
     title:
       new: 'New purchase'

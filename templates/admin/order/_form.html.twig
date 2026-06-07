@@ -3,6 +3,18 @@
 
 <main class="content order-builder" {{ stimulus_controller('order-form product-search select-two') }} data-select-two-target="form">
     <div class="container-fluid p-0">
+        <div class="order-form-header" {{ stimulus_controller('unsaved-indicator', {formId: order_form_id}) }}>
+            <div class="order-form-header__main">
+                {% if entity.number %}
+                    <span class="order-form-header__number">{{ entity.number }}</span>
+                {% endif %}
+                {{ include('admin/_components/status/_badge.html.twig', {context: 'order', value: entity.statusValue}) }}
+            </div>
+            <span class="order-form-header__unsaved text-warning small d-none" {{ stimulus_target('unsaved-indicator', 'indicator') }}>
+                <i class="fa-solid fa-circle-exclamation me-1"></i>{{ 'admin.common.unsaved_changes'|trans }}
+            </span>
+        </div>
+
         {% if form.vars.errors|length > 0 %}
             <div class="form-error mb-3">
                 {{ form_errors(form) }}
@@ -10,7 +22,7 @@
         {% endif %}
 
         <div class="row g-3 align-items-start">
-            <div class="col-12 col-lg-6">
+            <div class="col-12 col-lg-5 col-xl-4">
                 {{ include('admin/order/_header_settings.html.twig', {order_form_id: order_form_id}) }}
 
                 {% if entity.id %}
@@ -23,7 +35,7 @@
             {{ form_start(form, {
                 attr: {
                     'id': order_form_id,
-                    'class': 'col-12 col-lg-6',
+                    'class': 'col-12 col-lg-7 col-xl-8',
                     'data-order-form-target': 'form',
                     'data-order-form-summary-url': path('app_api_admin_order_summary', {store_id: app.request.attributes.get('store_id')}),
                     'data-order-form-customer-search-url': path('app_api_admin_order_customer_search', {store_id: app.request.attributes.get('store_id')}),
@@ -48,9 +60,22 @@
             {{ form_end(form, {'render_rest': false}) }}
         </div>
 
+        {% set footer_summary %}
+            {% if entity.number %}<span class="order-form-footer__number">{{ entity.number }}</span>{% endif %}
+            <span class="order-form-footer__metric">
+                <span class="order-form-footer__label">{{ 'admin.order.summary.entry_count'|trans }}:</span>
+                <strong data-order-form-target="summaryCount">{{ form.orderEntries|length }}</strong>
+            </span>
+            <span class="order-form-footer__metric">
+                <span class="order-form-footer__label">{{ 'admin.order.fields.amount_to_pay'|trans }}:</span>
+                <strong data-order-form-target="summaryTotal">{{ entity.totalAmount ? entity.totalAmount|money : '0.00' }}</strong>
+                <span class="text-muted" data-order-currency-label>{{ entity.currency ? entity.currency.code : '' }}</span>
+            </span>
+        {% endset %}
+
         {{ include('admin/_components/_form_actions.html.twig', {
             cancel_url: path('app_admin_order_index', app.request.query.all|merge({store_id: app.request.attributes.get('store_id'), id: entity.id, page: order_index_page})),
-            context: entity.number,
+            summary: footer_summary,
             form_id: order_form_id
         }) }}
     </div>

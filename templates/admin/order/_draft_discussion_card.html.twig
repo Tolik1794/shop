@@ -4,8 +4,8 @@
     <div class="card mt-3">
         <div class="card-body">
             <h5 class="card-title mb-3">{{ 'Comments'|trans }}</h5>
-            <div class="order-discussion-scroll-frame">
-                <div class="order-discussion-scroll order-discussion-comments" data-draft-order-comments-target="list">
+            <div class="order-discussion-scroll-frame order-discussion-scroll-frame--compact">
+                <div class="order-discussion-scroll order-discussion-scroll--compact order-discussion-comments" data-draft-order-comments-target="list">
                     {% for draft_comment in form.draftComments %}
                         {{ include('admin/order/_draft_comment_item.html.twig', {
                             field_name: draft_comment.vars.full_name,
@@ -14,7 +14,7 @@
                         }) }}
                     {% endfor %}
 
-                    <p class="text-muted mb-0{% if form.draftComments|length > 0 %} d-none{% endif %}" data-draft-order-comments-target="emptyState">{{ 'No comments.'|trans }}</p>
+                    <p class="text-muted small mb-0{% if form.draftComments|length > 0 %} d-none{% endif %}" data-draft-order-comments-target="emptyState">{{ 'No comments.'|trans }}</p>
                 </div>
             </div>
 

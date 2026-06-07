@@ -1,3 +1,21 @@
+{% macro status_label(value) %}
+{%- set key = 'admin.status.order.' ~ value -%}
+{%- set label = key|trans -%}
+{{- label == key ? (value|replace({'_': ' '})|capitalize) : label -}}
+{% endmacro %}
+{% import _self as history_helpers %}
+{% set history_title_map = {
+	'Order status changed': 'admin.order.history.event.status_changed'|trans,
+	'Order created': 'admin.order.history.event.created'|trans,
+	'Order updated': 'admin.order.history.event.updated'|trans,
+	'Order customer changed': 'admin.order.history.event.customer_changed'|trans,
+	'Order entry added': 'admin.order.history.event.entry_added'|trans,
+	'Order entry updated': 'admin.order.history.event.entry_updated'|trans,
+	'Order entry removed': 'admin.order.history.event.entry_removed'|trans,
+	'Comment added': 'admin.order.history.event.comment_added'|trans,
+	'Comment edited': 'admin.order.history.event.comment_edited'|trans,
+	'Comment deleted': 'admin.order.history.event.comment_deleted'|trans,
+} %}
 <div class="order-discussion-scroll order-discussion-history">
 	{% set current_history_date = null %}
 	{% for history in history_entries %}
@@ -8,21 +26,28 @@
 		{% endif %}
 		<div class="border-start ps-3 mb-3">
 			<div class="d-flex justify-content-between gap-2">
-				<strong>{{ history.title }}</strong>
+				<strong>{{ history_title_map[history.title]|default(history.title) }}</strong>
 				<span class="text-muted small">{{ history.occurredAt|date('H:i') }}</span>
 			</div>
 			<div class="text-muted small">
 				{{ history.source }}
 				{% if history.actorName %} · {{ history.actorName }}{% endif %}
-				· {{ history.eventKey }}
 			</div>
-			{% if history.description %}
+			{% if history.description and history.changes.status is not defined %}
 				<div>{{ history.description }}</div>
 			{% endif %}
 			{% if history.changes %}
-				<ul class="small mb-0 mt-1">
+				<ul class="small mb-0 mt-1 order-history-changes">
 					{% for field, change in history.changes %}
-						<li>{{ field }}: {{ change.from is iterable ? change.from|json_encode : change.from }} → {{ change.to is iterable ? change.to|json_encode : change.to }}</li>
+						{% if field == 'status' %}
+							<li>{% if change.from is not empty %}{{ history_helpers.status_label(change.from) }} → {% endif %}{{ history_helpers.status_label(change.to) }}</li>
+						{% endif %}
+						{% if field == 'discountMode' %}
+							<li>{{ ('admin.order.history.discount_mode.' ~ (change.from ?: 'none'))|trans }} → {{ ('admin.order.history.discount_mode.' ~ (change.to ?: 'none'))|trans }}</li>
+						{% endif %}
+						{% if field != 'status' and field != 'discountMode' %}
+							<li>{{ field }}: {{ change.from is iterable ? change.from|json_encode : change.from }} → {{ change.to is iterable ? change.to|json_encode : change.to }}</li>
+						{% endif %}
 					{% endfor %}
 				</ul>
 			{% endif %}

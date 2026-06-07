@@ -55,7 +55,7 @@ class OrderType extends AbstractType
 				'attr' => [
 					'autocomplete' => 'off',
 					'inputmode' => 'tel',
-					'placeholder' => '+380XXXXXXXXX',
+					'placeholder' => '+380 XX XXX XX XX',
 					'pattern' => '(\\+?380|0)[\\s\\-\\(\\)]*\\d{2}[\\s\\-\\(\\)]*\\d{3}[\\s\\-\\(\\)]*\\d{2}[\\s\\-\\(\\)]*\\d{2}',
 					'data-order-form-target' => 'customerPhone',
 					'data-action' => 'input->order-form#customerChanged focus->order-form#customerPhoneFocused',

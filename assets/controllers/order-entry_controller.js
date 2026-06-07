@@ -17,28 +17,140 @@ export default class extends Controller {
         'unitPrice',
         'discountMode',
         'discountRule',
+        'discountSelect',
         'discountPercent',
         'discountAmount',
         'discountMeta',
         'lineTotal',
+        'manualDiscount',
+        'manualToggle',
     ]
 
     connect() {
-        this.syncDiscount(null)
+        this.normalizeQuantityInput()
+        this.normalizeUnitPriceInput()
+        this.normalizeManualPercentInput()
+        this.applyInitialDiscountState()
         this.recalculate()
         this.formatAvailable()
+        this.updateAvailabilityVisibility()
+    }
+
+    // Strip excess precision from the initial field values ("49600.0000" -> "49600",
+    // "10.0000" -> "10"). Display only: the values still submit/parse identically.
+    normalizeQuantityInput() {
+        if (!this.hasQuantityTarget || this.quantityTarget.value === '') {
+            return
+        }
+
+        this.quantityTarget.value = this.formatQuantity(
+            this.numberValue(this.quantityTarget.value),
+            this.element.dataset.unitPrecision || '4'
+        )
+    }
+
+    normalizeManualPercentInput() {
+        if (!this.hasDiscountPercentTarget || this.discountPercentTarget.value === '') {
+            return
+        }
+
+        this.discountPercentTarget.value = this.formatPercent(this.discountPercentTarget.value)
+    }
+
+    normalizeUnitPriceInput() {
+        if (!this.hasUnitPriceTarget || this.unitPriceTarget.value === '') {
+            return
+        }
+
+        this.unitPriceTarget.value = String(Number.parseFloat(this.numberValue(this.unitPriceTarget.value).toFixed(4)))
+    }
+
+    // Respect a pre-set discount mode on load: never silently reset a saved manual override
+    // to "none". Only re-derive the rule/none state from the select.
+    applyInitialDiscountState() {
+        if (this.hasDiscountModeTarget && this.discountModeTarget.value === 'manual_override') {
+            if (this.hasManualToggleTarget) {
+                this.manualToggleTarget.checked = true
+            }
+            if (this.hasDiscountSelectTarget) {
+                this.discountSelectTarget.classList.add('d-none')
+            }
+            if (this.hasManualDiscountTarget) {
+                this.manualDiscountTarget.classList.remove('d-none')
+            }
+
+            return
+        }
+
+        this.syncDiscount(null)
+    }
+
+    // Production lines have no warehouse stock, so hide the "Availability: 0" hint and show
+    // a neutral note instead, so the line does not look like an error.
+    updateAvailabilityVisibility() {
+        const isProduction = this.element.dataset.sourceType === 'production'
+        const avail = this.element.querySelector('.order-entry-head__avail')
+        const note = this.element.querySelector('.order-entry-head__production')
+
+        if (avail) {
+            avail.classList.toggle('d-none', isProduction)
+        }
+        if (note) {
+            note.classList.toggle('d-none', !isProduction)
+        }
     }
 
     changed(event) {
-        this.syncDiscount(event ? event.target : null)
+        const target = event ? event.target : null
+
+        this.syncDiscount(target)
         this.recalculate()
-        this.dispatch('changed', {detail: {row: this.element}})
+        this.dispatch('changed', {
+            detail: {
+                row: this.element,
+                productChanged: target === this.productTarget,
+            },
+        })
     }
 
     remove(event) {
         event.preventDefault()
         event.stopPropagation()
         this.dispatch('remove', {detail: {row: this.element}})
+    }
+
+    // Switch between rule-based discount (select) and manual override (percent input).
+    // When on: hide the select, show the input, set manual_override and clear the rule.
+    // When off: restore the select and re-derive the rule/none state.
+    toggleManualDiscount() {
+        const on = this.hasManualToggleTarget ? this.manualToggleTarget.checked : false
+
+        if (this.hasDiscountSelectTarget) {
+            this.discountSelectTarget.classList.toggle('d-none', on)
+        }
+        if (this.hasManualDiscountTarget) {
+            this.manualDiscountTarget.classList.toggle('d-none', !on)
+        }
+
+        if (on) {
+            if (this.hasDiscountModeTarget) {
+                this.discountModeTarget.value = 'manual_override'
+            }
+            if (this.hasDiscountRuleTarget) {
+                this.discountRuleTarget.value = ''
+            }
+            if (this.hasDiscountPercentTarget) {
+                this.discountPercentTarget.focus()
+            }
+        } else {
+            if (this.hasDiscountPercentTarget) {
+                this.discountPercentTarget.value = ''
+            }
+            this.syncDiscount(null)
+        }
+
+        this.recalculate()
+        this.dispatch('changed', {detail: {row: this.element, productChanged: false}})
     }
 
     recalculate() {
@@ -66,6 +178,15 @@ export default class extends Controller {
             return
         }
 
+        // While the manual switch is on, keep manual override regardless of which field changed
+        // (editing quantity/price must not silently reset the manual discount).
+        if (this.hasManualToggleTarget && this.manualToggleTarget.checked) {
+            this.discountModeTarget.value = 'manual_override'
+            this.discountRuleTarget.value = ''
+            this.updateDiscountMeta()
+            return
+        }
+
         if (target === this.discountPercentTarget && this.numberValue(this.discountPercentTarget.value) > 0) {
             this.discountModeTarget.value = 'manual_override'
             this.discountRuleTarget.value = ''
@@ -76,7 +197,7 @@ export default class extends Controller {
         const selectedRule = this.discountRuleTarget.selectedOptions[0]
         if (selectedRule && selectedRule.value) {
             this.discountModeTarget.value = 'rule'
-            this.discountPercentTarget.value = selectedRule.dataset.percent || ''
+            this.discountPercentTarget.value = selectedRule.dataset.percent ? this.formatPercent(selectedRule.dataset.percent) : ''
             this.updateDiscountMeta()
             return
         }
@@ -93,14 +214,20 @@ export default class extends Controller {
 
         const percent = this.numberValue(this.discountPercentTarget.value)
         if (this.discountModeTarget.value === 'manual_override' && percent > 0) {
-            this.discountMetaTarget.textContent = `${percent.toFixed(2)}%`
+            this.discountMetaTarget.textContent = `${this.formatPercent(this.discountPercentTarget.value)}%`
             return
         }
 
         const selectedRule = this.hasDiscountRuleTarget ? this.discountRuleTarget.selectedOptions[0] : null
         this.discountMetaTarget.textContent = selectedRule && selectedRule.value && selectedRule.dataset.percent
-            ? `${selectedRule.dataset.percent}%`
+            ? `${this.formatPercent(selectedRule.dataset.percent)}%`
             : ''
+    }
+
+    formatPercent(value) {
+        const number = this.numberValue(value)
+
+        return String(Number.parseFloat(number.toFixed(2)))
     }
 
     formatAvailable() {
@@ -140,6 +267,6 @@ export default class extends Controller {
             return String(Math.trunc(value))
         }
 
-        return value.toFixed(normalizedPrecision)
+        return value.toFixed(normalizedPrecision).replace(/\.?0+$/, '')
     }
 }

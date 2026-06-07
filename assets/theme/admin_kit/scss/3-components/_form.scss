@@ -53,3 +53,11 @@ button.eye-password {
   border-radius: $card-border-radius;
   box-shadow: 0 -0.25rem 0.5rem rgba($black, 0.05);
 }
+
+// Optional richer left-side summary (e.g. order number + live count/total).
+.form-actions__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.85rem;
+}
