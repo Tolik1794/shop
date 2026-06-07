@@ -52,6 +52,35 @@ class PurchaseIndexControllerTest extends WebTestCase
 		self::assertStringContainsString('class="sticky-top tab tab-card"', (string) $this->client->getResponse()->getContent());
 	}
 
+	public function testPurchaseFormUsesNavbarHeaderAndStickyActions(): void
+	{
+		$this->client->loginUser($this->createUser('purchase-form-layout-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('purchase-form-layout-store-' . uniqid());
+
+		$this->client->request('GET', sprintf('/admin/store/%d/purchase/new', $store->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('.navbar-page-header__title', 'New purchase');
+		self::assertSelectorTextContains('.navbar-page-header__breadcrumb', 'Purchases');
+		self::assertSelectorTextContains('.navbar-page-header__breadcrumb', 'New');
+		self::assertSelectorNotExists('main.content h1');
+		self::assertSelectorExists('#purchase-form > .form-actions');
+		self::assertSelectorTextContains('.form-actions', 'Save');
+		self::assertSelectorTextContains('.form-actions', 'Save and continue');
+		self::assertSelectorTextContains('.form-actions', 'Cancel');
+
+		$purchase = $this->createPurchase($store, 'PO-form-layout-' . uniqid(), 'Form Layout Supplier');
+
+		$this->client->request('GET', sprintf('/admin/store/%d/purchase/%d/edit', $store->getId(), $purchase->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('.navbar-page-header__title', 'Edit purchase');
+		self::assertSelectorTextContains('.navbar-page-header__subtitle', $purchase->getNumber());
+		self::assertSelectorTextContains('.navbar-page-header__breadcrumb', $purchase->getNumber());
+		self::assertSelectorNotExists('main.content h1');
+		self::assertSelectorExists('#purchase-form > .form-actions');
+	}
+
 	public function testPurchaseIndexQuickUnpaidFilterIncludesUnpaidAndPartiallyPaidPurchases(): void
 	{
 		$this->client->loginUser($this->createUser('purchase-index-quick-unpaid-admin-' . uniqid() . '@example.com'));

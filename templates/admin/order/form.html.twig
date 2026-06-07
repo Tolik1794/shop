@@ -3,19 +3,19 @@
 {% block title %}Order{% endblock %}
 
 {% block navbar_breadcrumb %}
-    {{ include('admin/_components/_breadcrumb.html.twig', {
-        breadcrumb_class: 'mb-0',
-        items: [
-            {
-                label: 'Orders',
-                url: entity.id
-                    ? path('app_admin_order_index', {store_id: app.request.attributes.get('store_id'), id: entity.id, page: order_index_page})
-                    : path('app_admin_order_index', {store_id: app.request.attributes.get('store_id')})
-            },
-            {
-                label: entity.id ? entity.number : 'New'
-            }
-        ]
+    {% set page_breadcrumb %}
+        {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+            section_label: 'Orders',
+            section_url: entity.id
+                ? path('app_admin_order_index', {store_id: app.request.attributes.get('store_id'), id: entity.id, page: order_index_page})
+                : path('app_admin_order_index', {store_id: app.request.attributes.get('store_id')}),
+            current_label: entity.id ? entity.number : 'New'
+        }) }}
+    {% endset %}
+    {{ include('admin/_components/_navbar_header.html.twig', {
+        title: entity.id ? 'admin.order.title.edit'|trans : 'admin.order.title.new'|trans,
+        subtitle: entity.number,
+        breadcrumb: page_breadcrumb
     }) }}
 {% endblock %}
 

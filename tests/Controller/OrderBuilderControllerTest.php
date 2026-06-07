@@ -55,9 +55,18 @@ class OrderBuilderControllerTest extends WebTestCase
 
 		self::assertResponseIsSuccessful();
 		self::assertSelectorTextContains('body', 'New order');
+		self::assertSelectorTextContains('.navbar-page-header__title', 'New order');
+		self::assertSelectorTextContains('.navbar-page-header__breadcrumb', 'Orders');
+		self::assertSelectorTextContains('.navbar-page-header__breadcrumb', 'New');
 		self::assertSelectorExists('[data-controller~="order-form"]');
 		self::assertSelectorExists('[data-controller~="draft-order-comments"]');
 		self::assertSelectorExists('[data-order-form-target="prototype"]');
+		self::assertSelectorExists('.order-builder > .container-fluid > .form-actions');
+		self::assertSelectorCount(2, '.form-actions button[type="submit"][form="order-form-new"]');
+		self::assertSelectorExists('.form-actions button[name="save"][value="stay"][form="order-form-new"]');
+		self::assertSelectorTextContains('.form-actions', 'Save');
+		self::assertSelectorTextContains('.form-actions', 'Save and continue');
+		self::assertSelectorTextContains('.form-actions', 'Cancel');
 	}
 
 	public function testOrderIndexShowsFiltersAboveListWithoutFilterTab(): void
@@ -585,8 +594,8 @@ class OrderBuilderControllerTest extends WebTestCase
 		$store = $this->createStore('order-builder-submit-store-' . uniqid());
 		$customer = $this->createCustomer($store);
 
-		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
-		$this->client->submitForm('Save', [
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
+		$this->client->submit($crawler->filter('#order-form-new')->form(), [
 			'order[customer]' => $customer->getId(),
 			'order[customerPhone]' => $customer->getPhone(),
 			'order[customerName]' => $customer->getName(),
@@ -643,8 +652,8 @@ class OrderBuilderControllerTest extends WebTestCase
 		$store = $this->createStore('order-builder-new-customer-store-' . uniqid());
 		$phone = '050 123-45-67';
 
-		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
-		$this->client->submitForm('Save', [
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
+		$this->client->submit($crawler->filter('#order-form-new')->form(), [
 			'order[customerPhone]' => $phone,
 			'order[customerName]' => 'Inline',
 			'order[customerLastName]' => 'Customer',
@@ -1207,6 +1216,10 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertInstanceOf(Order::class, $order);
 
 		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/edit', $store->getId(), $order->getId()));
+		self::assertSelectorTextContains('.navbar-page-header__title', 'Edit order');
+		self::assertSelectorTextContains('.navbar-page-header__subtitle', $order->getNumber());
+		self::assertSelectorTextContains('.navbar-page-header__breadcrumb', $order->getNumber());
+		self::assertSelectorCount(2, sprintf('.form-actions button[type="submit"][form="order-form-%d"]', $order->getId()));
 		self::assertSame('1', $crawler->filter('[data-order-entry-target~="quantity"]')->attr('value'));
 		$token = $crawler->filter('input[name="order[_token]"]')->attr('value');
 		$version = $crawler->filter('input[name="order[version]"]')->attr('value');
@@ -1242,8 +1255,8 @@ class OrderBuilderControllerTest extends WebTestCase
 		$store = $this->createStore('order-builder-edit-history-store-' . uniqid());
 		$customer = $this->createCustomer($store);
 
-		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
-		$this->client->submitForm('Save', [
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
+		$this->client->submit($crawler->filter('#order-form-new')->form(), [
 			'order[customer]' => $customer->getId(),
 			'order[customerPhone]' => $customer->getPhone(),
 			'order[customerName]' => $customer->getName(),
@@ -1279,8 +1292,8 @@ class OrderBuilderControllerTest extends WebTestCase
 		$store = $this->createStore('order-builder-index-comments-store-' . uniqid());
 		$customer = $this->createCustomer($store);
 
-		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
-		$this->client->submitForm('Save', [
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
+		$this->client->submit($crawler->filter('#order-form-new')->form(), [
 			'order[customer]' => $customer->getId(),
 			'order[customerPhone]' => $customer->getPhone(),
 			'order[customerName]' => $customer->getName(),
@@ -1309,8 +1322,8 @@ class OrderBuilderControllerTest extends WebTestCase
 		$store = $this->createStore('order-builder-edit-ajax-comment-store-' . uniqid());
 		$customer = $this->createCustomer($store);
 
-		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
-		$this->client->submitForm('Save', [
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
+		$this->client->submit($crawler->filter('#order-form-new')->form(), [
 			'order[customer]' => $customer->getId(),
 			'order[customerPhone]' => $customer->getPhone(),
 			'order[customerName]' => $customer->getName(),
@@ -1350,8 +1363,8 @@ class OrderBuilderControllerTest extends WebTestCase
 		$store = $this->createStore('order-builder-edit-ajax-update-comment-store-' . uniqid());
 		$customer = $this->createCustomer($store);
 
-		$this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
-		$this->client->submitForm('Save', [
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
+		$this->client->submit($crawler->filter('#order-form-new')->form(), [
 			'order[customer]' => $customer->getId(),
 			'order[customerPhone]' => $customer->getPhone(),
 			'order[customerName]' => $customer->getName(),

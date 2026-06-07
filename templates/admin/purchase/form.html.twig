@@ -3,35 +3,25 @@
 {% block title %}{{ 'admin.menu.purchases'|trans }}{% endblock %}
 
 {% block navbar_breadcrumb %}
-	{{ include('admin/_components/_breadcrumb.html.twig', {
-		breadcrumb_class: 'mb-0',
-		items: [
-			{
-				label: 'admin.menu.purchases'|trans,
-				url: entity.id
-					? path('app_admin_purchase_index', {store_id: app.request.attributes.get('store_id'), id: entity.id, page: purchase_index_page})
-					: path('app_admin_purchase_index', {store_id: app.request.attributes.get('store_id')})
-			},
-			{label: entity.id ? entity.number : 'admin.common.new'|trans}
-		]
+	{% set page_breadcrumb %}
+		{{ include('admin/_components/_resource_breadcrumb.html.twig', {
+			section_label: 'admin.menu.purchases'|trans,
+			section_url: entity.id
+				? path('app_admin_purchase_index', {store_id: app.request.attributes.get('store_id'), id: entity.id, page: purchase_index_page})
+				: path('app_admin_purchase_index', {store_id: app.request.attributes.get('store_id')}),
+			current_label: entity.id ? entity.number : 'admin.common.new'|trans
+		}) }}
+	{% endset %}
+	{{ include('admin/_components/_navbar_header.html.twig', {
+		title: entity.id ? 'admin.purchase.title.edit'|trans : 'admin.purchase.title.new'|trans,
+		subtitle: entity.number,
+		breadcrumb: page_breadcrumb
 	}) }}
 {% endblock %}
 
 {% block main_content %}
 	<main class="content" {{ stimulus_controller('purchase-form select-two') }}>
 		<div class="container-fluid p-0">
-			<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-				<div>
-					<h1 class="h3 mb-1">{{ entity.id ? 'admin.purchase.title.edit'|trans : 'admin.purchase.title.new'|trans }}</h1>
-					<div class="text-muted">{{ entity.number }}</div>
-				</div>
-				<div class="d-flex flex-wrap gap-2">
-					<button form="purchase-form" type="submit" class="btn btn-primary">{{ 'admin.common.save'|trans }}</button>
-					<button form="purchase-form" name="save" value="stay" type="submit" class="btn btn-outline-primary">{{ 'admin.common.save_as_draft'|trans }}</button>
-					<a href="{{ path('app_admin_purchase_index', app.request.query.all|merge({store_id: app.request.attributes.get('store_id'), id: entity.id, page: purchase_index_page})) }}" class="btn btn-light">{{ 'admin.common.cancel'|trans }}</a>
-				</div>
-			</div>
-
 			{% if form.vars.errors|length > 0 %}
 				<div class="form-error mb-3">
 					{{ form_errors(form) }}
@@ -106,6 +96,11 @@
 					{{ form_widget(form.version) }}
 					{{ form_widget(form._token) }}
 				{% endif %}
+
+				{{ include('admin/_components/_form_actions.html.twig', {
+					cancel_url: path('app_admin_purchase_index', app.request.query.all|merge({store_id: app.request.attributes.get('store_id'), id: entity.id, page: purchase_index_page})),
+					context: entity.number
+				}) }}
 			{{ form_end(form, {'render_rest': false}) }}
 		</div>
 	</main>

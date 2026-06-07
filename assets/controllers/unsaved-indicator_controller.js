@@ -3,22 +3,33 @@ import {Controller} from '@hotwired/stimulus'
 // Lightweight "unsaved changes" hint for the sticky action bar. Mirrors the dirty signal
 // already used by assets/admin/turbo-shell.js (input/change marks dirty, submit clears),
 // kept self-contained so it does not touch the shared navigation logic. The controller
-// lives on the action bar and binds to its surrounding <form>.
+// lives on the action bar and binds to its surrounding or explicitly associated <form>.
 export default class extends Controller {
     static targets = ['indicator']
+    static values = {formId: String}
 
     connect() {
-        this.form = this.element.closest('form')
+        const explicitFormId = this.hasFormIdValue ? this.formIdValue : ''
+
+        this.form = explicitFormId
+            ? document.getElementById(explicitFormId)
+            : this.element.closest('form')
+
         if (!this.form) {
             return
         }
 
+        this.changeEventSource = explicitFormId ? document : this.form
         this.dirty = false
-        this.onChange = () => this.markDirty()
+        this.onChange = (event) => {
+            if (event.target.form === this.form || this.form.contains(event.target)) {
+                this.markDirty()
+            }
+        }
         this.onSubmit = () => this.clear()
 
-        this.form.addEventListener('input', this.onChange)
-        this.form.addEventListener('change', this.onChange)
+        this.changeEventSource.addEventListener('input', this.onChange)
+        this.changeEventSource.addEventListener('change', this.onChange)
         this.form.addEventListener('submit', this.onSubmit)
     }
 
@@ -27,8 +38,8 @@ export default class extends Controller {
             return
         }
 
-        this.form.removeEventListener('input', this.onChange)
-        this.form.removeEventListener('change', this.onChange)
+        this.changeEventSource.removeEventListener('input', this.onChange)
+        this.changeEventSource.removeEventListener('change', this.onChange)
         this.form.removeEventListener('submit', this.onSubmit)
     }
 
