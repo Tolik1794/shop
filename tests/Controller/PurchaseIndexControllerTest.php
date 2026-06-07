@@ -49,6 +49,7 @@ class PurchaseIndexControllerTest extends WebTestCase
 		self::assertSelectorTextContains('.order-quick-filters', 'Returned');
 		self::assertSelectorExists('.order-filter-chips');
 		self::assertSelectorNotExists('.tab-search-link');
+		self::assertStringContainsString('class="sticky-top tab tab-card"', (string) $this->client->getResponse()->getContent());
 	}
 
 	public function testPurchaseIndexQuickUnpaidFilterIncludesUnpaidAndPartiallyPaidPurchases(): void
@@ -108,6 +109,42 @@ class PurchaseIndexControllerTest extends WebTestCase
 		self::assertSelectorTextContains('body', $supplierMatch->getNumber());
 		self::assertStringNotContainsString((string) $numberMatch->getNumber(), (string) $this->client->getResponse()->getContent());
 		self::assertStringNotContainsString((string) $otherPurchase->getNumber(), (string) $this->client->getResponse()->getContent());
+	}
+
+	public function testPurchaseShowPanelUsesCompactSummaryAndReadableSections(): void
+	{
+		$this->client->loginUser($this->createUser('purchase-show-polish-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('purchase-show-polish-store-' . uniqid());
+		$purchase = $this->createPurchase($store, 'PO-show-polish-' . uniqid(), 'Long Supplier Materials Company');
+		$paidPurchase = $this->createPurchase($store, 'PO-show-paid-' . uniqid(), 'Paid Supplier', PurchaseStatus::COMPLETED, PaymentStatusEnum::PAID);
+
+		$this->client->request('GET', sprintf('/admin/store/%d/purchase/?id=%d', $store->getId(), $purchase->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorNotExists('.purchase-show-card > .card-header');
+		self::assertSelectorExists('.purchase-show-actions form[data-action="submit->reload-card#submitQuickAction"]');
+		self::assertSelectorExists('.purchase-show-summary__number + .purchase-show-summary__statuses');
+		self::assertSelectorExists('.purchase-show-summary__supplier + .purchase-show-summary__total');
+		self::assertSelectorTextContains('.purchase-show-summary', (string) $purchase->getNumber());
+		self::assertSelectorTextContains('.purchase-show-summary', 'Long Supplier Materials Company');
+		self::assertStringNotContainsString('+380000000001', $this->client->getCrawler()->filter('.purchase-show-summary')->text());
+		self::assertSelectorTextContains('.purchase-show-supplier-fields', '+380000000001');
+		self::assertSelectorTextContains('.purchase-show-supplier-fields', 'supplier-');
+		self::assertSelectorTextContains('.order-show-payment-total--due', '100.00 UAH');
+		self::assertSelectorTextContains('.order-show-payment-total--paid', '0.00 UAH');
+		self::assertSelectorNotExists('.purchase-show-payment-totals--paid');
+		self::assertSelectorTextContains('.order-show-money-list', '100.00 UAH');
+		self::assertSelectorTextContains('.order-show-money-list', '0.00 UAH');
+		self::assertSelectorTextContains('body', 'Delivery cost');
+		self::assertSelectorTextContains('.purchase-show-product-total', '100.00 UAH');
+		self::assertSelectorTextContains('.purchase-show-product-sku', 'purchase-product-');
+
+		$this->client->request('GET', sprintf('/admin/store/%d/purchase/?id=%d', $store->getId(), $paidPurchase->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorExists('.purchase-show-payment-totals--paid');
+		self::assertSelectorTextContains('.order-show-payment-total--due', '0.00 UAH');
+		self::assertSelectorTextContains('.order-show-payment-total--paid', '100.00 UAH');
 	}
 
 	private function createUser(string $email): User

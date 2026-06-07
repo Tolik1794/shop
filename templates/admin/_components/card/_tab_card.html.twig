@@ -1,4 +1,5 @@
-<div class="sticky-top tab tab-card">
+{% set sticky = sticky is defined ? sticky : true %}
+<div class="{{ sticky ? 'sticky-top ' : '' }}tab tab-card">
     {% set active_tab_key = active_tab_key|default(0) %}
     {% set tab_keys = tab_keys|default([]) %}
     <ul class="nav nav-tabs" role="tablist">

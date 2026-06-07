@@ -528,6 +528,44 @@
 	border-top: 1px solid rgba($gray-200, .7);
 }
 
+.purchase-index-table {
+	.document-list-card {
+		gap: .35rem;
+	}
+
+	.document-list-card__header {
+		gap: .4rem;
+	}
+
+	.document-list-card__total {
+		font-size: 1.08rem;
+		font-weight: 750;
+	}
+
+	.document-list-card__badges {
+		margin-top: .15rem;
+	}
+
+	.document-list-card__items {
+		gap: .2rem;
+		padding-top: .35rem;
+	}
+
+	.document-list-card__item {
+		gap: 0;
+	}
+
+	.document-list-card__item-name {
+		font-size: .9rem;
+	}
+
+	.document-list-card__item-meta strong {
+		color: $gray-700;
+		font-size: .82rem;
+		font-weight: 600;
+	}
+}
+
 @media (max-width: 575.98px) {
 	.document-list-card__header {
 		grid-template-columns: minmax(0, 1fr);
@@ -656,6 +694,88 @@
 	}
 }
 
+.purchase-show-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .35rem;
+	justify-content: flex-end;
+	margin-bottom: .75rem;
+
+	.dropdown-menu form {
+		margin: 0;
+	}
+}
+
+.purchase-show-summary {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: .75rem 1rem;
+	padding: .85rem .9rem;
+
+	.order-show-summary__label {
+		color: $gray-500;
+		font-size: .74rem;
+		font-weight: 600;
+		letter-spacing: 0;
+		line-height: 1.1;
+	}
+
+	.order-show-summary__item strong {
+		overflow-wrap: normal;
+		word-break: normal;
+	}
+
+	.purchase-show-summary__number strong,
+	.purchase-show-summary__total strong {
+		color: $body-color;
+		font-weight: 750;
+	}
+
+	.purchase-show-summary__number strong {
+		font-size: 1rem;
+	}
+
+	.purchase-show-summary__statuses,
+	.purchase-show-summary__total {
+		text-align: right;
+	}
+
+	.purchase-show-summary__statuses {
+		justify-content: flex-end;
+		align-items: flex-start;
+	}
+
+	.purchase-show-summary__statuses .order-show-summary__statuses {
+		justify-content: flex-end;
+	}
+
+	.purchase-show-summary__supplier strong {
+		overflow-wrap: anywhere;
+	}
+
+	.purchase-show-summary__total strong {
+		font-size: 1.18rem;
+		letter-spacing: 0;
+	}
+}
+
+@media (max-width: 575.98px) {
+	.purchase-show-summary {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.purchase-show-summary {
+		.purchase-show-summary__statuses,
+		.purchase-show-summary__total {
+			text-align: left;
+		}
+
+		.purchase-show-summary__statuses,
+		.purchase-show-summary__statuses .order-show-summary__statuses {
+			justify-content: flex-start;
+		}
+	}
+}
+
 .order-show-grid {
 	display: grid;
 	gap: 1rem;
@@ -714,6 +834,18 @@
 	}
 }
 
+.purchase-show-supplier-fields {
+	div {
+		grid-template-columns: minmax(7rem, max-content) minmax(0, 1fr);
+	}
+
+	dd {
+		text-align: left;
+		overflow-wrap: anywhere;
+		word-break: normal;
+	}
+}
+
 .order-show-payment-totals {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
@@ -749,6 +881,31 @@
 .order-show-payment-total--paid {
 	border-color: rgba($primary, .2);
 	background: mix($primary, $white, 5%);
+}
+
+.purchase-show-payment-totals--paid {
+	.order-show-payment-total--due {
+		border-color: rgba($gray-300, .9);
+		background: mix($gray-100, $white, 55%);
+
+		strong {
+			color: $gray-600;
+			font-size: 1rem;
+			font-weight: 650;
+		}
+	}
+
+	.order-show-payment-total--paid {
+		border-color: rgba($primary, .28);
+		background: mix($primary, $white, 7%);
+		box-shadow: 0 .35rem .85rem rgba($primary, .08);
+
+		strong {
+			color: $primary;
+			font-size: 1.22rem;
+			font-weight: 750;
+		}
+	}
 }
 
 .order-show-payment-meta {
@@ -817,7 +974,7 @@
 .purchase-show-product-fields {
 	display: grid;
 	gap: .35rem .75rem;
-	grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
 	margin: .65rem 0 0;
 	color: $text-muted;
 	font-size: $font-size-sm;
@@ -841,8 +998,42 @@
 }
 
 .purchase-show-product-card {
+	display: grid;
+	gap: .5rem;
+
 	.order-show-product-name {
-		overflow-wrap: anywhere;
+		overflow-wrap: normal;
+		word-break: normal;
+	}
+}
+
+.purchase-show-product-header {
+	display: grid;
+	gap: .75rem;
+	grid-template-columns: minmax(0, 1fr) max-content;
+	align-items: start;
+}
+
+.purchase-show-product-sku {
+	margin-top: .1rem;
+	overflow-wrap: anywhere;
+	word-break: normal;
+}
+
+.purchase-show-product-total {
+	font-variant-numeric: tabular-nums;
+	line-height: 1.2;
+	text-align: right;
+	white-space: nowrap;
+}
+
+@media (max-width: 575.98px) {
+	.purchase-show-product-header {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.purchase-show-product-total {
+		text-align: left;
 	}
 }
 

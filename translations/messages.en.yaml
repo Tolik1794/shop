@@ -324,6 +324,7 @@ admin:
         completed: 'Completed'
     fields:
       amount_to_pay: 'Amount to pay'
+      delivery_cost: 'Delivery cost'
       exchange_rate: 'Exchange rate'
       paid_amount: 'Paid'
       unit: 'Unit'

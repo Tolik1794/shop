@@ -347,6 +347,7 @@ admin:
         completed: 'Завершені'
     fields:
       amount_to_pay: 'До сплати'
+      delivery_cost: 'Вартість доставки'
       exchange_rate: 'Курс обміну'
       paid_amount: 'Сплачено'
       unit: 'Одиниця'

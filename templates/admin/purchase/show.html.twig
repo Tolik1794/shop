@@ -1,6 +1,7 @@
 {% set empty_text = 'Not specified'|trans %}
 {% set dash_text = '—' %}
 {% set currency_code = entity.currency ? entity.currency.code : dash_text %}
+{% set base_currency_code = entity.store.baseCurrency ? entity.store.baseCurrency.code : currency_code %}
 {% set supplier_name = entity.supplierNameSnapshot|default('')|trim %}
 {% set supplier_phone = entity.supplierPhoneSnapshot|default('')|trim %}
 {% set supplier_email = entity.supplierEmailSnapshot|default('')|trim %}
@@ -51,52 +52,57 @@
 		</form>
 	{% endif %}
 {% endset %}
-{% set show_more_actions = secondary_actions|trim or not primary_action|trim %}
-{% set header_badges %}
-	{{ include('admin/_components/status/_badge.html.twig', {context: 'purchase', value: entity.status.value}) }}
-	{{ include('admin/_components/status/_badge.html.twig', {context: 'payment', value: entity.paymentStatus.value}) }}
-{% endset %}
+{% set show_more_actions = secondary_actions|trim ? true : false %}
 
 <div class="card show-card purchase-show-card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
-	{{ include('admin/_components/show_card/_header.html.twig', {
-		title: entity.number,
-		subtitle: supplier_name,
-		badges: header_badges,
-		primary_action: primary_action,
-		secondary_actions: secondary_actions,
-		show_more: show_more_actions
-	}) }}
 	<div class="card-body">
-		<div class="order-show-summary">
-			<div class="order-show-summary__item order-show-summary__item--identity">
+		{% if primary_action|trim or show_more_actions %}
+			<div class="purchase-show-actions">
+				{{ primary_action|raw }}
+				{% if show_more_actions %}
+					<div class="dropdown">
+						<button class="btn btn-light btn-sm show-card-header__more"
+						        type="button"
+						        data-bs-toggle="dropdown"
+						        aria-expanded="false"
+						        title="{{ 'admin.common.actions'|trans }}"
+						        aria-label="{{ 'admin.common.actions'|trans }}">
+							<i class="fa-solid fa-ellipsis"></i>
+						</button>
+						<div class="dropdown-menu dropdown-menu-end">
+							{{ secondary_actions|raw }}
+						</div>
+					</div>
+				{% endif %}
+			</div>
+		{% endif %}
+
+		<div class="order-show-summary purchase-show-summary">
+			<div class="order-show-summary__item order-show-summary__item--identity purchase-show-summary__number">
 				<span class="order-show-summary__label">{{ 'admin.purchase.summary.number'|trans }}</span>
 				<strong>{{ entity.number }}</strong>
 			</div>
-			<div class="order-show-summary__item">
-				<span class="order-show-summary__label">{{ 'admin.purchase.summary.supplier'|trans }}</span>
-				<strong>{{ supplier_name is not empty ? supplier_name : empty_text }}</strong>
-			</div>
-			<div class="order-show-summary__item">
-				<span class="order-show-summary__label">{{ 'admin.common.phone'|trans }}</span>
-				<strong>{{ supplier_phone is not empty ? supplier_phone : empty_text }}</strong>
-			</div>
-			<div class="order-show-summary__item order-show-summary__item--amount">
-				<span class="order-show-summary__label">{{ 'admin.purchase.summary.total'|trans }}</span>
-				<strong>{{ entity.totalAmount|money }} {{ currency_code }}</strong>
-			</div>
-			<div class="order-show-summary__item order-show-summary__item--statuses order-show-summary__item--wide">
+			<div class="order-show-summary__item order-show-summary__item--statuses purchase-show-summary__statuses">
 				<span class="order-show-summary__label">{{ 'admin.purchase.summary.statuses'|trans }}</span>
 				<strong class="order-show-summary__statuses">
 					{{ include('admin/_components/status/_badge.html.twig', {context: 'purchase', value: entity.status.value}) }}
 					{{ include('admin/_components/status/_badge.html.twig', {context: 'payment', value: entity.paymentStatus.value}) }}
 				</strong>
 			</div>
+			<div class="order-show-summary__item purchase-show-summary__supplier">
+				<span class="order-show-summary__label">{{ 'admin.purchase.summary.supplier'|trans }}</span>
+				<strong>{{ supplier_name is not empty ? supplier_name : empty_text }}</strong>
+			</div>
+			<div class="order-show-summary__item order-show-summary__item--amount purchase-show-summary__total">
+				<span class="order-show-summary__label">{{ 'admin.purchase.summary.total'|trans }}</span>
+				<strong>{{ entity.totalAmount|money }} {{ currency_code }}</strong>
+			</div>
 		</div>
 
 		<div class="order-show-grid">
 			<section class="order-show-section">
 				<h6>{{ 'admin.purchase.sections.supplier'|trans }}</h6>
-				<dl class="order-show-fields">
+				<dl class="order-show-fields purchase-show-supplier-fields">
 					<div>
 						<dt>{{ 'Supplier'|trans }}</dt>
 						<dd>{{ supplier_name is not empty ? supplier_name : empty_text }}</dd>
@@ -128,14 +134,14 @@
 
 			<section class="order-show-section">
 				<h6>{{ 'admin.purchase.sections.payment'|trans }}</h6>
-				<div class="order-show-payment-totals">
+				<div class="order-show-payment-totals purchase-show-payment-totals{{ entity.paymentStatus.value == 'paid' ? ' purchase-show-payment-totals--paid' : '' }}">
 					<div class="order-show-payment-total order-show-payment-total--due">
 						<span>{{ 'admin.purchase.fields.amount_to_pay'|trans }}</span>
-						<strong>{{ amount_due_base|money }}</strong>
+						<strong>{{ amount_due_base|money }} {{ base_currency_code }}</strong>
 					</div>
 					<div class="order-show-payment-total order-show-payment-total--paid">
 						<span>{{ 'admin.purchase.fields.paid_amount'|trans }}</span>
-						<strong>{{ entity.paidAmountBase|money }}</strong>
+						<strong>{{ entity.paidAmountBase|money }} {{ base_currency_code }}</strong>
 					</div>
 				</div>
 				<dl class="order-show-money-list order-show-payment-meta">
@@ -153,11 +159,11 @@
 					</div>
 					<div>
 						<dt>{{ 'Amount base'|trans }}</dt>
-						<dd>{{ entity.totalAmountBase|money }}</dd>
+						<dd>{{ entity.totalAmountBase|money }} {{ base_currency_code }}</dd>
 					</div>
 					<div>
 						<dt>{{ 'Paid amount base'|trans }}</dt>
-						<dd>{{ entity.paidAmountBase|money }}</dd>
+						<dd>{{ entity.paidAmountBase|money }} {{ base_currency_code }}</dd>
 					</div>
 					<div>
 						<dt>{{ 'Paid at'|trans }}</dt>
@@ -170,7 +176,7 @@
 				<h6>{{ 'admin.purchase.sections.delivery'|trans }}</h6>
 				<dl class="order-show-money-list">
 					<div>
-						<dt>{{ 'Delivery'|trans }}</dt>
+						<dt>{{ 'admin.purchase.fields.delivery_cost'|trans }}</dt>
 						<dd>{{ entity.deliveryCost is not null ? entity.deliveryCost|money ~ ' ' ~ currency_code : empty_text }}</dd>
 					</div>
 				</dl>
@@ -186,40 +192,35 @@
 							{% set unit_code = entry.unitCodeSnapshot|default('')|trim %}
 							{% set quantity_label = entry.quantity|quantity(entry.product) %}
 							<div class="order-show-product-card purchase-show-product-card">
-								<div class="order-show-product-main">
-									<div class="order-show-product-heading">
-										<strong class="order-show-product-name">{{ product_name is not empty ? product_name : empty_text }}</strong>
+								<div class="purchase-show-product-header">
+									<div class="order-show-product-main">
+										<div class="order-show-product-heading">
+											<strong class="order-show-product-name">{{ product_name is not empty ? product_name : empty_text }}</strong>
+										</div>
+										{% if product_code is not empty %}
+											<div class="text-muted small purchase-show-product-sku">{{ product_code }}</div>
+										{% endif %}
 									</div>
-									{% if product_code is not empty %}
-										<div class="text-muted small">{{ product_code }}</div>
-									{% endif %}
-									<dl class="purchase-show-product-fields">
-										<div>
-											<dt>{{ 'Warehouse'|trans }}</dt>
-											<dd>{{ entry.warehouse ? entry.warehouse.name : empty_text }}</dd>
-										</div>
-										<div>
-											<dt>{{ 'Quantity'|trans }}</dt>
-											<dd>{{ quantity_label }}</dd>
-										</div>
-										<div>
-											<dt>{{ 'admin.purchase.fields.unit'|trans }}</dt>
-											<dd>{{ unit_code is not empty ? unit_code : empty_text }}</dd>
-										</div>
-										<div>
-											<dt>{{ 'Unit cost'|trans }}</dt>
-											<dd>{{ entry.unitCost|money }} {{ currency_code }}</dd>
-										</div>
-										<div>
-											<dt>{{ 'Delivery'|trans }}</dt>
-											<dd>{{ entry.deliveryCost is not null ? entry.deliveryCost|money ~ ' ' ~ currency_code : dash_text }}</dd>
-										</div>
-										<div>
-											<dt>{{ 'Total'|trans }}</dt>
-											<dd>{{ entry.totalCost|money }} {{ currency_code }}</dd>
-										</div>
-									</dl>
+									<strong class="purchase-show-product-total">{{ entry.totalCost|money }} {{ currency_code }}</strong>
 								</div>
+								<dl class="purchase-show-product-fields">
+									<div>
+										<dt>{{ 'Warehouse'|trans }}</dt>
+										<dd>{{ entry.warehouse ? entry.warehouse.name : empty_text }}</dd>
+									</div>
+									<div>
+										<dt>{{ 'Quantity'|trans }}</dt>
+										<dd>{{ quantity_label }}{{ unit_code is not empty ? ' ' ~ unit_code : '' }}</dd>
+									</div>
+									<div>
+										<dt>{{ 'Unit cost'|trans }}</dt>
+										<dd>{{ entry.unitCost|money }} {{ currency_code }}</dd>
+									</div>
+									<div>
+										<dt>{{ 'Delivery'|trans }}</dt>
+										<dd>{{ entry.deliveryCost is not null ? entry.deliveryCost|money ~ ' ' ~ currency_code : dash_text }}</dd>
+									</div>
+								</dl>
 							</div>
 						{% endfor %}
 					</div>
