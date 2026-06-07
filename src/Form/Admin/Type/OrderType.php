@@ -114,15 +114,7 @@ class OrderType extends AbstractType
 				'label' => false,
 			])
 			->add('draftComments', CollectionType::class, [
-				'entry_type' => HiddenType::class,
-				'entry_options' => [
-					'constraints' => [
-						new NotBlank([
-							'message' => 'Order comment must not be blank.',
-							'normalizer' => 'trim',
-						]),
-					],
-				],
+				'entry_type' => OrderDraftCommentType::class,
 				'allow_add' => true,
 				'allow_delete' => true,
 				'mapped' => false,

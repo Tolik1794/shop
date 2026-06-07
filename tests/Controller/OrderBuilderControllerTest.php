@@ -22,6 +22,7 @@ use App\Entity\User\User;
 use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
 use App\Entity\WarehouseStockBatch;
+use App\Enum\CommentTypeEnum;
 use App\Enum\OrderDiscountModeEnum;
 use App\Enum\PaymentDirectionEnum;
 use App\Enum\PaymentStatusEnum;
@@ -61,6 +62,11 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSelectorTextContains('.navbar-page-header__breadcrumb', 'New');
 		self::assertSelectorExists('[data-controller~="order-form"]');
 		self::assertSelectorExists('[data-controller~="draft-order-comments"]');
+		self::assertSelectorExists('[data-controller~="draft-order-comments"] .order-discussion-scroll-frame');
+		self::assertSelectorExists('[data-controller~="draft-order-comments"] [data-draft-order-comments-target~="newType"]');
+		self::assertSelectorExists('[data-controller~="draft-order-comments"] [data-draft-order-comments-target~="newImportant"]');
+		self::assertSelectorExists('[data-controller~="draft-order-comments"] .order-comment-template-chip');
+		self::assertSelectorNotExists('.order-discussion-scroll-frame--compact');
 		self::assertSelectorExists('[data-order-form-target="prototype"]');
 		self::assertSelectorExists('.order-builder > .container-fluid > .form-actions');
 		self::assertSelectorCount(2, '.form-actions button[type="submit"][form="order-form-new"]');
@@ -628,7 +634,11 @@ class OrderBuilderControllerTest extends WebTestCase
 				'customerName' => $customer->getName(),
 				'customerLastName' => $customer->getLastName(),
 				'currency' => $store->getBaseCurrency()?->getCode(),
-				'draftComments' => ['Created with the order'],
+				'draftComments' => [[
+					'body' => 'Created with the order',
+					'type' => 'warehouse',
+					'important' => '1',
+				]],
 				'_token' => $token,
 			],
 		]);
@@ -641,10 +651,45 @@ class OrderBuilderControllerTest extends WebTestCase
 		]);
 
 		self::assertInstanceOf(Order::class, $order);
-		self::assertNotNull($this->entityManager->getRepository(OrderComment::class)->findOneBy([
+		$comment = $this->entityManager->getRepository(OrderComment::class)->findOneBy([
 			'order' => $order,
 			'body' => 'Created with the order',
-		]));
+		]);
+		self::assertInstanceOf(OrderComment::class, $comment);
+		self::assertSame(CommentTypeEnum::WAREHOUSE, $comment->getType());
+		self::assertTrue($comment->isImportant());
+	}
+
+	public function testNewOrderBuilderRendersStructuredDraftCommentAfterInvalidSubmit(): void
+	{
+		$this->client->loginUser($this->createUser('order-builder-invalid-draft-comment-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-builder-invalid-draft-comment-store-' . uniqid());
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
+		$token = $crawler->filter('input[name="order[_token]"]')->attr('value');
+
+		$this->client->request('POST', sprintf('/admin/store/%d/order/new', $store->getId()), [
+			'order' => [
+				'customerPhone' => '',
+				'customerName' => '',
+				'customerLastName' => '',
+				'currency' => $store->getBaseCurrency()?->getCode(),
+				'draftComments' => [[
+					'body' => 'Draft survives invalid submit',
+					'type' => 'accounting',
+					'important' => '1',
+				]],
+				'_token' => $token,
+			],
+		]);
+
+		self::assertResponseStatusCodeSame(422);
+		self::assertSelectorTextContains('[data-draft-order-comments-item]', 'Draft survives invalid submit');
+		self::assertSelectorTextContains('[data-draft-order-comments-item] [data-draft-order-comments-meta]', 'Accounting');
+		self::assertSelectorTextContains('[data-draft-order-comments-item] [data-draft-order-comments-meta]', 'Important');
+		self::assertSelectorExists('[data-draft-order-comments-field-name="body"][value="Draft survives invalid submit"]');
+		self::assertSelectorExists('[data-draft-order-comments-field-name="type"][value="accounting"]');
+		self::assertSelectorExists('[data-draft-order-comments-field-name="important"][value="1"]');
 	}
 
 	public function testNewOrderBuilderFormCreatesCustomerWhenCustomerIsNotSelected(): void

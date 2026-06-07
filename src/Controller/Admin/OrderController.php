@@ -173,6 +173,7 @@ class OrderController extends AbstractAdvancedController
 					'entity' => $order,
 					'form' => $form,
 					'order_index_page' => null,
+					...$this->getDraftDiscussionViewData(),
 				], new Response(status: Response::HTTP_CONFLICT));
 			} catch (RuntimeException $exception) {
 				$form->addError(new FormError($exception->getMessage()));
@@ -181,6 +182,7 @@ class OrderController extends AbstractAdvancedController
 					'entity' => $order,
 					'form' => $form,
 					'order_index_page' => null,
+					...$this->getDraftDiscussionViewData(),
 				]);
 			}
 
@@ -196,6 +198,7 @@ class OrderController extends AbstractAdvancedController
 			'entity' => $order,
 			'form' => $form,
 			'order_index_page' => null,
+			...$this->getDraftDiscussionViewData(),
 		]);
 	}
 
@@ -737,9 +740,30 @@ class OrderController extends AbstractAdvancedController
 			return;
 		}
 
-		foreach ((array) $form->get('draftComments')->getData() as $body) {
-			$this->orderCommentManager->create($order, $user, (string) $body);
+		foreach ((array) $form->get('draftComments')->getData() as $comment) {
+			if (!is_array($comment)) {
+				continue;
+			}
+
+			$this->orderCommentManager->create(
+				$order,
+				$user,
+				(string) ($comment['body'] ?? ''),
+				CommentTypeEnum::tryFrom((string) ($comment['type'] ?? '')) ?? CommentTypeEnum::GENERAL,
+				filter_var($comment['important'] ?? false, FILTER_VALIDATE_BOOL),
+			);
 		}
+	}
+
+	/**
+	 * @return array{comment_templates: array, comment_types: array}
+	 */
+	private function getDraftDiscussionViewData(): array
+	{
+		return [
+			'comment_templates' => $this->commentTemplateProvider->templates(),
+			'comment_types' => CommentTypeEnum::cases(),
+		];
 	}
 
 	private function denyOrderOutsideStore(Order $order, Store $store): void

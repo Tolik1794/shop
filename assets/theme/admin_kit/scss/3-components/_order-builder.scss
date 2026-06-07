@@ -121,10 +121,6 @@
 		}
 	}
 
-	.order-draft-comment-body {
-		white-space: pre-line;
-	}
-
 	.order-product-search,
 	.order-customer-search {
 		position: relative;
@@ -580,18 +576,7 @@
 		color: $primary;
 	}
 
-	// --- Compact draft comments + history ---
-	.order-discussion-scroll-frame--compact::after {
-		display: none;
-	}
-
-	.order-discussion-scroll--compact {
-		height: auto;
-		max-height: 220px;
-		overflow-y: auto;
-		padding: .6rem .75rem;
-	}
-
+	// --- Compact history ---
 	.order-history-compact__entry {
 		border-color: rgba($primary, .35) !important;
 	}

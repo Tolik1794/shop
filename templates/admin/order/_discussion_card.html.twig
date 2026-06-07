@@ -1,13 +1,18 @@
-<div class="order-discussion" {{ stimulus_controller('order-discussion') }}>
+{% set is_draft = not entity.id %}
+<div class="order-discussion"
+     {{ stimulus_controller(is_draft ? 'draft-order-comments' : 'order-discussion') }}
+     {% if is_draft %}data-draft-order-comments-next-index-value="{{ form.draftComments|length }}"{% endif %}>
     <div class="card mt-3">
         <div class="card-body">
-            {{ include('admin/order/_comments.html.twig') }}
+            {{ include('admin/order/_comments.html.twig', {is_draft: is_draft, order_form_id: order_form_id|default('')}) }}
         </div>
     </div>
 
-    <div class="card mt-3">
-        <div class="card-body">
-            {{ include('admin/order/_history.html.twig') }}
+    {% if not is_draft %}
+        <div class="card mt-3">
+            <div class="card-body">
+                {{ include('admin/order/_history.html.twig') }}
+            </div>
         </div>
-    </div>
+    {% endif %}
 </div>

@@ -25,11 +25,7 @@
             <div class="col-12 col-lg-5 col-xl-4">
                 {{ include('admin/order/_header_settings.html.twig', {order_form_id: order_form_id}) }}
 
-                {% if entity.id %}
-                    {{ include('admin/order/_discussion_card.html.twig') }}
-                {% else %}
-                    {{ include('admin/order/_draft_discussion_card.html.twig', {order_form_id: order_form_id}) }}
-                {% endif %}
+                {{ include('admin/order/_discussion_card.html.twig', {order_form_id: order_form_id}) }}
             </div>
 
             {{ form_start(form, {

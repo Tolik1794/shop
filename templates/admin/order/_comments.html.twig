@@ -1,8 +1,67 @@
+{% macro draft_item(comment, order_form_id, comment_types, author) %}
+    {% set body = comment.body.vars.value|default('') %}
+    {% set type = comment.type.vars.value|default('general') %}
+    {% set is_important = comment.important.vars.value|default(false) in [true, 1, '1'] %}
+    <div class="border-start ps-3 mb-3 {{ is_important ? 'order-comment--important border-danger border-2 bg-danger-subtle rounded' : '' }}" data-draft-order-comments-item>
+        {{ form_widget(comment.body, {attr: {form: order_form_id, 'data-draft-order-comments-field': '', 'data-draft-order-comments-field-name': 'body'}}) }}
+        {{ form_widget(comment.type, {attr: {form: order_form_id, 'data-draft-order-comments-field': '', 'data-draft-order-comments-field-name': 'type'}}) }}
+        {{ form_widget(comment.important, {attr: {form: order_form_id, 'data-draft-order-comments-field': '', 'data-draft-order-comments-field-name': 'important'}}) }}
+        <div class="d-flex justify-content-between align-items-start gap-2">
+            <div>
+                <strong>{{ author }}</strong>
+                <span class="text-muted small">· {{ 'not saved yet'|trans }}</span>
+                <div class="mt-1" data-draft-order-comments-meta data-important-label="{{ 'Important'|trans }}">
+                    {{ include('admin/_components/comment/_meta.html.twig', {type: type, is_important: is_important}) }}
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-link btn-sm p-0 text-muted"
+                        title="{{ 'Edit comment'|trans }}" aria-label="{{ 'Edit comment'|trans }}"
+                        data-action="click->draft-order-comments#toggleEdit">
+                    <i class="fa-solid fa-pen"></i>
+                </button>
+                <button type="button" class="btn btn-link btn-sm p-0 text-danger"
+                        title="{{ 'Delete comment'|trans }}" aria-label="{{ 'Delete comment'|trans }}"
+                        data-confirm="Delete comment?" data-action="click->draft-order-comments#remove">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        <div data-draft-order-comments-body>{{ body }}</div>
+        <form class="d-none mt-2" data-action="submit->draft-order-comments#saveEdit" data-draft-order-comments-edit-form>
+            <textarea class="form-control form-control-sm mb-2" rows="2" required data-draft-order-comments-edit-body>{{ body }}</textarea>
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                <select class="form-select form-select-sm w-auto" data-draft-order-comments-edit-type>
+                    {% for comment_type in comment_types %}
+                        <option value="{{ comment_type.value }}" {{ type == comment_type.value ? 'selected' : '' }}>{{ ('comment_type.' ~ comment_type.value)|trans }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="{{ comment.vars.id }}_edit_important"
+                           data-draft-order-comments-edit-important {{ is_important ? 'checked' : '' }}>
+                    <label class="form-check-label" for="{{ comment.vars.id }}_edit_important">{{ 'Important'|trans }}</label>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-light btn-sm" type="submit">{{ 'Save edit'|trans }}</button>
+                <button class="btn btn-link btn-sm" type="button" data-action="click->draft-order-comments#toggleEdit">{{ 'Cancel'|trans }}</button>
+            </div>
+        </form>
+    </div>
+{% endmacro %}
+{% import _self as comments_helpers %}
+{% set is_draft = is_draft|default(false) %}
+{% set comment_id_suffix = entity.id ?: 'new' %}
+
 <h5 class="card-title mb-3">{{ 'Comments'|trans }}</h5>
 
-<form method="post" action="{{ path('app_admin_order_comment_add', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="mb-3" data-action="submit->order-discussion#submit">
-    <input type="hidden" name="_token" value="{{ csrf_token('add_order_comment_' ~ entity.id) }}">
-    <label for="order-comment-body-{{ entity.id }}" class="form-label">{{ 'Add comment'|trans }}</label>
+{% if is_draft %}
+    <form class="mb-3" data-action="submit->draft-order-comments#add">
+{% else %}
+    <form method="post" action="{{ path('app_admin_order_comment_add', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}" class="mb-3" data-action="submit->order-discussion#submit">
+        <input type="hidden" name="_token" value="{{ csrf_token('add_order_comment_' ~ entity.id) }}">
+{% endif %}
+    <label for="order-comment-body-{{ comment_id_suffix }}" class="form-label">{{ 'Add comment'|trans }}</label>
     {% if comment_templates|default([]) %}
         <div class="order-comment-template-chips d-flex flex-wrap gap-1 mb-2" aria-label="{{ 'Comment templates'|trans }}">
             {% for template in comment_templates %}
@@ -10,9 +69,8 @@
                 {% if chip_label == 'admin.order.comment_template.' ~ template.key %}
                     {% set chip_label = template.label|trans %}
                 {% endif %}
-                <button type="button"
-                        class="order-comment-template-chip"
-                        data-action="order-discussion#applyTemplate"
+                <button type="button" class="order-comment-template-chip"
+                        data-action="{{ is_draft ? 'draft-order-comments#applyTemplate' : 'order-discussion#applyTemplate' }}"
                         data-template-body="{{ template.body|trans }}"
                         data-template-type="{{ template.type.value }}"
                         data-template-important="{{ template.important ? '1' : '0' }}"
@@ -22,98 +80,86 @@
             {% endfor %}
         </div>
     {% endif %}
-    <textarea id="order-comment-body-{{ entity.id }}" name="body" data-order-discussion-target="body" class="form-control mb-2" rows="3" required></textarea>
+    <textarea id="order-comment-body-{{ comment_id_suffix }}" {{ (is_draft ? '' : 'name="body"')|raw }}
+              class="form-control mb-2" rows="3" required
+              {{ (is_draft ? 'data-draft-order-comments-target="newBody"' : 'data-order-discussion-target="body"')|raw }}></textarea>
     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-        <select name="type" class="form-select form-select-sm w-auto" data-order-discussion-target="type">
+        <select {{ (is_draft ? '' : 'name="type"')|raw }} class="form-select form-select-sm w-auto"
+                {{ (is_draft ? 'data-draft-order-comments-target="newType"' : 'data-order-discussion-target="type"')|raw }}>
             {% for comment_type in comment_types %}
                 <option value="{{ comment_type.value }}">{{ ('comment_type.' ~ comment_type.value)|trans }}</option>
             {% endfor %}
         </select>
         <div class="form-check">
-            <input class="form-check-input" type="checkbox" name="important" value="1" id="order-comment-important-{{ entity.id }}" data-order-discussion-target="important">
-            <label class="form-check-label" for="order-comment-important-{{ entity.id }}">{{ 'Important'|trans }}</label>
+            <input class="form-check-input" type="checkbox" {{ (is_draft ? '' : 'name="important" value="1"')|raw }}
+                   id="order-comment-important-{{ comment_id_suffix }}"
+                   {{ (is_draft ? 'data-draft-order-comments-target="newImportant"' : 'data-order-discussion-target="important"')|raw }}>
+            <label class="form-check-label" for="order-comment-important-{{ comment_id_suffix }}">{{ 'Important'|trans }}</label>
         </div>
     </div>
     <button class="btn btn-primary btn-sm" type="submit">{{ 'Add comment'|trans }}</button>
+    {% if is_draft %}<span class="text-muted small ms-2">{{ 'Will be saved together with the order.'|trans }}</span>{% endif %}
 </form>
 
 <div class="order-discussion-scroll-frame">
-    <div class="order-discussion-scroll order-discussion-comments">
-        {% set current_comment_date = null %}
-        {% for comment in comments %}
-            {% set comment_date = comment.createdAt|date('Y-m-d') %}
-            {% if comment_date != current_comment_date %}
-                {% set current_comment_date = comment_date %}
-                <div class="text-muted small fw-semibold mt-3 mb-2">{{ comment.createdAt|date('Y-m-d') }}</div>
-            {% endif %}
-            <div class="border-start ps-3 mb-3 {{ comment.isImportant ? 'order-comment--important border-danger border-2 bg-danger-subtle rounded' : '' }}" data-order-discussion-comment>
-                <div class="d-flex justify-content-between align-items-start gap-2">
-                    <div>
-                        <strong>{{ comment.author }}</strong>
-                        {% if comment.updatedAt %}
-                            <span class="text-muted small">· {{ 'edited'|trans }}</span>
-                        {% endif %}
-                        <div class="mt-1">
-                            {{ include('admin/_components/comment/_meta.html.twig', {
-                                type: comment.type.value,
-                                is_important: comment.isImportant
-                            }) }}
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted small">{{ comment.createdAt|date('H:i') }}</span>
-                        <button
-                                type="button"
-                                class="btn btn-link btn-sm p-0 text-muted"
-                                title="{{ 'Edit comment'|trans }}"
-                                aria-label="{{ 'Edit comment'|trans }}"
-                                data-action="click->order-discussion#toggleEdit"
-                        >
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
-                        <form
-                                method="post"
-                                action="{{ path('app_admin_order_comment_delete', {store_id: app.request.attributes.get('store_id'), id: entity.id, commentId: comment.id}) }}"
-                                class="d-inline"
-                                data-action="submit->order-discussion#submit"
-                                data-confirm="Delete comment?"
-                        >
-                            <input type="hidden" name="_token" value="{{ csrf_token('delete_order_comment_' ~ comment.id) }}">
-                            <button class="btn btn-link btn-sm p-0 text-danger" type="submit" title="{{ 'Delete comment'|trans }}" aria-label="{{ 'Delete comment'|trans }}">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-                <div>{{ comment.body|nl2br }}</div>
-                <form
-                        method="post"
-                        action="{{ path('app_admin_order_comment_edit', {store_id: app.request.attributes.get('store_id'), id: entity.id, commentId: comment.id}) }}"
-                        class="d-none mt-2"
-                        data-action="submit->order-discussion#submit"
-                        data-order-discussion-target="editForm"
-                >
-                    <input type="hidden" name="_token" value="{{ csrf_token('edit_order_comment_' ~ comment.id) }}">
-                    <textarea name="body" class="form-control form-control-sm mb-2" rows="2" required>{{ comment.body }}</textarea>
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                        <select name="type" class="form-select form-select-sm w-auto">
-                            {% for comment_type in comment_types %}
-                                <option value="{{ comment_type.value }}" {{ comment.type == comment_type ? 'selected' : '' }}>{{ ('comment_type.' ~ comment_type.value)|trans }}</option>
-                            {% endfor %}
-                        </select>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="important" value="1" id="edit-comment-important-{{ comment.id }}" {{ comment.isImportant ? 'checked' : '' }}>
-                            <label class="form-check-label" for="edit-comment-important-{{ comment.id }}">{{ 'Important'|trans }}</label>
-                        </div>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-light btn-sm" type="submit">{{ 'Save edit'|trans }}</button>
-                        <button class="btn btn-link btn-sm" type="button" data-action="click->order-discussion#toggleEdit">{{ 'Cancel'|trans }}</button>
-                    </div>
-                </form>
-            </div>
+    <div class="order-discussion-scroll order-discussion-comments" {% if is_draft %}data-draft-order-comments-target="list"{% endif %}>
+        {% if is_draft %}
+            {% for draft_comment in form.draftComments %}
+                {{ comments_helpers.draft_item(draft_comment, order_form_id, comment_types, app.user) }}
+            {% endfor %}
+            <p class="text-muted mb-0{% if form.draftComments|length > 0 %} d-none{% endif %}" data-draft-order-comments-target="emptyState">{{ 'No comments.'|trans }}</p>
         {% else %}
-            <p class="text-muted mb-0">{{ 'No comments.'|trans }}</p>
-        {% endfor %}
+            {% set current_comment_date = null %}
+            {% for comment in comments %}
+                {% set comment_date = comment.createdAt|date('Y-m-d') %}
+                {% if comment_date != current_comment_date %}
+                    {% set current_comment_date = comment_date %}
+                    <div class="text-muted small fw-semibold mt-3 mb-2">{{ comment.createdAt|date('Y-m-d') }}</div>
+                {% endif %}
+                <div class="border-start ps-3 mb-3 {{ comment.isImportant ? 'order-comment--important border-danger border-2 bg-danger-subtle rounded' : '' }}" data-order-discussion-comment>
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                            <strong>{{ comment.author }}</strong>
+                            {% if comment.updatedAt %}<span class="text-muted small">· {{ 'edited'|trans }}</span>{% endif %}
+                            <div class="mt-1">{{ include('admin/_components/comment/_meta.html.twig', {type: comment.type.value, is_important: comment.isImportant}) }}</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted small">{{ comment.createdAt|date('H:i') }}</span>
+                            <button type="button" class="btn btn-link btn-sm p-0 text-muted" title="{{ 'Edit comment'|trans }}" aria-label="{{ 'Edit comment'|trans }}" data-action="click->order-discussion#toggleEdit"><i class="fa-solid fa-pen"></i></button>
+                            <form method="post" action="{{ path('app_admin_order_comment_delete', {store_id: app.request.attributes.get('store_id'), id: entity.id, commentId: comment.id}) }}" class="d-inline" data-action="submit->order-discussion#submit" data-confirm="Delete comment?">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete_order_comment_' ~ comment.id) }}">
+                                <button class="btn btn-link btn-sm p-0 text-danger" type="submit" title="{{ 'Delete comment'|trans }}" aria-label="{{ 'Delete comment'|trans }}"><i class="fa-solid fa-trash"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                    <div>{{ comment.body|nl2br }}</div>
+                    <form method="post" action="{{ path('app_admin_order_comment_edit', {store_id: app.request.attributes.get('store_id'), id: entity.id, commentId: comment.id}) }}" class="d-none mt-2" data-action="submit->order-discussion#submit" data-order-discussion-target="editForm">
+                        <input type="hidden" name="_token" value="{{ csrf_token('edit_order_comment_' ~ comment.id) }}">
+                        <textarea name="body" class="form-control form-control-sm mb-2" rows="2" required>{{ comment.body }}</textarea>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <select name="type" class="form-select form-select-sm w-auto">
+                                {% for comment_type in comment_types %}<option value="{{ comment_type.value }}" {{ comment.type == comment_type ? 'selected' : '' }}>{{ ('comment_type.' ~ comment_type.value)|trans }}</option>{% endfor %}
+                            </select>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="important" value="1" id="edit-comment-important-{{ comment.id }}" {{ comment.isImportant ? 'checked' : '' }}>
+                                <label class="form-check-label" for="edit-comment-important-{{ comment.id }}">{{ 'Important'|trans }}</label>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-light btn-sm" type="submit">{{ 'Save edit'|trans }}</button>
+                            <button class="btn btn-link btn-sm" type="button" data-action="click->order-discussion#toggleEdit">{{ 'Cancel'|trans }}</button>
+                        </div>
+                    </form>
+                </div>
+            {% else %}
+                <p class="text-muted mb-0">{{ 'No comments.'|trans }}</p>
+            {% endfor %}
+        {% endif %}
     </div>
 </div>
+
+{% if is_draft %}
+    <template data-draft-order-comments-target="prototype">
+        {{ comments_helpers.draft_item(form.draftComments.vars.prototype, order_form_id, comment_types, app.user) }}
+    </template>
+{% endif %}
