@@ -243,6 +243,93 @@ class OrderManager extends AbstractManager
 		});
 	}
 
+	/**
+	 * Refuses (cancels) part or all of the not-yet-shipped quantity of a single position. The refused
+	 * quantity is recorded on the entry's canceledQuantity, the matching stock reservation is released,
+	 * and the aggregate order status is re-synchronized. Other positions are untouched, so an order can
+	 * ship the rest while one position is declined.
+	 */
+	public function refuseEntryRemaining(Order $order, OrderEntry $orderEntry, string $quantity): void
+	{
+		$this->entityManager->wrapInTransaction(function () use ($order, $orderEntry, $quantity): void {
+			$this->concurrencyGuard->lock($order);
+
+			if ($orderEntry->getOrder() !== $order) {
+				throw new RuntimeException('Order entry does not belong to the order.');
+			}
+
+			$refuse = $this->numberValue($quantity);
+			if ($refuse <= 0.00005) {
+				throw new RuntimeException('Refused quantity must be greater than zero.');
+			}
+
+			$remaining = max(
+				0.0,
+				$this->numberValue($orderEntry->getQuantity())
+				- $this->numberValue($orderEntry->getCanceledQuantity())
+				- $this->numberValue($orderEntry->getShippedQuantity()),
+			);
+
+			if ($refuse > $remaining + 0.00005) {
+				throw new RuntimeException('Cannot refuse more than the remaining quantity of a position.');
+			}
+
+			$previousCanceled = $this->numberValue($orderEntry->getCanceledQuantity());
+
+			// Free the reserved stock for the refused part so it becomes available to other orders.
+			$this->stockReservationService->releaseForOrderEntry($orderEntry, $this->formatQuantity($refuse), false);
+
+			$orderEntry->setCanceledQuantity($this->formatQuantity($previousCanceled + $refuse));
+
+			$context = $this->transitionContext(['transition' => 'refuse_entry_remaining']);
+
+			// syncOrder already excludes canceledQuantity from the expected quantity, so the aggregate
+			// status is recomputed correctly without an explicit workflow transition.
+			$this->businessDocumentStatusSynchronizer->syncOrder($order, $context);
+
+			$this->orderHistoryRecorder->recordEntryUpdated(
+				$order,
+				['canceledQuantity' => [
+					'from' => $this->formatQuantity($previousCanceled),
+					'to' => $orderEntry->getCanceledQuantity(),
+				]],
+				$this->currentActor(),
+				$orderEntry->getId(),
+			);
+
+			$this->entityManager->flush();
+		});
+	}
+
+	/**
+	 * Re-evaluates a waiting order after stock arrived elsewhere (purchase receipt, production, return, …):
+	 * reserves the newly available stock and re-synchronizes the aggregate status, advancing
+	 * `awaiting_stock` → `ready_to_ship` when every position is now covered. No-op for other statuses.
+	 *
+	 * Locks in the same Order→Stock order as {@see confirm()} (reservation locks stock internally), so it is
+	 * deadlock-safe when run after the inventory posting transaction has committed.
+	 */
+	public function refreshAvailability(Order $order): void
+	{
+		if ($order->getStatus() !== OrderStatus::AWAITING_STOCK) {
+			return;
+		}
+
+		$this->entityManager->wrapInTransaction(function () use ($order): void {
+			$this->concurrencyGuard->lock($order);
+
+			// Re-check under the lock: another action may have moved the order in the meantime.
+			if ($order->getStatus() !== OrderStatus::AWAITING_STOCK) {
+				return;
+			}
+
+			$this->reserveStockForOrder($order);
+			$context = $this->transitionContext(['transition' => 'replenish_availability']);
+			$this->businessDocumentStatusSynchronizer->syncOrder($order, $context);
+			$this->entityManager->flush();
+		});
+	}
+
 	public function recalculate(Order $order): void
 	{
 		foreach ($order->getOrderEntries() as $orderEntry) {
@@ -403,5 +490,17 @@ class OrderManager extends AbstractManager
 				$this->stockReservationService->release($reservation);
 			}
 		}
+	}
+
+	private function numberValue(mixed $value): float
+	{
+		$number = (float) str_replace(',', '.', (string) $value);
+
+		return is_finite($number) ? $number : 0.0;
+	}
+
+	private function formatQuantity(float $value): string
+	{
+		return number_format($value, 4, '.', '');
 	}
 }

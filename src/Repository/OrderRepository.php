@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Customer;
 use App\Entity\Order;
+use App\Entity\OrderStatus;
 use App\Entity\Store;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -41,6 +42,35 @@ class OrderRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
+
+	/**
+	 * Orders waiting for stock in a store that contain at least one of the given products. Oldest first so
+	 * scarce replenished stock is reserved for earlier orders. Used to re-evaluate availability when stock
+	 * arrives (see {@see \App\Service\Order\AwaitingStockReplenishmentService}).
+	 *
+	 * @param int[] $productIds
+	 *
+	 * @return Order[]
+	 */
+	public function findAwaitingStockByProducts(int $storeId, array $productIds): array
+	{
+		if ($productIds === []) {
+			return [];
+		}
+
+		return $this->createQueryBuilder('orders')
+			->innerJoin('orders.orderEntries', 'orderEntry')
+			->andWhere('orders.store = :storeId')
+			->andWhere('orders.status = :status')
+			->andWhere('orderEntry.product IN (:productIds)')
+			->setParameter('storeId', $storeId)
+			->setParameter('status', OrderStatus::AWAITING_STOCK)
+			->setParameter('productIds', $productIds)
+			->groupBy('orders.id')
+			->orderBy('orders.id', 'ASC')
+			->getQuery()
+			->getResult();
+	}
 
 	public function findAvailableByStoreQB(Store $store): QueryBuilder
 	{

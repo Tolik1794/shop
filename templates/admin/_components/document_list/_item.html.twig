@@ -17,4 +17,9 @@
 	{% if sku|default('') %}
 		<div class="document-list-card__item-sku">{{ sku }}</div>
 	{% endif %}
+	{% if source|default('') %}
+		<div class="document-list-card__item-source text-muted small">
+			<i class="fa-solid {{ source_type|default('') == 'production' ? 'fa-industry' : 'fa-warehouse' }} me-1"></i>{{ source }}
+		</div>
+	{% endif %}
 </div>

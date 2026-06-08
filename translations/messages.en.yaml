@@ -211,6 +211,7 @@ admin:
       summary: 'Summary'
       products: 'Products'
       inventory_documents: 'Inventory documents'
+      fulfillment: 'Fulfillment'
     filters:
       active_filters: 'Active filters'
       clear_filter: 'Clear %label% filter'
@@ -249,6 +250,8 @@ admin:
       rollback_status: 'Rollback status'
       open_product: 'Open product'
       ship: 'Ship'
+      return: 'Return'
+      refuse: 'Refuse'
       mark_delivered: 'Mark delivered'
       complete: 'Complete'
       cancel: 'Cancel'
@@ -258,6 +261,7 @@ admin:
       rollback_status: 'Rollback order status?'
       complete: 'Complete order?'
       cancel: 'Cancel order?'
+      refuse: 'Refuse position and release reservation?'
     empty:
       entries: 'No entries added yet.'
       entries_hint: 'Use the search above to add products to the order.'
@@ -273,6 +277,31 @@ admin:
       total: 'Total amount'
     related:
       title: 'Related products'
+    fulfillment:
+      progress: 'Fulfillment'
+      ordered: 'Ordered'
+      shipped: 'Shipped'
+      returned: 'Returned'
+      remaining: 'Remaining'
+      refused: 'Refused'
+      returnable: 'Returnable'
+    ship_modal:
+      title: 'Ship positions'
+      hint: 'Choose the quantity to ship now. The rest can be shipped later.'
+      quantity: 'Quantity'
+      remaining: 'Remaining'
+      submit: 'Create shipment'
+      empty: 'No positions are ready to ship.'
+    return_modal:
+      title: 'Return position'
+      hint: 'Creates a customer return draft for the shipped quantity.'
+      quantity: 'Return quantity'
+      submit: 'Create return'
+    refuse_modal:
+      title: 'Refuse position'
+      hint: 'Cancels the not-yet-shipped quantity and releases the reservation.'
+      quantity: 'Refuse quantity'
+      submit: 'Confirm refusal'
     discount:
       none: 'No discount'
     source:
@@ -405,6 +434,13 @@ admin:
       canceled: 'Canceled'
       partially_returned: 'Partially returned'
       returned: 'Returned'
+    order_entry:
+      pending: 'Pending'
+      partially_shipped: 'Partially shipped'
+      shipped: 'Shipped'
+      partially_returned: 'Partially returned'
+      returned: 'Returned'
+      refused: 'Refused'
     purchase:
       draft: 'Draft'
       ordered: 'Ordered'

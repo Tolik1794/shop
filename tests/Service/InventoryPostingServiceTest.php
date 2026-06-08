@@ -31,6 +31,7 @@ use App\Service\BusinessDocumentStatusSynchronizer;
 use App\Service\Concurrency\ConcurrencyGuard;
 use App\Service\DocumentProgressRecalculator;
 use App\Service\InventoryPostingService;
+use App\Service\Order\StockReplenishmentQueue;
 use App\Service\StockReservationService;
 use App\Service\WarehouseStockBatchPostingService;
 use App\Service\WarehouseStockService;
@@ -51,6 +52,7 @@ class InventoryPostingServiceTest extends TestCase
 	private GenericStatusHistoryRecorder&MockObject $statusHistoryRecorder;
 	private OrderHistoryRecorder&MockObject $orderHistoryRecorder;
 	private ConcurrencyGuard&MockObject $concurrencyGuard;
+	private StockReplenishmentQueue $replenishmentQueue;
 	private InventoryPostingService $inventoryPostingService;
 
 	protected function setUp(): void
@@ -95,6 +97,7 @@ class InventoryPostingServiceTest extends TestCase
 			$this->stockReservationService,
 			$this->statusHistoryRecorder,
 			$this->concurrencyGuard,
+			$this->replenishmentQueue = new StockReplenishmentQueue(),
 		);
 	}
 
@@ -128,6 +131,39 @@ class InventoryPostingServiceTest extends TestCase
 		self::assertSame('3.0000', $movement->getWarehouseStockBatch()->getInitialQuantity());
 		self::assertSame('3.0000', $movement->getWarehouseStockBatch()->getRemainingQuantity());
 		self::assertSame('4.0000', $movement->getWarehouseStockBatch()->getUnitCost());
+	}
+
+	public function testPostInLineQueuesProductForReplenishment(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$this->assignId($store, 71);
+		$this->assignId($product, 91);
+		$warehouseStock = $this->warehouseStock($warehouse, $product, '5.0000', '2.0000');
+		$document = $this->document($store)
+			->addLine($this->line($product, $warehouse, InventoryDirection::IN, '3.0000', '4.0000'));
+
+		$this->warehouseStockService->method('findOrCreate')->willReturn($warehouseStock);
+
+		$this->inventoryPostingService->post($document);
+
+		self::assertSame([71 => [91]], $this->replenishmentQueue->drain());
+	}
+
+	public function testPostOutLineDoesNotQueueReplenishment(): void
+	{
+		[$store, $warehouse, $product] = $this->storeWarehouseAndProduct(ProductKindEnum::FINISHED_PRODUCT);
+		$this->assignId($store, 72);
+		$this->assignId($product, 92);
+		$warehouseStock = $this->warehouseStock($warehouse, $product, '5.0000', '9.0000');
+		$this->batch($warehouseStock, '5.0000', '9.0000', '2026-01-01 00:00:00');
+		$document = $this->document($store)
+			->addLine($this->line($product, $warehouse, InventoryDirection::OUT, '4.0000'));
+
+		$this->warehouseStockService->method('findOrCreate')->willReturn($warehouseStock);
+
+		$this->inventoryPostingService->post($document);
+
+		self::assertSame([], $this->replenishmentQueue->drain());
 	}
 
 	public function testFifoOutLineConsumesOldestBatchesAndSplitsMovements(): void
@@ -691,5 +727,11 @@ class InventoryPostingServiceTest extends TestCase
 			->setDirection($direction)
 			->setQuantity($quantity)
 			->setUnitPriceBase($unitPriceBase);
+	}
+
+	private function assignId(object $entity, int $id): void
+	{
+		$property = new \ReflectionProperty($entity, 'id');
+		$property->setValue($entity, $id);
 	}
 }

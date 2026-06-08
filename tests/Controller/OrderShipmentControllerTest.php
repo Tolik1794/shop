@@ -50,7 +50,9 @@ class OrderShipmentControllerTest extends WebTestCase
 		self::assertResponseIsSuccessful();
 		self::assertGreaterThan(0, $crawler->selectButton('Ship')->count());
 
-		$this->client->submit($crawler->selectButton('Ship')->form());
+		// The Ship button opens the selective shipment modal; submit its form (quantities default to the
+		// remaining quantity of each position, so this ships everything that is left).
+		$this->client->submit($crawler->selectButton('Create shipment')->form());
 
 		$document = $this->entityManager->getRepository(InventoryDocument::class)->findOneBy([
 			'order' => $order,
@@ -154,6 +156,52 @@ class OrderShipmentControllerTest extends WebTestCase
 			'order' => $order,
 			'type' => InventoryDocumentType::SALE_SHIPMENT,
 		]));
+	}
+
+	public function testSelectivePartialShipmentShipsOnlySelectedQuantity(): void
+	{
+		$this->client->loginUser($this->createUser('order-partial-ship-' . uniqid() . '@example.com'));
+		[$store, $warehouse, $product] = $this->createStoreWarehouseAndProduct('order-partial-ship-' . uniqid());
+		$order = $this->createOrder($store, $warehouse, $product, OrderStatus::READY_TO_SHIP, '2.0000', '0.0000');
+		$this->createWarehouseStock($warehouse, $product, '2.0000', '6.0000');
+		$entryId = $order->getOrderEntries()->first()->getId();
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/show', $store->getId(), $order->getId()));
+		self::assertResponseIsSuccessful();
+
+		// Ship only 1 of the 2 ordered units; the rest stays for a later shipment.
+		$this->client->submit($crawler->selectButton('Create shipment')->form(), ['lines' => [$entryId => '1']]);
+
+		$document = $this->entityManager->getRepository(InventoryDocument::class)->findOneBy([
+			'order' => $order,
+			'type' => InventoryDocumentType::SALE_SHIPMENT,
+		]);
+
+		self::assertInstanceOf(InventoryDocument::class, $document);
+		self::assertResponseRedirects(sprintf('/admin/store/%d/inventory-document/?id=%d', $store->getId(), $document->getId()));
+		self::assertCount(1, $document->getLines());
+		self::assertSame('1.0000', $document->getLines()->first()->getQuantity());
+	}
+
+	public function testRefuseEntryRemainingSetsCanceledQuantity(): void
+	{
+		$this->client->loginUser($this->createUser('order-refuse-' . uniqid() . '@example.com'));
+		[$store, $warehouse, $product] = $this->createStoreWarehouseAndProduct('order-refuse-' . uniqid());
+		$order = $this->createOrder($store, $warehouse, $product, OrderStatus::READY_TO_SHIP, '5.0000', '0.0000');
+		$this->createWarehouseStock($warehouse, $product, '5.0000', '6.0000');
+		$orderId = $order->getId();
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/show', $store->getId(), $orderId));
+		self::assertResponseIsSuccessful();
+
+		$this->client->submit($crawler->selectButton('Confirm refusal')->form(), ['quantity' => '2']);
+		self::assertResponseRedirects(sprintf('/admin/store/%d/order/?id=%d&page=1', $store->getId(), $orderId));
+
+		$this->entityManager->clear();
+		$refusedOrder = $this->entityManager->getRepository(Order::class)->find($orderId);
+
+		self::assertInstanceOf(Order::class, $refusedOrder);
+		self::assertSame('2.0000', $refusedOrder->getOrderEntries()->first()->getCanceledQuantity());
 	}
 
 	private function createUser(string $email): User

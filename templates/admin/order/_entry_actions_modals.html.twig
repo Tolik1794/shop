@@ -1,0 +1,58 @@
+{# Per-position refuse/return modals rendered on the order detail card. #}
+{% set store_id = app.request.attributes.get('store_id') %}
+{% set can_refuse = progress.hasRemaining and is_granted('order.refuse') %}
+{% set can_return = progress.hasReturnable and is_granted('order.return') %}
+
+{% if can_refuse %}
+    <div class="modal fade" id="order-refuse-modal-{{ entity.id }}-{{ entry.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{{ path('app_admin_order_entry_refuse', {store_id: store_id, id: entity.id, entryId: entry.id}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('refuse_order_entry_' ~ entity.id ~ '_' ~ entry.id) }}">
+                    <div class="modal-header">
+                        <h5 class="modal-title">{{ 'admin.order.refuse_modal.title'|trans }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ 'admin.common.close'|trans }}"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="fw-semibold mb-1">{{ entry.productNameSnapshot }}</p>
+                        <p class="text-muted small">{{ 'admin.order.refuse_modal.hint'|trans }}</p>
+                        <label class="form-label" for="order-refuse-qty-{{ entity.id }}-{{ entry.id }}">{{ 'admin.order.refuse_modal.quantity'|trans }}</label>
+                        <input type="number" step="any" min="0" max="{{ progress.remaining }}" value="{{ progress.remaining }}"
+                               class="form-control" id="order-refuse-qty-{{ entity.id }}-{{ entry.id }}" name="quantity" required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ 'admin.common.cancel'|trans }}</button>
+                        <button type="submit" class="btn btn-danger">{{ 'admin.order.refuse_modal.submit'|trans }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+{% if can_return %}
+    <div class="modal fade" id="order-return-modal-{{ entity.id }}-{{ entry.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{{ path('app_admin_order_entry_return', {store_id: store_id, id: entity.id, entryId: entry.id}) }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('return_order_entry_' ~ entity.id ~ '_' ~ entry.id) }}">
+                    <div class="modal-header">
+                        <h5 class="modal-title">{{ 'admin.order.return_modal.title'|trans }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ 'admin.common.close'|trans }}"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="fw-semibold mb-1">{{ entry.productNameSnapshot }}</p>
+                        <p class="text-muted small">{{ 'admin.order.return_modal.hint'|trans }}</p>
+                        <label class="form-label" for="order-return-qty-{{ entity.id }}-{{ entry.id }}">{{ 'admin.order.return_modal.quantity'|trans }}</label>
+                        <input type="number" step="any" min="0" max="{{ progress.returnable }}" value="{{ progress.returnable }}"
+                               class="form-control" id="order-return-qty-{{ entity.id }}-{{ entry.id }}" name="quantity" required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ 'admin.common.cancel'|trans }}</button>
+                        <button type="submit" class="btn btn-secondary">{{ 'admin.order.return_modal.submit'|trans }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}

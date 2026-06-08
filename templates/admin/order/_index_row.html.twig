@@ -26,6 +26,7 @@
 		{% set items %}
 			{% for entry in entity.orderEntries %}
 				{% set has_discount = entry.discountAmount is not null and entry.discountAmount > 0 %}
+				{% set is_production = entry.warehouse is null %}
 				{{ include('admin/_components/document_list/_item.html.twig', {
 					name: entry.productNameSnapshot,
 					quantity_label: entry.quantity|quantity(entry.product),
@@ -33,7 +34,9 @@
 					discount_amount: entry.discountAmount|money,
 					total_amount: entry.totalPrice|money ~ ' ' ~ entity.currency.code,
 					show_calculation: has_discount,
-					sku: entry.productCodeSnapshot
+					sku: entry.productCodeSnapshot,
+					source: is_production ? 'admin.order.source.production'|trans : ('admin.order.source.stock'|trans ~ ' · ' ~ entry.warehouse.name),
+					source_type: is_production ? 'production' : 'stock'
 				}) }}
 			{% endfor %}
 		{% endset %}

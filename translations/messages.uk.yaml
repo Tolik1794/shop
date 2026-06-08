@@ -232,6 +232,7 @@ admin:
       summary: 'Підсумки'
       products: 'Товари'
       inventory_documents: 'Складські документи'
+      fulfillment: 'Виконання'
     filters:
       active_filters: 'Активні фільтри'
       clear_filter: 'Скинути фільтр %label%'
@@ -270,6 +271,8 @@ admin:
       rollback_status: 'Відкотити статус'
       open_product: 'Відкрити товар'
       ship: 'Відвантажити'
+      return: 'Повернути'
+      refuse: 'Відмова'
       mark_delivered: 'Доставлено'
       complete: 'Завершити'
       cancel: 'Скасувати'
@@ -279,6 +282,7 @@ admin:
       rollback_status: 'Відкотити статус замовлення?'
       complete: 'Завершити замовлення?'
       cancel: 'Скасувати замовлення?'
+      refuse: 'Відмовитися від позиції та звільнити резерв?'
     empty:
       entries: 'Позиції ще не додані.'
       entries_hint: 'Скористайтеся пошуком вище, щоб додати товари до замовлення.'
@@ -294,6 +298,31 @@ admin:
       total: 'Загальна сума'
     related:
       title: 'Пов''язані товари'
+    fulfillment:
+      progress: 'Виконання'
+      ordered: 'Замовлено'
+      shipped: 'Відвантажено'
+      returned: 'Повернено'
+      remaining: 'Залишок'
+      refused: 'Відмова'
+      returnable: 'Доступно до повернення'
+    ship_modal:
+      title: 'Відвантаження позицій'
+      hint: 'Оберіть кількість для відвантаження зараз. Решту можна відвантажити пізніше.'
+      quantity: 'Кількість'
+      remaining: 'Залишок'
+      submit: 'Створити відвантаження'
+      empty: 'Немає позицій, готових до відвантаження.'
+    return_modal:
+      title: 'Повернення позиції'
+      hint: 'Створює чернетку повернення для відвантаженої кількості.'
+      quantity: 'Кількість до повернення'
+      submit: 'Створити повернення'
+    refuse_modal:
+      title: 'Відмова від позиції'
+      hint: 'Скасовує ще не відвантажену кількість і звільняє резерв.'
+      quantity: 'Кількість для відмови'
+      submit: 'Підтвердити відмову'
     discount:
       none: 'Без знижки'
     source:
@@ -428,6 +457,13 @@ admin:
       canceled: 'Скасовано'
       partially_returned: 'Частково повернено'
       returned: 'Повернено'
+    order_entry:
+      pending: 'Очікує'
+      partially_shipped: 'Частково відвантажено'
+      shipped: 'Відвантажено'
+      partially_returned: 'Частково повернено'
+      returned: 'Повернено'
+      refused: 'Відмова'
     purchase:
       draft: 'Чернетка'
       ordered: 'Замовлено'

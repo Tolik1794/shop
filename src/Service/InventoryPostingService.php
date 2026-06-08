@@ -23,6 +23,7 @@ use App\Enum\ProductKindEnum;
 use App\Exception\StockOperationException;
 use App\Manager\UserManager;
 use App\Service\Concurrency\ConcurrencyGuard;
+use App\Service\Order\StockReplenishmentQueue;
 use App\Workflow\History\GenericStatusHistoryRecorder;
 use App\Workflow\TransitionContext;
 use DateTimeImmutable;
@@ -40,6 +41,7 @@ class InventoryPostingService
 		private readonly StockReservationService $stockReservationService,
 		private readonly GenericStatusHistoryRecorder $statusHistoryRecorder,
 		private readonly ConcurrencyGuard $concurrencyGuard,
+		private readonly StockReplenishmentQueue $replenishmentQueue,
 	)
 	{
 	}
@@ -131,6 +133,7 @@ class InventoryPostingService
 		$this->entityManager->persist($document);
 		$this->statusHistoryRecorder->recordChange($document, 'post', $fromStatus, InventoryDocumentStatus::POSTED->value, $context);
 		$this->documentProgressRecalculator->recalculateForInventoryDocument($document, $context);
+		$this->enqueueReplenishment($document);
 	}
 
 	private function cancelDocument(InventoryDocument $document): ?InventoryDocument
@@ -246,6 +249,38 @@ class InventoryPostingService
 		}
 
 		$this->stockReservationService->completeForOrderEntry($orderEntry, (string) $line->getQuantity(), false);
+	}
+
+	/**
+	 * Records products whose stock increased so waiting orders can be re-evaluated after the transaction
+	 * commits (drained on kernel.terminate). Only IN lines raise availability; OUT-only documents enqueue
+	 * nothing. Pure in-memory bookkeeping — safe to call inside the (possibly nested) posting transaction.
+	 */
+	private function enqueueReplenishment(InventoryDocument $document): void
+	{
+		$store = $document->getStore();
+
+		if (!$store instanceof Store || $store->getId() === null) {
+			return;
+		}
+
+		$productIds = [];
+
+		foreach ($document->getLines() as $line) {
+			if ($line->getDirection() !== InventoryDirection::IN) {
+				continue;
+			}
+
+			$productId = $line->getProduct()?->getId();
+
+			if ($productId !== null) {
+				$productIds[] = $productId;
+			}
+		}
+
+		if ($productIds !== []) {
+			$this->replenishmentQueue->enqueue($store->getId(), $productIds);
+		}
 	}
 
 	private function lockPersisted(object $entity): void

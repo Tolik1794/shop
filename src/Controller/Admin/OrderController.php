@@ -22,6 +22,7 @@ use App\Service\Customer\CustomerHistoryProvider;
 use App\Service\Discount\OrderEntryDiscountService;
 use App\Service\FilterFormHandler;
 use App\Service\History\DocumentTimelineBuilder;
+use App\Service\Inventory\CustomerReturnUseCase;
 use App\Service\Inventory\OrderShipmentUseCase;
 use App\Service\Order\CommentAudienceResolver;
 use App\Service\Order\CommentTemplateProvider;
@@ -53,6 +54,7 @@ class OrderController extends AbstractAdvancedController
 		private readonly CustomerRepository $customerRepository,
 		private readonly DocumentTimelineBuilder $documentTimelineBuilder,
 		private readonly OrderShipmentUseCase $orderShipmentUseCase,
+		private readonly CustomerReturnUseCase $customerReturnUseCase,
 		private readonly ConcurrencyGuard $concurrencyGuard,
 		private readonly CommentTemplateProvider $commentTemplateProvider,
 		private readonly CommentAudienceResolver $commentAudienceResolver,
@@ -562,8 +564,12 @@ class OrderController extends AbstractAdvancedController
 			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
 		}
 
+		$selection = $this->resolveShipmentSelection($request);
+
 		try {
-			$inventoryDocument = $this->orderShipmentUseCase->createDraft($order);
+			$inventoryDocument = $selection === []
+				? $this->orderShipmentUseCase->createDraft($order)
+				: $this->orderShipmentUseCase->createDraftForSelection($order, $selection);
 			$this->addFlash('success', 'Order shipment draft created. Review and post the inventory document to ship stock.');
 		} catch (ConcurrencyConflictException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
@@ -579,6 +585,87 @@ class OrderController extends AbstractAdvancedController
 			'store_id' => $store->getId(),
 			'id' => $inventoryDocument->getId(),
 		]);
+	}
+
+	#[Route('/{id}/entry/{entryId}/return', name: 'entry_return', methods: ['POST'])]
+	#[IsGranted('order.return')]
+	public function entryReturn(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Order $order,
+		int $entryId,
+	): Response
+	{
+		$this->denyOrderOutsideStore($order, $store);
+		$orderEntry = $this->findOrderEntry($order, $entryId);
+
+		if (!$this->isCsrfTokenValid('return_order_entry_' . $order->getId() . '_' . $orderEntry->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Order action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		try {
+			$inventoryDocument = $this->customerReturnUseCase->createDraft(
+				$order,
+				$orderEntry,
+				$this->normalizeQuantity((string) $request->request->get('quantity')),
+			);
+			$this->addFlash('success', 'Customer return draft created. Review and post the inventory document to return stock.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_CONFLICT);
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->redirectToRoute('app_admin_inventory_document_index', [
+			'store_id' => $store->getId(),
+			'id' => $inventoryDocument->getId(),
+		]);
+	}
+
+	#[Route('/{id}/entry/{entryId}/refuse', name: 'entry_refuse', methods: ['POST'])]
+	#[IsGranted('order.refuse')]
+	public function entryRefuse(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Order $order,
+		int $entryId,
+	): Response
+	{
+		$this->denyOrderOutsideStore($order, $store);
+		$orderEntry = $this->findOrderEntry($order, $entryId);
+
+		if (!$this->isCsrfTokenValid('refuse_order_entry_' . $order->getId() . '_' . $orderEntry->getId(), (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Order action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		try {
+			$this->orderManager->refuseEntryRemaining(
+				$order,
+				$orderEntry,
+				$this->normalizeQuantity((string) $request->request->get('quantity')),
+			);
+			$this->addFlash('success', 'Position refused. Reserved stock was released.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_CONFLICT);
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->quickActionResponse($request, $store, $order);
 	}
 
 	#[Route('/{id}/comment', name: 'comment_add', methods: ['POST'])]
@@ -771,6 +858,47 @@ class OrderController extends AbstractAdvancedController
 		if ($order->getStore()?->getId() !== $store->getId()) {
 			throw $this->createNotFoundException();
 		}
+	}
+
+	private function findOrderEntry(Order $order, int $entryId): OrderEntry
+	{
+		foreach ($order->getOrderEntries() as $orderEntry) {
+			if ($orderEntry->getId() === $entryId) {
+				return $orderEntry;
+			}
+		}
+
+		throw $this->createNotFoundException();
+	}
+
+	/**
+	 * Reads the per-position shipment selection (lines[entryId] = quantity) from the ship modal.
+	 * Returns an empty array when no selection was submitted, which falls back to shipping everything.
+	 *
+	 * @return array<int, string>
+	 */
+	private function resolveShipmentSelection(Request $request): array
+	{
+		$selection = [];
+
+		foreach ((array) $request->request->all('lines') as $entryId => $quantity) {
+			if (!is_numeric($entryId)) {
+				continue;
+			}
+
+			$normalized = $this->normalizeQuantity((string) $quantity);
+
+			if ((float) $normalized > 0) {
+				$selection[(int) $entryId] = $normalized;
+			}
+		}
+
+		return $selection;
+	}
+
+	private function normalizeQuantity(string $quantity): string
+	{
+		return number_format((float) str_replace(',', '.', trim($quantity)), 4, '.', '');
 	}
 
 	private function denyNotDraft(Order $order): void

@@ -1,0 +1,52 @@
+{# Selective shipment modal: pick which positions/quantities to ship now; the rest ship later. #}
+{% set store_id = app.request.attributes.get('store_id') %}
+<div class="modal fade" id="order-ship-modal-{{ entity.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" action="{{ path('app_admin_order_ship', {store_id: store_id, id: entity.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('ship_order_' ~ entity.id) }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ 'admin.order.ship_modal.title'|trans }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ 'admin.common.close'|trans }}"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">{{ 'admin.order.ship_modal.hint'|trans }}</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>{{ 'admin.common.product'|trans }}</th>
+                                    <th class="text-end">{{ 'admin.order.ship_modal.remaining'|trans }}</th>
+                                    <th class="text-end" style="width: 9rem;">{{ 'admin.order.ship_modal.quantity'|trans }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in entity.orderEntries %}
+                                    {% set progress = order_entry_progress(entry) %}
+                                    {% if progress.hasRemaining %}
+                                        {% set unit_code = entry.unitCodeSnapshot|default('')|trim %}
+                                        <tr>
+                                            <td>
+                                                <div>{{ entry.productNameSnapshot }}</div>
+                                                {% if entry.productCodeSnapshot %}<div class="text-muted small">{{ entry.productCodeSnapshot }}</div>{% endif %}
+                                            </td>
+                                            <td class="text-end">{{ progress.remaining|quantity(entry.product) }}{{ unit_code is not empty ? ' ' ~ unit_code : '' }}</td>
+                                            <td class="text-end">
+                                                <input type="number" step="any" min="0" max="{{ progress.remaining }}" value="{{ progress.remaining }}"
+                                                       class="form-control form-control-sm text-end" name="lines[{{ entry.id }}]">
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ 'admin.common.cancel'|trans }}</button>
+                    <button type="submit" class="btn btn-success">{{ 'admin.order.ship_modal.submit'|trans }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

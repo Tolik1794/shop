@@ -20,13 +20,10 @@
     {% endif %}
 
     {% if can_ship|default(false) %}
-        <form method="post"
-              action="{{ path('app_admin_order_ship', {store_id: app.request.attributes.get('store_id'), id: entity.id}) }}"
-              class="d-inline">
-            <input type="hidden" name="_token" value="{{ csrf_token('ship_order_' ~ entity.id) }}">
-            <button class="btn btn-success btn-sm order-primary-action" type="submit"><i
-                        class="fa-solid fa-truck me-1"></i>{{ 'admin.order.actions.ship'|trans }}</button>
-        </form>
+        <button class="btn btn-success btn-sm order-primary-action" type="button"
+                data-bs-toggle="modal" data-bs-target="#order-ship-modal-{{ entity.id }}">
+            <i class="fa-solid fa-truck me-1"></i>{{ 'admin.order.actions.ship'|trans }}
+        </button>
     {% endif %}
 
     {% if entity.status.value == 'shipped' %}
@@ -229,6 +226,8 @@
                             {% set unit_code = entry.unitCodeSnapshot|default('')|trim %}
                             {% set quantity_label = entry.quantity|quantity(entry.product) ~ (unit_code is not empty ? ' ' ~ unit_code : '') %}
                             {% set product_copy_text = (product_name is not empty ? product_name : empty_text) ~ '\n' ~ ('admin.common.quantity'|trans) ~ ': ' ~ quantity_label %}
+                            {% set progress = order_entry_progress(entry) %}
+                            {% set show_fulfillment = entity.status.value not in ['draft', 'canceled'] %}
                             <div class="order-show-product-card">
                                 <div class="order-show-product-main">
                                     <div class="order-show-product-heading order-show-copyable">
@@ -260,6 +259,36 @@
                                     {% if product_code is not empty %}
                                         <div class="text-muted small">{{ product_code }}</div>
                                     {% endif %}
+                                    {% set is_production = entry.warehouse is null %}
+                                    <div class="text-muted small order-show-product-source">
+                                        <i class="fa-solid {{ is_production ? 'fa-industry' : 'fa-warehouse' }} me-1"></i>{{ is_production ? 'admin.order.source.production'|trans : ('admin.order.source.stock'|trans ~ ' · ' ~ entry.warehouse.name) }}
+                                    </div>
+                                    {% if show_fulfillment %}
+                                        <div class="order-show-product-fulfillment mt-1">
+                                            {{ include('admin/_components/status/_badge.html.twig', {context: 'order_entry', value: progress.state.value}) }}
+                                            <span class="text-muted small ms-1">
+                                                {{ 'admin.order.fulfillment.shipped'|trans }}: {{ progress.shipped|quantity(entry.product) }}{% if progress.hasReturned %} · {{ 'admin.order.fulfillment.returned'|trans }}: {{ progress.returned|quantity(entry.product) }}{% endif %}{% if progress.hasRemaining %} · {{ 'admin.order.fulfillment.remaining'|trans }}: {{ progress.remaining|quantity(entry.product) }}{% endif %}{% if progress.hasCanceled %} · {{ 'admin.order.fulfillment.refused'|trans }}: {{ progress.canceled|quantity(entry.product) }}{% endif %}
+                                            </span>
+                                            {% set can_refuse = progress.hasRemaining and is_granted('order.refuse') %}
+                                            {% set can_return = progress.hasReturnable and is_granted('order.return') %}
+                                            {% if can_refuse or can_return %}
+                                                <div class="order-show-product-actions mt-1">
+                                                    {% if can_refuse %}
+                                                        <button type="button" class="btn btn-outline-danger btn-sm"
+                                                                data-bs-toggle="modal" data-bs-target="#order-refuse-modal-{{ entity.id }}-{{ entry.id }}">
+                                                            {{ 'admin.order.actions.refuse'|trans }}
+                                                        </button>
+                                                    {% endif %}
+                                                    {% if can_return %}
+                                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                                data-bs-toggle="modal" data-bs-target="#order-return-modal-{{ entity.id }}-{{ entry.id }}">
+                                                            {{ 'admin.order.actions.return'|trans }}
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         {% endfor %}
@@ -268,10 +297,19 @@
                         {% set modal_id = 'order-product-details-' ~ entity.id ~ '-' ~ entry.id %}
                         {{ include('admin/order/_product_details_modal.html.twig', {entry: entry, entity: entity, modal_id: modal_id}) }}
                     {% endfor %}
+                    {% if entity.status.value not in ['draft', 'canceled'] %}
+                        {% for entry in entity.orderEntries %}
+                            {{ include('admin/order/_entry_actions_modals.html.twig', {entity: entity, entry: entry, progress: order_entry_progress(entry)}) }}
+                        {% endfor %}
+                    {% endif %}
                 {% else %}
                     <p class="text-muted mb-0">{{ 'admin.order.empty.products'|trans }}</p>
                 {% endif %}
             </section>
+
+            {% if can_ship|default(false) %}
+                {{ include('admin/order/_ship_modal.html.twig', {entity: entity}) }}
+            {% endif %}
 
             <section class="order-show-section">
                 <h6>{{ 'admin.order.sections.inventory_documents'|trans }}</h6>

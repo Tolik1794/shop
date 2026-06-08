@@ -117,6 +117,37 @@ class StockReservationService
 		}
 	}
 
+	/**
+	 * Releases (cancels) up to $quantity of the still-active reservations of an order entry. Used when
+	 * a customer refuses part of a not-yet-shipped position so the reserved stock becomes available
+	 * again. Releasing less than is active leaves the rest reserved for the position.
+	 */
+	public function releaseForOrderEntry(OrderEntry $orderEntry, string $quantity, bool $flush = true): void
+	{
+		if (!$this->entityManager->getConnection()->isTransactionActive()) {
+			$this->entityManager->wrapInTransaction(function () use ($orderEntry, $quantity, $flush): void {
+				$this->releaseForOrderEntry($orderEntry, $quantity, $flush);
+			});
+
+			return;
+		}
+
+		$remainingQuantity = $this->normalize($quantity);
+		$this->assertPositiveQuantity($remainingQuantity);
+
+		foreach ($this->stockReservationRepository->findActiveForOrderEntry($orderEntry) as $reservation) {
+			if ((float) $remainingQuantity <= 0) {
+				break;
+			}
+
+			$remainingQuantity = $this->releaseReservedQuantity($reservation, $remainingQuantity);
+		}
+
+		if ($flush) {
+			$this->entityManager->flush();
+		}
+	}
+
 	public function expireOldReservations(DateTimeImmutable $now): int
 	{
 		$count = 0;
@@ -202,6 +233,39 @@ class StockReservationService
 		$orderEntry->addStockReservation($completedReservation);
 		$warehouseStock->addStockReservation($completedReservation);
 		$this->entityManager->persist($completedReservation);
+
+		return '0.0000';
+	}
+
+	private function releaseReservedQuantity(StockReservation $reservation, string $quantityToRelease): string
+	{
+		$reservationQuantity = $this->normalize($reservation->getQuantity());
+
+		// Releasing the whole reservation reuses close(), which also revalidates stock and status.
+		if ((float) $quantityToRelease >= (float) $reservationQuantity) {
+			$this->close($reservation, StockReservationStatus::CANCELED, false);
+
+			return $this->subtract($quantityToRelease, $reservationQuantity);
+		}
+
+		$warehouseStock = $reservation->getWarehouseStock();
+		if (!$warehouseStock instanceof WarehouseStock) {
+			throw new StockOperationException('Reservation has no warehouse stock.');
+		}
+
+		$this->lockPersisted($warehouseStock);
+		$batch = $reservation->getWarehouseStockBatch();
+		if ($batch instanceof WarehouseStockBatch) {
+			$this->lockPersisted($batch);
+		}
+
+		$newReservedQuantity = $this->subtract($warehouseStock->getReservedQuantity(), $quantityToRelease);
+		if ((float) $newReservedQuantity < 0) {
+			throw new StockOperationException('Reserved quantity cannot be negative.');
+		}
+
+		$reservation->setQuantity($this->subtract($reservationQuantity, $quantityToRelease));
+		$warehouseStock->setReservedQuantity($newReservedQuantity);
 
 		return '0.0000';
 	}
