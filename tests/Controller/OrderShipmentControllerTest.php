@@ -61,7 +61,7 @@ class OrderShipmentControllerTest extends WebTestCase
 		]);
 
 		self::assertInstanceOf(InventoryDocument::class, $document);
-		self::assertResponseRedirects(sprintf('/admin/store/%d/inventory-document/?id=%d', $store->getId(), $document->getId()));
+		self::assertResponseRedirects(sprintf('/admin/store/%d/order/?id=%d&page=1', $store->getId(), $order->getId()));
 		self::assertSame(InventoryDocumentStatus::DRAFT, $document->getStatus());
 		self::assertSame($store->getId(), $document->getStore()?->getId());
 		self::assertSame($order->getId(), $document->getOrder()?->getId());
@@ -179,7 +179,7 @@ class OrderShipmentControllerTest extends WebTestCase
 		]);
 
 		self::assertInstanceOf(InventoryDocument::class, $document);
-		self::assertResponseRedirects(sprintf('/admin/store/%d/inventory-document/?id=%d', $store->getId(), $document->getId()));
+		self::assertResponseRedirects(sprintf('/admin/store/%d/order/?id=%d&page=1', $store->getId(), $order->getId()));
 		self::assertCount(1, $document->getLines());
 		self::assertSame('1.0000', $document->getLines()->first()->getQuantity());
 	}
@@ -245,6 +245,56 @@ class OrderShipmentControllerTest extends WebTestCase
 		self::assertNull($this->entityManager->getRepository(InventoryDocument::class)->findOneBy([
 			'order' => $order,
 			'type' => InventoryDocumentType::SALE_SHIPMENT,
+		]));
+	}
+
+	public function testReturnModalAjaxSubmitCreatesDraftAndReturnsOrderFragments(): void
+	{
+		$this->client->loginUser($this->createUser('order-return-ajax-admin-' . uniqid() . '@example.com'));
+		[$store, $warehouse, $product] = $this->createStoreWarehouseAndProduct('order-return-ajax-' . uniqid());
+		$order = $this->createOrder($store, $warehouse, $product, OrderStatus::READY_TO_SHIP, '2.0000', '0.0000');
+		$this->createWarehouseStock($warehouse, $product, '2.0000', '6.0000');
+
+		// Ship everything and post the shipment so the position becomes returnable. Follow the
+		// redirects so the setup flashes are consumed and don't leak into the AJAX assertion below.
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/show', $store->getId(), $order->getId()));
+		$this->client->submit($crawler->selectButton('Create shipment')->form());
+		$this->client->followRedirect();
+
+		$shipment = $this->entityManager->getRepository(InventoryDocument::class)->findOneBy([
+			'order' => $order,
+			'type' => InventoryDocumentType::SALE_SHIPMENT,
+		]);
+		self::assertInstanceOf(InventoryDocument::class, $shipment);
+
+		$this->client->request('GET', sprintf('/admin/store/%d/inventory-document/%d/show', $store->getId(), $shipment->getId()));
+		$this->client->submit($this->client->getCrawler()->selectButton('Post')->form());
+		$this->client->followRedirect();
+
+		// Open the order and submit the Return modal as AJAX; it must close in place (JSON fragments),
+		// not redirect to the inventory-document list.
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/show', $store->getId(), $order->getId()));
+		$form = $crawler->selectButton('Create return')->form();
+
+		$this->client->request(
+			$form->getMethod(),
+			$form->getUri(),
+			$form->getValues(),
+			[],
+			[
+				'HTTP_ACCEPT' => 'application/json',
+				'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest',
+			],
+		);
+
+		self::assertResponseIsSuccessful();
+		$data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+		self::assertSame('Customer return draft created. Review and post the inventory document to return stock.', $data['flashes'][0]['message'] ?? null);
+		self::assertArrayHasKey('card', $data['fragments']);
+		self::assertArrayHasKey('row', $data['fragments']);
+		self::assertInstanceOf(InventoryDocument::class, $this->entityManager->getRepository(InventoryDocument::class)->findOneBy([
+			'order' => $order,
+			'type' => InventoryDocumentType::CUSTOMER_RETURN,
 		]));
 	}
 

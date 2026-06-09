@@ -34,13 +34,15 @@
     <div class="modal fade" id="order-return-modal-{{ entity.id }}-{{ entry.id }}" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="post" action="{{ path('app_admin_order_entry_return', {store_id: store_id, id: entity.id, entryId: entry.id}) }}">
+                <form method="post" action="{{ path('app_admin_order_entry_return', {store_id: store_id, id: entity.id, entryId: entry.id}) }}"
+                      data-action="submit->reload-card#submitShipment">
                     <input type="hidden" name="_token" value="{{ csrf_token('return_order_entry_' ~ entity.id ~ '_' ~ entry.id) }}">
                     <div class="modal-header">
                         <h5 class="modal-title">{{ 'admin.order.return_modal.title'|trans }}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ 'admin.common.close'|trans }}"></button>
                     </div>
                     <div class="modal-body">
+                        <div class="alert alert-danger d-none" role="alert" data-shipment-errors></div>
                         <p class="fw-semibold mb-1">{{ entry.productNameSnapshot }}</p>
                         <p class="text-muted small">{{ 'admin.order.return_modal.hint'|trans }}</p>
                         <label class="form-label" for="order-return-qty-{{ entity.id }}-{{ entry.id }}">{{ 'admin.order.return_modal.quantity'|trans }}</label>

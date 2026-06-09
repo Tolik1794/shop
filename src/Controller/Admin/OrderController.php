@@ -650,7 +650,7 @@ class OrderController extends AbstractAdvancedController
 		$selection = $this->resolveShipmentSelection($request);
 
 		try {
-			$inventoryDocument = $selectionSubmitted
+			$selectionSubmitted
 				? $this->orderShipmentUseCase->createDraftForSelection($order, $selection)
 				: $this->orderShipmentUseCase->createDraft($order);
 			$this->addFlash('success', 'Order shipment draft created. Review and post the inventory document to ship stock.');
@@ -664,14 +664,7 @@ class OrderController extends AbstractAdvancedController
 			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
 		}
 
-		if ($this->wantsQuickActionJson($request)) {
-			return $this->quickActionResponse($request, $store, $order);
-		}
-
-		return $this->redirectToRoute('app_admin_inventory_document_index', [
-			'store_id' => $store->getId(),
-			'id' => $inventoryDocument->getId(),
-		]);
+		return $this->quickActionResponse($request, $store, $order);
 	}
 
 	#[Route('/{id}/entry/{entryId}/return', name: 'entry_return', methods: ['POST'])]
@@ -694,7 +687,7 @@ class OrderController extends AbstractAdvancedController
 		}
 
 		try {
-			$inventoryDocument = $this->customerReturnUseCase->createDraft(
+			$this->customerReturnUseCase->createDraft(
 				$order,
 				$orderEntry,
 				$this->normalizeQuantity((string) $request->request->get('quantity')),
@@ -710,10 +703,7 @@ class OrderController extends AbstractAdvancedController
 			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
 		}
 
-		return $this->redirectToRoute('app_admin_inventory_document_index', [
-			'store_id' => $store->getId(),
-			'id' => $inventoryDocument->getId(),
-		]);
+		return $this->quickActionResponse($request, $store, $order);
 	}
 
 	#[Route('/{id}/entry/{entryId}/refuse', name: 'entry_refuse', methods: ['POST'])]
