@@ -133,6 +133,7 @@ ProductionRecipe ||--o{ ProductionRecipeItem
 ProductionRecipe |o--o{ ProductionOrder
 ProductionOrder ||--o{ ProductionOrderMaterial
 ProductionOrder ||--o{ InventoryDocument
+OrderEntry |o--o{ ProductionOrder
 
 note bottom
   Detailed diagrams are split by bounded context in this directory:

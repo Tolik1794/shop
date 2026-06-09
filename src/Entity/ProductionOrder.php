@@ -14,6 +14,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: ProductionOrderRepository::class)]
 #[ORM\Index(name: 'idx_production_order_store_status', columns: ['store_id', 'status'])]
 #[ORM\Index(name: 'idx_production_order_planned_start', columns: ['planned_start_at'])]
+#[ORM\Index(name: 'idx_production_order_source_entry', columns: ['source_order_entry_id'])]
+#[ORM\UniqueConstraint(name: 'uniq_production_order_active_source_entry', columns: ['source_order_entry_id'], options: ['where' => "((source_order_entry_id IS NOT NULL) AND ((status)::text <> 'completed'::text) AND ((status)::text <> 'canceled'::text))"])]
 class ProductionOrder implements WorkflowSubjectInterface
 {
 	#[ORM\Id]
@@ -87,6 +89,9 @@ class ProductionOrder implements WorkflowSubjectInterface
 	#[ORM\ManyToOne(inversedBy: 'productionOrders')]
 	private ?ProductionRecipe $recipe = null;
 
+	#[ORM\ManyToOne(inversedBy: 'productionOrders')]
+	private ?OrderEntry $sourceOrderEntry = null;
+
 	/**
 	 * @var Collection<int, ProductionOrderMaterial>
 	 */
@@ -154,6 +159,8 @@ class ProductionOrder implements WorkflowSubjectInterface
 	public function setWarehouse(?Warehouse $warehouse): self { $this->warehouse = $warehouse; return $this; }
 	public function getRecipe(): ?ProductionRecipe { return $this->recipe; }
 	public function setRecipe(?ProductionRecipe $recipe): self { $this->recipe = $recipe; return $this; }
+	public function getSourceOrderEntry(): ?OrderEntry { return $this->sourceOrderEntry; }
+	public function setSourceOrderEntry(?OrderEntry $sourceOrderEntry): self { $this->sourceOrderEntry = $sourceOrderEntry; return $this; }
 
 	/**
 	 * @return Collection<int, ProductionOrderMaterial>

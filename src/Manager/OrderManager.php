@@ -4,6 +4,7 @@ namespace App\Manager;
 
 use App\Entity\Order;
 use App\Entity\OrderEntry;
+use App\Entity\OrderEntryFulfillmentSource;
 use App\Entity\OrderHistory;
 use App\Entity\OrderStatus;
 use App\Entity\Product;
@@ -12,6 +13,7 @@ use App\Entity\StockReservationStatus;
 use App\Entity\Store;
 use App\Entity\User\User;
 use App\Exception\StockOperationException;
+use App\Enum\ProductKindEnum;
 use App\Repository\OrderHistoryRepository;
 use App\Repository\OrderRepository;
 use App\Repository\WarehouseStockRepository;
@@ -23,6 +25,7 @@ use App\Service\Order\OrderEntryPricingService;
 use App\Service\Order\OrderEntrySnapshotter;
 use App\Service\Order\OrderBatchPricingService;
 use App\Service\OrderCalculator;
+use App\Service\Production\ProductionDemandService;
 use App\Service\StockReservationService;
 use App\Workflow\History\OrderHistoryChangeSetBuilder;
 use App\Workflow\History\OrderHistoryRecorder;
@@ -49,6 +52,7 @@ class OrderManager extends AbstractManager
 		private readonly UserManager $userManager,
 		private readonly WarehouseStockRepository $warehouseStockRepository,
 		private readonly StockReservationService $stockReservationService,
+		private readonly ProductionDemandService $productionDemandService,
 		private readonly BusinessDocumentStatusSynchronizer $businessDocumentStatusSynchronizer,
 		private readonly ConcurrencyGuard $concurrencyGuard,
 	)
@@ -130,11 +134,18 @@ class OrderManager extends AbstractManager
 
 	public function confirm(Order $order): void
 	{
+		foreach ($order->getOrderEntries() as $orderEntry) {
+			$this->productionDemandService->assertCanPlanDemand($orderEntry);
+		}
+
 		$this->entityManager->wrapInTransaction(function () use ($order): void {
 			$this->concurrencyGuard->lock($order);
 			$context = $this->transitionContext();
 			$this->statusTransitionService->apply($order, 'confirm', $context);
 			$this->saveOrder($order);
+			foreach ($order->getOrderEntries() as $orderEntry) {
+				$this->productionDemandService->ensurePlannedDemand($orderEntry, $context);
+			}
 			$this->reserveStockForOrder($order);
 			$this->businessDocumentStatusSynchronizer->syncOrder($order, $context);
 			$this->entityManager->flush();
@@ -149,7 +160,11 @@ class OrderManager extends AbstractManager
 				return;
 			}
 
-			$this->statusTransitionService->apply($order, 'cancel', $this->transitionContext());
+			$context = $this->transitionContext();
+			$this->statusTransitionService->apply($order, 'cancel', $context);
+			foreach ($order->getOrderEntries() as $orderEntry) {
+				$this->productionDemandService->cancelPlannedDemand($orderEntry, $context);
+			}
 			$this->releaseActiveReservations($order);
 			$this->saveStatusOnlyOrder($order);
 		});
@@ -160,6 +175,9 @@ class OrderManager extends AbstractManager
 		$this->entityManager->wrapInTransaction(function () use ($order): void {
 			$this->concurrencyGuard->lock($order);
 			$this->statusTransitionService->apply($order, 'return_to_draft', $this->transitionContext());
+			foreach ($order->getOrderEntries() as $orderEntry) {
+				$this->productionDemandService->cancelPlannedDemand($orderEntry, $this->transitionContext());
+			}
 			$this->releaseActiveReservations($order);
 			$this->saveOrder($order);
 		});
@@ -213,6 +231,9 @@ class OrderManager extends AbstractManager
 			}
 
 			if ($targetStatus === OrderStatus::DRAFT) {
+				foreach ($order->getOrderEntries() as $orderEntry) {
+					$this->productionDemandService->cancelPlannedDemand($orderEntry, $context);
+				}
 				$this->releaseActiveReservations($order);
 			}
 
@@ -282,6 +303,7 @@ class OrderManager extends AbstractManager
 			$orderEntry->setCanceledQuantity($this->formatQuantity($previousCanceled + $refuse));
 
 			$context = $this->transitionContext(['transition' => 'refuse_entry_remaining']);
+			$this->productionDemandService->adjustPlannedDemand($orderEntry, $context);
 
 			// syncOrder already excludes canceledQuantity from the expected quantity, so the aggregate
 			// status is recomputed correctly without an explicit workflow transition.
@@ -372,6 +394,9 @@ class OrderManager extends AbstractManager
 		}
 
 		$this->orderEntrySnapshotter->snapshot($orderEntry);
+		if ($product->getProductKind() === ProductKindEnum::SERVICE) {
+			$orderEntry->setFulfillmentSource(OrderEntryFulfillmentSource::SERVICE);
+		}
 		$this->orderBatchPricingService->applyBatchPrice($orderEntry);
 		$this->orderEntryPricingService->initializeUnitPrice($orderEntry, $order);
 		$this->orderEntryDiscountService->apply($orderEntry, $order);
@@ -462,7 +487,11 @@ class OrderManager extends AbstractManager
 			$product = $orderEntry->getProduct();
 			$warehouse = $orderEntry->getWarehouse();
 
-			if (!$product instanceof Product || $warehouse === null) {
+			if (
+				!$product instanceof Product
+				|| $warehouse === null
+				|| $orderEntry->getFulfillmentSource() !== OrderEntryFulfillmentSource::STOCK
+			) {
 				continue;
 			}
 

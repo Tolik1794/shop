@@ -4,6 +4,7 @@ namespace App\Form\Admin\Type;
 
 use App\Entity\Currency;
 use App\Entity\OrderEntry;
+use App\Entity\OrderEntryFulfillmentSource;
 use App\Entity\Product;
 use App\Entity\ProductDiscountRule;
 use App\Entity\Store;
@@ -49,6 +50,19 @@ class OrderEntryType extends AbstractType
 		$currencyCode = $options['currency'] instanceof Currency ? $options['currency']->getCode() : '';
 
 		$builder
+			->add('fulfillmentSource', ChoiceType::class, [
+				'choices' => [
+					'admin.order.source.stock' => OrderEntryFulfillmentSource::STOCK,
+					'admin.order.source.production' => OrderEntryFulfillmentSource::PRODUCTION,
+					'admin.order.source.service' => OrderEntryFulfillmentSource::SERVICE,
+				],
+				'choice_value' => static fn (?OrderEntryFulfillmentSource $choice): string => $choice?->value ?? '',
+				'required' => true,
+				'attr' => [
+					'data-order-entry-target' => 'source',
+					'data-action' => 'change->order-entry#sourceChanged',
+				],
+			])
 			->add('warehouse', EntityType::class, [
 				'class' => Warehouse::class,
 				'query_builder' => fn(WarehouseRepository $repository) => $options['store'] instanceof Store
@@ -56,7 +70,10 @@ class OrderEntryType extends AbstractType
 					: $repository->createQueryBuilder('warehouse')->andWhere('1 = 0'),
 				'choice_label' => 'name',
 				'required' => false,
-				'attr' => ['class' => 'select2'],
+				'attr' => [
+					'class' => 'select2',
+					'data-order-entry-target' => 'warehouse',
+				],
 			])
 			->add('unitPrice', NumberType::class, [
 				'required' => false,
@@ -100,6 +117,13 @@ class OrderEntryType extends AbstractType
 				return;
 			}
 
+			if (empty($data['fulfillmentSource'])) {
+				$data['fulfillmentSource'] = empty($data['warehouse'])
+					? OrderEntryFulfillmentSource::PRODUCTION->value
+					: OrderEntryFulfillmentSource::STOCK->value;
+				$event->setData($data);
+			}
+
 			if (empty($data['product']) && $orderEntry?->getProduct() instanceof Product) {
 				$data['product'] = $orderEntry->getProduct()->getId();
 				$event->setData($data);
@@ -115,6 +139,10 @@ class OrderEntryType extends AbstractType
 			]);
 
 			if ($product instanceof Product) {
+				if ($product->getProductKind() === \App\Enum\ProductKindEnum::SERVICE) {
+					$data['fulfillmentSource'] = OrderEntryFulfillmentSource::SERVICE->value;
+					$event->setData($data);
+				}
 				$this->addProductField($event->getForm(), $product);
 				$this->addQuantityField($event->getForm(), $product, $orderEntry);
 				$this->addDiscountFields($event->getForm(), $product, $orderEntry, $options['store']);

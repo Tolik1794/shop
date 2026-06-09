@@ -249,6 +249,7 @@ export default class extends Controller {
         const quantityInput = row.querySelector('[data-order-entry-target~="quantity"]')
         const unitPriceInput = row.querySelector('[data-order-entry-target~="unitPrice"]')
         const warehouseSelect = row.querySelector('[data-order-entry-target~="warehouse"]')
+        const sourceSelect = row.querySelector('[data-order-entry-target~="source"]')
         const layers = Array.isArray(product.batchLayers) ? product.batchLayers : []
 
         this.entriesTarget.prepend(row)
@@ -271,6 +272,9 @@ export default class extends Controller {
         row.dataset.productId = product.id || ''
         row.dataset.batchLayers = JSON.stringify(layers)
         row.dataset.sourceType = product.sourceType || (product.warehouseId ? 'stock' : 'production')
+        if (sourceSelect) {
+            sourceSelect.value = row.dataset.sourceType
+        }
         row.dataset.available = product.available || '0.0000'
         row.dataset.unitPrecision = product.unitPrecision ?? '4'
         this.setWarehouseStockBatch(row, product.batchId || '')
@@ -544,8 +548,12 @@ export default class extends Controller {
         const sourceDetail = product.sourceDetail || product.warehouseName || sourceLabel
         const sourceLabelTarget = row.querySelector('[data-order-entry-target~="sourceLabel"]')
         const sourceMetaTarget = row.querySelector('[data-order-entry-target~="sourceMeta"]')
+        const sourceSelect = row.querySelector('[data-order-entry-target~="source"]')
 
         row.dataset.sourceType = sourceType
+        if (sourceSelect) {
+            sourceSelect.value = sourceType
+        }
 
         if (sourceLabelTarget) {
             sourceLabelTarget.textContent = sourceDetail || trans('order.source.undefined', 'Not defined')

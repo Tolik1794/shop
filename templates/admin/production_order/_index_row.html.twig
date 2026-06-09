@@ -17,6 +17,7 @@
 				<th>{{ 'Planned'|trans }}</th>
 				<th>{{ 'Completed'|trans }}</th>
 				<th>{{ 'Warehouse'|trans }}</th>
+				<th>{{ 'Sales order'|trans }}</th>
 			</tr>
 			</thead>
 			<tbody>
@@ -27,6 +28,7 @@
 				<td>{{ entity.plannedQuantity|quantity(entity.product) }}</td>
 				<td>{{ entity.completedQuantity|quantity(entity.product) }}</td>
 				<td>{{ entity.warehouse ? entity.warehouse.name : '' }}</td>
+				<td>{% if entity.sourceOrderEntry and entity.sourceOrderEntry.order %}{{ entity.sourceOrderEntry.order.number }}{% endif %}</td>
 			</tr>
 			</tbody>
 		</table>

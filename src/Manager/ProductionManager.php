@@ -20,6 +20,7 @@ use App\Repository\WarehouseStockRepository;
 use App\Service\Concurrency\ConcurrencyGuard;
 use App\Service\InventoryPostingService;
 use App\Service\Production\ProductionOrderFactory;
+use App\Service\Order\StockReplenishmentQueue;
 use App\Service\WarehouseStockService;
 use App\Workflow\StatusTransitionService;
 use App\Workflow\TransitionContext;
@@ -32,6 +33,7 @@ class ProductionManager extends AbstractManager
 	public function __construct(
 		private readonly EntityManagerInterface $entityManager,
 		private readonly ProductionOrderFactory $productionOrderFactory,
+		private readonly StockReplenishmentQueue $stockReplenishmentQueue,
 		private readonly InventoryPostingService $inventoryPostingService,
 		private readonly WarehouseStockService $warehouseStockService,
 		private readonly WarehouseStockRepository $warehouseStockRepository,
@@ -150,11 +152,14 @@ class ProductionManager extends AbstractManager
 			}
 
 			$document = $this->productionOrderFactory->createProductionDocument($order, $quantity, $this->currentActor());
+			$this->entityManager->persist($document);
 
 			$this->releaseReservedMaterials($order);
-			$this->entityManager->persist($document);
 			$this->inventoryPostingService->post($document);
 			$this->statusTransitionService->apply($order, 'complete', $context);
+			$this->entityManager->persist($order);
+			$this->entityManager->flush();
+			$this->stockReplenishmentQueue->enqueueProductionOrder((int) $order->getId());
 			$this->touchAndSaveOrder($order);
 
 			return $document;

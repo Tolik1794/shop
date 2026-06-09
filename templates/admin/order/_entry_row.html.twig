@@ -1,6 +1,7 @@
 {% set entryData = entry.vars.data|default(null) %}
 {% set product = entryData ? entryData.product|default(null) : null %}
 {% set warehouse = entryData ? entryData.warehouse|default(null) : null %}
+{% set fulfillmentSource = entryData ? entryData.fulfillmentSource|default(null) : null %}
 {% set warehouseStockBatch = entryData ? entryData.warehouseStockBatch|default(null) : null %}
 {% set productName = product ? product.name : (entryData ? entryData.productNameSnapshot|default('') : '') %}
 {% set productCode = product ? product.code : (entryData ? entryData.productCodeSnapshot|default('') : '') %}
@@ -14,7 +15,7 @@
     service: 'admin.order.source.service'|trans,
     material: 'admin.order.source.material'|trans
 } %}
-{% set sourceType = product ? (warehouse ? 'stock' : 'production') : '' %}
+{% set sourceType = fulfillmentSource ? fulfillmentSource.value : (product ? (warehouse ? 'stock' : 'production') : '') %}
 {% set sourceLabel = sourceLabels[sourceType]|default(sourceType) %}
 {% set sourceDetail = warehouse ? warehouse.name : sourceLabel %}
 {% set available = 0 %}
@@ -26,6 +27,7 @@
 {% set hasEntryErrors =
     entry.vars.errors|length > 0
     or entry.product.vars.errors|length > 0
+    or entry.fulfillmentSource.vars.errors|length > 0
     or entry.warehouse.vars.errors|length > 0
     or entry.quantity.vars.errors|length > 0
     or entry.unitPrice.vars.errors|length > 0
@@ -69,7 +71,6 @@
             <div class="order-entry-head__code text-muted small" data-order-entry-target="productMeta">{{ productCode }}</div>
         </div>
         <div class="order-entry-head__source">
-            {{ form_widget(entry.warehouse, {attr: {class: 'd-none', 'data-order-entry-target': 'warehouse'}}) }}
             {{ form_widget(entry.warehouseStockBatchId) }}
             <div class="order-entry-head__source-label fw-semibold" data-order-entry-target="sourceLabel">{{ sourceDetail ?: 'admin.order.source.undefined'|trans }}</div>
             <div class="order-entry-head__source-meta text-muted small">
@@ -85,6 +86,26 @@
     </div>
 
     <div class="order-entry-main row g-2 align-items-start mt-0">
+        <div class="col-6 col-md-2">
+            <label class="form-label">{{ 'admin.order.fields.source'|trans }}</label>
+            {{ form_widget(entry.fulfillmentSource, {
+                attr: {
+                    class: 'form-select form-select-sm',
+                    'data-order-entry-target': 'source',
+                    'data-action': 'change->order-entry#sourceChanged'
+                }
+            }) }}
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label">{{ 'Warehouse'|trans }}</label>
+            {{ form_widget(entry.warehouse, {
+                attr: {
+                    class: 'form-select form-select-sm',
+                    'data-order-entry-target': 'warehouse',
+                    'data-action': 'change->order-entry#sourceChanged'
+                }
+            }) }}
+        </div>
         <div class="col-4 col-md-2">
             <label class="form-label">{{ 'admin.common.quantity'|trans }}</label>
             {{ form_widget(entry.quantity, {

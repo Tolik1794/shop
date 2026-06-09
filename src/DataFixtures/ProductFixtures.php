@@ -24,6 +24,10 @@ use RuntimeException;
 
 class ProductFixtures extends Fixture implements DependentFixtureInterface
 {
+	public function __construct(private readonly ProductionRecipeFixtureSeeder $productionRecipeSeeder)
+	{
+	}
+
 	public function getDependencies(): array
 	{
 		return [
@@ -92,6 +96,7 @@ class ProductFixtures extends Fixture implements DependentFixtureInterface
 		}
 
 		$manager->flush();
+		$this->productionRecipeSeeder->seed($manager);
 	}
 
 	/**

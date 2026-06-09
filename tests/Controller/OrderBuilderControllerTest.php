@@ -9,6 +9,7 @@ use App\Entity\ExchangeRate;
 use App\Entity\Order;
 use App\Entity\OrderComment;
 use App\Entity\OrderEntry;
+use App\Entity\OrderEntryFulfillmentSource;
 use App\Entity\OrderStatus;
 use App\Entity\Payment;
 use App\Entity\Product;
@@ -35,6 +36,7 @@ use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\HttpFoundation\Response;
 
 class OrderBuilderControllerTest extends WebTestCase
 {
@@ -593,6 +595,72 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertStringContainsString('Add incoming payment', $data['fragments']['payments']);
 		self::assertStringContainsString('Add payment', $data['fragments']['payments']);
 		self::assertStringContainsString('data-reload-card-target="paymentsCard"', $data['fragments']['payments']);
+	}
+
+	public function testConfirmProductionOrderWithoutDefaultRecipeReturnsUserSafeQuickActionError(): void
+	{
+		$this->client->loginUser($this->createUser('order-confirm-production-recipe-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-confirm-production-recipe-store-' . uniqid());
+		$product = $this->createProduct($store, 'Production product without recipe', true);
+		$warehouse = $this->createWarehouse($store);
+		$order = (new Order())
+			->setStore($store)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber('SO-production-recipe-' . uniqid())
+			->setStatus(OrderStatus::DRAFT)
+			->setCustomerNameSnapshot('Production Recipe Customer')
+			->setTotalAmount('100.0000')
+			->setTotalAmountBase('100.0000')
+			->setPaidAmountBase('0.0000')
+			->setPaymentStatus(PaymentStatusEnum::UNPAID);
+		$entry = (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setFulfillmentSource(OrderEntryFulfillmentSource::PRODUCTION)
+			->setProductNameSnapshot($product->getName())
+			->setProductCodeSnapshot($product->getCode())
+			->setUnitCodeSnapshot($product->getUnit()?->getCode() ?? 'pc')
+			->setUnitNameSnapshot($product->getUnit()?->getName() ?? 'Piece')
+			->setQuantity('1.0000')
+			->setUnitPrice('100.0000')
+			->setUnitPriceBase('100.0000')
+			->setTotalPrice('100.0000')
+			->setTotalPriceBase('100.0000');
+		$order->addOrderEntry($entry);
+		$this->entityManager->persist($order);
+		$this->entityManager->persist($entry);
+		$this->entityManager->flush();
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/show', $store->getId(), $order->getId()));
+		$form = $crawler->filter('form[action$="/confirm"]')->form();
+
+		$this->client->request(
+			$form->getMethod(),
+			$form->getUri(),
+			$form->getValues(),
+			[],
+			[
+				'HTTP_ACCEPT' => 'application/json',
+				'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest',
+			],
+		);
+
+		self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+		$data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+		self::assertSame(
+			'Product "Production product without recipe" requires an active default production recipe.',
+			$data['flashes'][0]['message'] ?? null,
+		);
+		self::assertArrayHasKey('card', $data['fragments']);
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/show', $store->getId(), $order->getId()));
+		$form = $crawler->filter('form[action$="/confirm"]')->form();
+		$this->client->request($form->getMethod(), $form->getUri(), $form->getValues());
+		self::assertResponseRedirects();
+
+		$reloadedOrder = $this->entityManager->getRepository(Order::class)->find($order->getId());
+		self::assertInstanceOf(Order::class, $reloadedOrder);
+		self::assertSame(OrderStatus::DRAFT, $reloadedOrder->getStatus());
 	}
 
 	public function testNewOrderBuilderFormCanBeSubmitted(): void

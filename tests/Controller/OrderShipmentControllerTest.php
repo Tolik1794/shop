@@ -23,6 +23,7 @@ use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\HttpFoundation\Response;
 
 class OrderShipmentControllerTest extends WebTestCase
 {
@@ -181,6 +182,70 @@ class OrderShipmentControllerTest extends WebTestCase
 		self::assertResponseRedirects(sprintf('/admin/store/%d/inventory-document/?id=%d', $store->getId(), $document->getId()));
 		self::assertCount(1, $document->getLines());
 		self::assertSame('1.0000', $document->getLines()->first()->getQuantity());
+	}
+
+	public function testShipmentModalAjaxSubmitCreatesDraftAndReturnsOrderFragments(): void
+	{
+		$this->client->loginUser($this->createUser('order-shipment-ajax-admin-' . uniqid() . '@example.com'));
+		[$store, $warehouse, $product] = $this->createStoreWarehouseAndProduct('order-shipment-ajax-' . uniqid());
+		$order = $this->createOrder($store, $warehouse, $product, OrderStatus::READY_TO_SHIP, '2.0000', '0.0000');
+		$this->createWarehouseStock($warehouse, $product, '2.0000', '6.0000');
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/show', $store->getId(), $order->getId()));
+		$form = $crawler->selectButton('Create shipment')->form();
+
+		$this->client->request(
+			$form->getMethod(),
+			$form->getUri(),
+			$form->getValues(),
+			[],
+			[
+				'HTTP_ACCEPT' => 'application/json',
+				'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest',
+			],
+		);
+
+		self::assertResponseIsSuccessful();
+		$data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+		self::assertSame('Order shipment draft created. Review and post the inventory document to ship stock.', $data['flashes'][0]['message'] ?? null);
+		self::assertArrayHasKey('card', $data['fragments']);
+		self::assertArrayHasKey('row', $data['fragments']);
+		self::assertInstanceOf(InventoryDocument::class, $this->entityManager->getRepository(InventoryDocument::class)->findOneBy([
+			'order' => $order,
+			'type' => InventoryDocumentType::SALE_SHIPMENT,
+		]));
+	}
+
+	public function testShipmentModalAjaxSubmitShowsValidationErrorWhenNoPositionsSelected(): void
+	{
+		$this->client->loginUser($this->createUser('order-shipment-empty-admin-' . uniqid() . '@example.com'));
+		[$store, $warehouse, $product] = $this->createStoreWarehouseAndProduct('order-shipment-empty-' . uniqid());
+		$order = $this->createOrder($store, $warehouse, $product, OrderStatus::READY_TO_SHIP, '2.0000', '0.0000');
+		$this->createWarehouseStock($warehouse, $product, '2.0000', '6.0000');
+		$entryId = (int) $order->getOrderEntries()->first()->getId();
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/show', $store->getId(), $order->getId()));
+		$form = $crawler->selectButton('Create shipment')->form();
+		$values = $form->getValues();
+		$values['lines'][$entryId] = '0';
+
+		$this->client->request(
+			$form->getMethod(),
+			$form->getUri(),
+			$values,
+			[],
+			[
+				'HTTP_ACCEPT' => 'application/json',
+				'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest',
+			],
+		);
+
+		self::assertResponseStatusCodeSame(Response::HTTP_UNPROCESSABLE_ENTITY);
+		$data = json_decode($this->client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+		self::assertSame('No positions were selected to ship.', $data['flashes'][0]['message'] ?? null);
+		self::assertSame([], $data['fragments']);
+		self::assertNull($this->entityManager->getRepository(InventoryDocument::class)->findOneBy([
+			'order' => $order,
+			'type' => InventoryDocumentType::SALE_SHIPMENT,
+		]));
 	}
 
 	public function testRefuseEntryRemainingSetsCanceledQuantity(): void

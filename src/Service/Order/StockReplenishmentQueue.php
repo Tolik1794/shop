@@ -5,14 +5,17 @@ namespace App\Service\Order;
 /**
  * Request-scoped collector of products whose stock increased during the current request.
  *
- * Inventory posting enqueues affected products; {@see \App\EventSubscriber\StockReplenishmentSubscriber}
- * drains the queue on kernel.terminate (after the request transaction is committed) so waiting orders can be
- * re-evaluated without holding stock locks. Only scalar ids are stored to stay safe against detached entities.
+ * Inventory posting enqueues affected products and linked production completion enqueues its production order.
+ * {@see \App\EventSubscriber\StockReplenishmentSubscriber} drains linked production first, then the general
+ * product queue on kernel.terminate so priority allocation can lock Order before Stock.
  */
 class StockReplenishmentQueue
 {
 	/** @var array<int, array<int, int>> map of storeId => list of productIds */
 	private array $pending = [];
+
+	/** @var array<int, int> */
+	private array $productionOrderIds = [];
 
 	/**
 	 * @param int[] $productIds
@@ -40,5 +43,23 @@ class StockReplenishmentQueue
 		$this->pending = [];
 
 		return $pending;
+	}
+
+	public function enqueueProductionOrder(int $productionOrderId): void
+	{
+		if ($productionOrderId > 0) {
+			$this->productionOrderIds[$productionOrderId] = $productionOrderId;
+		}
+	}
+
+	/**
+	 * @return int[]
+	 */
+	public function drainProductionOrders(): array
+	{
+		$ids = array_values($this->productionOrderIds);
+		$this->productionOrderIds = [];
+
+		return $ids;
 	}
 }

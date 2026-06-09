@@ -9,6 +9,7 @@ use App\Entity\InventoryDocument;
 use App\Entity\InventoryDocumentLine;
 use App\Entity\Order;
 use App\Entity\OrderEntry;
+use App\Entity\OrderEntryFulfillmentSource;
 use App\Entity\OrderHistory;
 use App\Entity\OrderHistorySource;
 use App\Entity\OrderStatus;
@@ -16,6 +17,10 @@ use App\Entity\Payment;
 use App\Entity\Product;
 use App\Entity\ProductDiscountRule;
 use App\Entity\ProductDiscountTarget;
+use App\Entity\ProductionOrder;
+use App\Entity\ProductionOrderStatus;
+use App\Entity\ProductionRecipe;
+use App\Entity\ProductionRecipeItem;
 use App\Entity\StockReservation;
 use App\Entity\StockReservationStatus;
 use App\Entity\Store;
@@ -33,6 +38,7 @@ use App\Enum\OrderDiscountModeEnum;
 use App\Enum\ProductDiscountTargetTypeEnum;
 use App\Enum\ProductKindEnum;
 use App\Manager\OrderManager;
+use App\Service\Production\ProductionDemandService;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
@@ -42,18 +48,20 @@ class OrderManagerTest extends KernelTestCase
 {
 	private EntityManagerInterface $entityManager;
 	private OrderManager $orderManager;
+	private ProductionDemandService $productionDemandService;
 
 	protected function setUp(): void
 	{
 		self::bootKernel();
 		$this->entityManager = static::getContainer()->get(EntityManagerInterface::class);
 		$this->orderManager = static::getContainer()->get(OrderManager::class);
+		$this->productionDemandService = static::getContainer()->get(ProductionDemandService::class);
 	}
 
 	protected function tearDown(): void
 	{
 		parent::tearDown();
-		unset($this->entityManager, $this->orderManager);
+		unset($this->entityManager, $this->orderManager, $this->productionDemandService);
 	}
 
 	public function testSaveOrderCopiesProductSnapshotAndRecalculatesTotals(): void
@@ -203,6 +211,110 @@ class OrderManagerTest extends KernelTestCase
 		self::assertSame('2.0000', $reservation->getQuantity());
 		self::assertSame('2.0000', $warehouseStock->getReservedQuantity());
 		self::assertSame(OrderStatus::READY_TO_SHIP, $order->getStatus());
+	}
+
+	public function testConfirmCreatesPlannedProductionOrderForProductionEntry(): void
+	{
+		$currency = $this->persistCurrency('P' . substr(uniqid(), -2), 'Production order currency');
+		$store = $this->persistStore('order-production-' . uniqid(), $currency);
+		$product = $this->persistProduct($store)->setCanBeManufactured(true);
+		$material = $this->persistProduct($store)->setProductKind(ProductKindEnum::MATERIAL);
+		$warehouse = $this->persistWarehouse($store);
+		$this->persistProductionRecipe($store, $product, $material);
+		$order = $this->orderManager->createDraft($store);
+		$order->addOrderEntry((new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setFulfillmentSource(OrderEntryFulfillmentSource::PRODUCTION)
+			->setQuantity('2.0000')
+			->setUnitPrice('10.0000'));
+
+		$this->orderManager->saveOrder($order);
+		$this->orderManager->confirm($order);
+
+		$productionOrder = $this->entityManager->getRepository(ProductionOrder::class)->findOneBy([
+			'sourceOrderEntry' => $order->getOrderEntries()->first(),
+		]);
+
+		self::assertInstanceOf(ProductionOrder::class, $productionOrder);
+		self::assertSame(ProductionOrderStatus::PLANNED, $productionOrder->getStatus());
+		self::assertSame('2.0000', $productionOrder->getPlannedQuantity());
+		self::assertSame($warehouse, $productionOrder->getWarehouse());
+		self::assertSame(OrderStatus::AWAITING_STOCK, $order->getStatus());
+	}
+
+	public function testConfirmRejectsProductionEntryWithoutDefaultRecipe(): void
+	{
+		$currency = $this->persistCurrency('R' . substr(uniqid(), -2), 'Missing recipe currency');
+		$store = $this->persistStore('order-missing-recipe-' . uniqid(), $currency);
+		$product = $this->persistProduct($store)->setCanBeManufactured(true);
+		$warehouse = $this->persistWarehouse($store);
+		$order = $this->orderManager->createDraft($store);
+		$order->addOrderEntry((new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setFulfillmentSource(OrderEntryFulfillmentSource::PRODUCTION)
+			->setQuantity('1.0000')
+			->setUnitPrice('10.0000'));
+		$this->orderManager->saveOrder($order);
+
+		$this->expectException(RuntimeException::class);
+		$this->expectExceptionMessage('requires an active default production recipe');
+
+		$this->orderManager->confirm($order);
+	}
+
+	public function testCompletedLinkedProductionReservesItsOutputAndPlansRemainingDemand(): void
+	{
+		$currency = $this->persistCurrency('L' . substr(uniqid(), -2), 'Linked production currency');
+		$store = $this->persistStore('order-linked-production-' . uniqid(), $currency);
+		$product = $this->persistProduct($store)->setCanBeManufactured(true);
+		$material = $this->persistProduct($store)->setProductKind(ProductKindEnum::MATERIAL);
+		$warehouse = $this->persistWarehouse($store);
+		$this->persistProductionRecipe($store, $product, $material);
+		$order = $this->orderManager->createDraft($store);
+		$order->addOrderEntry((new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setFulfillmentSource(OrderEntryFulfillmentSource::PRODUCTION)
+			->setQuantity('2.0000')
+			->setUnitPrice('10.0000'));
+
+		$this->orderManager->saveOrder($order);
+		$this->orderManager->confirm($order);
+		$entry = $order->getOrderEntries()->first();
+		$completedProduction = $this->entityManager->getRepository(ProductionOrder::class)->findOneBy([
+			'sourceOrderEntry' => $entry,
+		]);
+		self::assertInstanceOf(ProductionOrder::class, $completedProduction);
+
+		$warehouseStock = $this->persistWarehouseStock($warehouse, $product, '1.0000');
+		$completedProduction
+			->setStatus(ProductionOrderStatus::COMPLETED)
+			->setCompletedQuantity('1.0000')
+			->setCompletedAt(new DateTimeImmutable());
+		$this->entityManager->flush();
+
+		$this->productionDemandService->fulfillCompletedProduction((int) $completedProduction->getId());
+		$this->entityManager->refresh($order);
+		$this->entityManager->refresh($warehouseStock);
+
+		$reservation = $this->entityManager->getRepository(StockReservation::class)->findOneBy([
+			'orderEntry' => $entry,
+			'warehouseStock' => $warehouseStock,
+			'status' => StockReservationStatus::ACTIVE,
+		]);
+		$continuation = $this->entityManager->getRepository(ProductionOrder::class)->findOneBy([
+			'sourceOrderEntry' => $entry,
+			'status' => ProductionOrderStatus::PLANNED,
+		]);
+
+		self::assertInstanceOf(StockReservation::class, $reservation);
+		self::assertSame('1.0000', $reservation->getQuantity());
+		self::assertSame('1.0000', $warehouseStock->getReservedQuantity());
+		self::assertInstanceOf(ProductionOrder::class, $continuation);
+		self::assertSame('1.0000', $continuation->getPlannedQuantity());
+		self::assertSame(OrderStatus::AWAITING_STOCK, $order->getStatus());
 	}
 
 	public function testSaveOrderWithNewBatchBackedEntryDoesNotQueryReservationsBeforeEntryHasId(): void
@@ -996,6 +1108,23 @@ class OrderManagerTest extends KernelTestCase
 		$this->entityManager->flush();
 
 		return $rule;
+	}
+
+	private function persistProductionRecipe(Store $store, Product $product, Product $material): ProductionRecipe
+	{
+		$recipe = (new ProductionRecipe())
+			->setStore($store)
+			->setProduct($product)
+			->setName('Default recipe ' . uniqid())
+			->setIsDefault(true)
+			->addItem((new ProductionRecipeItem())
+				->setMaterial($material)
+				->setQuantity('1.0000'));
+
+		$this->entityManager->persist($recipe);
+		$this->entityManager->flush();
+
+		return $recipe;
 	}
 
 	private function persistExchangeRate(Currency $fromCurrency, Currency $toCurrency, Store $store, string $rate): ExchangeRate

@@ -364,10 +364,37 @@ class ProductionOrderController extends AbstractAdvancedController
 		]);
 	}
 
+	private function refreshOrderState(ProductionOrder $order): void
+	{
+		$entityManager = $this->productionManager->getEntityManager();
+
+		if ($entityManager->isOpen() && $entityManager->contains($order)) {
+			$entityManager->refresh($order);
+		}
+	}
+
 	private function quickActionResponse(Request $request, Store $store, ProductionOrder $order, int $status = Response::HTTP_OK): Response
 	{
+		if ($status >= Response::HTTP_BAD_REQUEST) {
+			$this->refreshOrderState($order);
+		}
+
+		$entityManagerIsOpen = $this->productionManager->getEntityManager()->isOpen();
+
+		if (!$this->wantsQuickActionJson($request) && !$entityManagerIsOpen && $status >= Response::HTTP_BAD_REQUEST) {
+			return $this->redirectToRoute('app_admin_production_order_index', [
+				'store_id' => $store->getId(),
+				'id' => $order->getId(),
+				'page' => max(1, $request->query->getInt('page', 1)),
+			]);
+		}
+
 		if (!$this->wantsQuickActionJson($request)) {
 			return $this->redirectToOrderIndex($store, $order);
+		}
+
+		if (!$entityManagerIsOpen && $status >= Response::HTTP_BAD_REQUEST) {
+			return $this->quickActionJsonResponse($request, [], $status);
 		}
 
 		return $this->quickActionJsonResponse($request, [

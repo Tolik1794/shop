@@ -31,3 +31,4 @@ This protects draft forms from silent last-write-wins overwrites while avoiding 
 - Do not add a new status action without locking the subject first.
 - Do not recalculate order/purchase payment state without locking the target document.
 - Do not create shipment/receipt drafts for an order or purchase if an existing draft of the same operation is still open.
+- Allocate completed linked production after the production transaction commits. The replenishment subscriber must lock the sales order before reserving output stock, then run the general FIFO replenishment queue.

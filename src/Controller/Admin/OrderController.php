@@ -5,18 +5,21 @@ namespace App\Controller\Admin;
 use App\Entity\Order;
 use App\Entity\OrderComment;
 use App\Entity\OrderEntry;
+use App\Entity\OrderEntryFulfillmentSource;
 use App\Entity\OrderStatus;
 use App\Entity\Store;
 use App\Entity\Customer;
 use App\Entity\User\User;
 use App\Enum\CommentTypeEnum;
 use App\Exception\ConcurrencyConflictException;
+use App\Exception\ProductionDemandException;
 use App\Form\Admin\FilterType\OrderFilterType;
 use App\Form\Admin\Type\OrderType;
 use App\Manager\OrderManager;
 use App\Manager\OrderCommentManager;
 use App\Repository\CustomerRepository;
 use App\Repository\OrderCommentReadStateRepository;
+use App\Repository\WarehouseRepository;
 use App\Service\Concurrency\ConcurrencyGuard;
 use App\Service\Customer\CustomerHistoryProvider;
 use App\Service\Discount\OrderEntryDiscountService;
@@ -28,6 +31,8 @@ use App\Service\Order\CommentAudienceResolver;
 use App\Service\Order\CommentTemplateProvider;
 use App\Service\Payment\OrderPaymentReviewService;
 use App\Service\Payment\PaymentDocumentRenderer;
+use App\Service\Production\ProductionDemandService;
+use App\Workflow\TransitionContext;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
 use RuntimeException;
@@ -39,6 +44,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[Route('/admin/store/{store_id}/order', name: 'app_admin_order_'), IsGranted('order.view')]
 class OrderController extends AbstractAdvancedController
@@ -62,6 +68,9 @@ class OrderController extends AbstractAdvancedController
 		private readonly CustomerHistoryProvider $customerHistoryProvider,
 		private readonly OrderPaymentReviewService $orderPaymentReviewService,
 		private readonly PaymentDocumentRenderer $paymentDocumentRenderer,
+		private readonly ProductionDemandService $productionDemandService,
+		private readonly WarehouseRepository $warehouseRepository,
+		private readonly TranslatorInterface $translator,
 	)
 	{
 	}
@@ -293,7 +302,73 @@ class OrderController extends AbstractAdvancedController
 			'rollback_target_status' => $this->orderManager->getRollbackTargetStatus($order)?->value,
 			'payment_summary' => $this->orderPaymentReviewService->paymentSummary($order),
 			'payment_review' => $this->orderPaymentReviewService->canceledPaidReview($order),
+			'production_warehouses' => $this->warehouseRepository->findAvailableByStoreQB($store)->orderBy('warehouse.name', 'ASC')->getQuery()->getResult(),
 		]);
+	}
+
+	#[Route('/{id}/entry/{entryId}/plan-production', name: 'plan_production', methods: ['POST'])]
+	#[IsGranted('order.edit')]
+	public function planProduction(
+		Request $request,
+		#[MapEntity(expr: 'repository.find(store_id)')]
+		Store $store,
+		Order $order,
+		int $entryId,
+	): Response
+	{
+		$this->denyOrderOutsideStore($order, $store);
+		$this->denyAccessUnlessGranted('production_order.create');
+
+		if (!in_array($order->getStatus(), [OrderStatus::CONFIRMED, OrderStatus::AWAITING_STOCK], true)) {
+			throw $this->createAccessDeniedException('Production demand can be planned only for confirmed orders awaiting fulfillment.');
+		}
+
+		if (!$this->isCsrfTokenValid('plan_production_order_entry_' . $entryId, (string) $request->request->get('_token'))) {
+			$this->addFlash('danger', 'Order action token is invalid.');
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		$entry = $this->orderManager->getEntityManager()->getRepository(OrderEntry::class)->find($entryId);
+		$warehouse = $this->warehouseRepository->findOneBy([
+			'id' => $request->request->getInt('warehouse_id'),
+			'store' => $store,
+		]);
+
+		if (!$entry instanceof OrderEntry || $entry->getOrder() !== $order || !$warehouse) {
+			throw $this->createNotFoundException();
+		}
+
+		try {
+			$this->orderManager->getEntityManager()->wrapInTransaction(function () use ($entry, $order, $warehouse): void {
+				$this->concurrencyGuard->lock($order);
+				$entry
+					->setFulfillmentSource(OrderEntryFulfillmentSource::PRODUCTION)
+					->setWarehouse($warehouse);
+				$this->orderManager->getEntityManager()->persist($entry);
+				$user = $this->getUser();
+				$context = $user instanceof User ? TransitionContext::manual($user) : TransitionContext::system();
+				$this->productionDemandService->ensurePlannedDemand($entry, $context);
+			});
+			$this->addFlash('success', 'Production order planned.');
+		} catch (ConcurrencyConflictException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_CONFLICT);
+		} catch (ProductionDemandException $exception) {
+			$this->addFlash('danger', $this->translator->trans(
+				$exception->getTranslationKey(),
+				$exception->getTranslationParameters(),
+			));
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		} catch (RuntimeException $exception) {
+			$this->addFlash('danger', $exception->getMessage());
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		return $this->quickActionResponse($request, $store, $order);
 	}
 
 	#[Route('/{id}/comments', name: 'comments', methods: ['GET'])]
@@ -370,6 +445,13 @@ class OrderController extends AbstractAdvancedController
 			$this->addFlash('danger', $exception->getMessage());
 
 			return $this->quickActionResponse($request, $store, $order, Response::HTTP_CONFLICT);
+		} catch (ProductionDemandException $exception) {
+			$this->addFlash('danger', $this->translator->trans(
+				$exception->getTranslationKey(),
+				$exception->getTranslationParameters(),
+			));
+
+			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
 		} catch (RuntimeException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
 
@@ -564,12 +646,13 @@ class OrderController extends AbstractAdvancedController
 			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
 		}
 
+		$selectionSubmitted = $request->request->has('lines');
 		$selection = $this->resolveShipmentSelection($request);
 
 		try {
-			$inventoryDocument = $selection === []
-				? $this->orderShipmentUseCase->createDraft($order)
-				: $this->orderShipmentUseCase->createDraftForSelection($order, $selection);
+			$inventoryDocument = $selectionSubmitted
+				? $this->orderShipmentUseCase->createDraftForSelection($order, $selection)
+				: $this->orderShipmentUseCase->createDraft($order);
 			$this->addFlash('success', 'Order shipment draft created. Review and post the inventory document to ship stock.');
 		} catch (ConcurrencyConflictException $exception) {
 			$this->addFlash('danger', $exception->getMessage());
@@ -579,6 +662,10 @@ class OrderController extends AbstractAdvancedController
 			$this->addFlash('danger', $exception->getMessage());
 
 			return $this->quickActionResponse($request, $store, $order, Response::HTTP_UNPROCESSABLE_ENTITY);
+		}
+
+		if ($this->wantsQuickActionJson($request)) {
+			return $this->quickActionResponse($request, $store, $order);
 		}
 
 		return $this->redirectToRoute('app_admin_inventory_document_index', [
@@ -935,8 +1022,22 @@ class OrderController extends AbstractAdvancedController
 			$this->refreshOrderState($order);
 		}
 
+		$entityManagerIsOpen = $this->orderManager->getEntityManager()->isOpen();
+
+		if (!$this->wantsQuickActionJson($request) && !$entityManagerIsOpen && $status >= Response::HTTP_BAD_REQUEST) {
+			return $this->redirectToRoute('app_admin_order_index', [
+				'store_id' => $store->getId(),
+				'id' => $order->getId(),
+				'page' => max(1, $request->query->getInt('page', 1)),
+			]);
+		}
+
 		if (!$this->wantsQuickActionJson($request)) {
 			return $this->redirectToOrderIndex($store, $order);
+		}
+
+		if (!$entityManagerIsOpen && $status >= Response::HTTP_BAD_REQUEST) {
+			return $this->quickActionJsonResponse($request, [], $status);
 		}
 
 		return $this->quickActionJsonResponse($request, [
@@ -948,6 +1049,7 @@ class OrderController extends AbstractAdvancedController
 				'rollback_target_status' => $this->orderManager->getRollbackTargetStatus($order)?->value,
 				'payment_summary' => $this->orderPaymentReviewService->paymentSummary($order),
 				'payment_review' => $this->orderPaymentReviewService->canceledPaidReview($order),
+				'production_warehouses' => $this->warehouseRepository->findAvailableByStoreQB($store)->orderBy('warehouse.name', 'ASC')->getQuery()->getResult(),
 			]),
 			'history' => $this->renderView('admin/order/history.html.twig', [
 				'entity' => $order,

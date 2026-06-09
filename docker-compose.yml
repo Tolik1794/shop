@@ -14,6 +14,9 @@ services:
       DATABASE_URL: "postgresql://shop:shop@postgres:5432/shop?serverVersion=16&charset=utf8"
       REDIS_URL: "redis://redis:6379"
       MAILER_DSN: "null://null"
+      PHP_IDE_CONFIG: "serverName=shop"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./:/var/www/shop:cached
       - shop_var_cache:/var/www/shop/var/cache

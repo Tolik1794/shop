@@ -8,6 +8,7 @@ export default class extends Controller {
         'productMeta',
         'warehouse',
         'warehouseStockBatch',
+        'source',
         'sourceLabel',
         'sourceMeta',
         'available',
@@ -98,6 +99,25 @@ export default class extends Controller {
         if (note) {
             note.classList.toggle('d-none', !isProduction)
         }
+    }
+
+    sourceChanged() {
+        const sourceType = this.hasSourceTarget ? this.sourceTarget.value : 'stock'
+        const warehouse = this.hasWarehouseTarget ? this.warehouseTarget.selectedOptions[0] : null
+        const selectedSource = this.hasSourceTarget ? this.sourceTarget.selectedOptions[0] : null
+        const sourceLabel = selectedSource ? selectedSource.textContent : sourceType
+
+        this.element.dataset.sourceType = sourceType
+        if (this.hasSourceMetaTarget) {
+            this.sourceMetaTarget.textContent = sourceLabel
+        }
+        if (this.hasSourceLabelTarget) {
+            this.sourceLabelTarget.textContent = warehouse && warehouse.value
+                ? warehouse.textContent
+                : sourceLabel
+        }
+        this.updateAvailabilityVisibility()
+        this.changed()
     }
 
     changed(event) {

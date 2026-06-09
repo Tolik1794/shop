@@ -64,6 +64,7 @@ entity ProductionOrder {
     * product: Product
     warehouse: Warehouse?
     recipe: ProductionRecipe?
+    sourceOrderEntry: OrderEntry?
 }
 
 entity ProductionOrderMaterial {
@@ -90,6 +91,7 @@ ProductionRecipeItem |o--o{ ProductionOrderMaterial : copied into plan
 ProductionRecipe |o--o{ ProductionOrder : used by
 ProductionOrder ||--o{ ProductionOrderMaterial : plans materials
 ProductionOrder ||--o{ InventoryDocument : generates stock docs
+OrderEntry |o--o{ ProductionOrder : requests output
 ProductionOrderStatus ||--o{ ProductionOrder : controls
 
 note right of ProductionOrderStatus
@@ -127,6 +129,9 @@ note right of ProductionOrder
 
   ProductionOrderMaterial stores the planned material snapshot for this exact order.
   InventoryDocument(type=production) posts actual stock movements.
+
+  sourceOrderEntry links make-to-order production to the sales position that requested it.
+  Only one linked production order may be active for one order entry at a time.
 end note
 
 @enduml

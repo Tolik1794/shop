@@ -242,6 +242,7 @@ admin:
       manual_discount_toggle: 'Manual discount'
       delivery_address_placeholder: 'City, post office or street, building, apartment'
       availability: 'Availability'
+      source: 'Source'
     actions:
       confirm: 'Confirm'
       copy_number: 'Copy order number'
@@ -512,3 +513,7 @@ comment_type:
     call_result: 'Call result'
     callback_needed: 'Callback needed'
     complaint: 'Complaint'
+production_demand:
+    product_not_manufacturable: 'Production order position product must be manufacturable.'
+    output_warehouse_required: 'Select a production output warehouse for every production position.'
+    active_default_recipe_required: 'Product "%product%" requires an active default production recipe.'

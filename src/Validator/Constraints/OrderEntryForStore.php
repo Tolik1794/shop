@@ -10,6 +10,8 @@ class OrderEntryForStore extends Constraint
 {
 	public string $invalidProductMessage = 'Select product from current store.';
 	public string $invalidWarehouseMessage = 'Select warehouse from current store.';
+	public string $warehouseRequiredMessage = 'Select warehouse for this order position.';
+	public string $invalidFulfillmentSourceMessage = 'Selected fulfillment source is not valid for this product.';
 	public string $insufficientStockMessage = 'Insufficient stock. Available quantity: {{ available }}.';
 
 	public function __construct(

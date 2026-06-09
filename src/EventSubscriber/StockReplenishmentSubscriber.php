@@ -2,8 +2,12 @@
 
 namespace App\EventSubscriber;
 
+use App\Exception\ConcurrencyConflictException;
+use App\Exception\StockOperationException;
 use App\Service\Order\AwaitingStockReplenishmentService;
 use App\Service\Order\StockReplenishmentQueue;
+use App\Service\Production\ProductionDemandService;
+use RuntimeException;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -18,6 +22,7 @@ final class StockReplenishmentSubscriber implements EventSubscriberInterface
 	public function __construct(
 		private readonly StockReplenishmentQueue $queue,
 		private readonly AwaitingStockReplenishmentService $replenishmentService,
+		private readonly ProductionDemandService $productionDemandService,
 	)
 	{
 	}
@@ -31,6 +36,14 @@ final class StockReplenishmentSubscriber implements EventSubscriberInterface
 
 	public function onKernelTerminate(TerminateEvent $event): void
 	{
+		foreach ($this->queue->drainProductionOrders() as $productionOrderId) {
+			try {
+				$this->productionDemandService->fulfillCompletedProduction($productionOrderId);
+			} catch (ConcurrencyConflictException | StockOperationException | RuntimeException) {
+				// Best-effort: general replenishment still runs and the demand can be planned manually.
+			}
+		}
+
 		foreach ($this->queue->drain() as $storeId => $productIds) {
 			$this->replenishmentService->replenish($storeId, $productIds);
 		}

@@ -26,7 +26,12 @@
 		{% set items %}
 			{% for entry in entity.orderEntries %}
 				{% set has_discount = entry.discountAmount is not null and entry.discountAmount > 0 %}
-				{% set is_production = entry.warehouse is null %}
+				{% set source_type = entry.fulfillmentSource.value %}
+				{% set source_label = {
+					stock: 'admin.order.source.stock'|trans,
+					production: 'admin.order.source.production'|trans,
+					service: 'admin.order.source.service'|trans
+				}[source_type]|default(source_type) %}
 				{{ include('admin/_components/document_list/_item.html.twig', {
 					name: entry.productNameSnapshot,
 					quantity_label: entry.quantity|quantity(entry.product),
@@ -35,8 +40,8 @@
 					total_amount: entry.totalPrice|money ~ ' ' ~ entity.currency.code,
 					show_calculation: has_discount,
 					sku: entry.productCodeSnapshot,
-					source: is_production ? 'admin.order.source.production'|trans : ('admin.order.source.stock'|trans ~ ' · ' ~ entry.warehouse.name),
-					source_type: is_production ? 'production' : 'stock'
+					source: source_label ~ (entry.warehouse ? ' · ' ~ entry.warehouse.name : ''),
+					source_type: source_type
 				}) }}
 			{% endfor %}
 		{% endset %}

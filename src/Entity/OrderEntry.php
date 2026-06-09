@@ -82,6 +82,9 @@ class OrderEntry
 	#[ORM\ManyToOne]
 	private ?WarehouseStockBatch $warehouseStockBatch = null;
 
+	#[ORM\Column(length: 32, enumType: OrderEntryFulfillmentSource::class)]
+	private OrderEntryFulfillmentSource $fulfillmentSource;
+
 	#[ORM\ManyToOne(inversedBy: 'orderEntries')]
 	private ?ProductDiscountRule $discountRule = null;
 
@@ -97,6 +100,12 @@ class OrderEntry
 	#[ORM\OneToMany(targetEntity: StockReservation::class, mappedBy: 'orderEntry')]
 	private Collection $stockReservations;
 
+	/**
+	 * @var Collection<int, ProductionOrder>
+	 */
+	#[ORM\OneToMany(mappedBy: 'sourceOrderEntry', targetEntity: ProductionOrder::class)]
+	private Collection $productionOrders;
+
 	public function __construct()
 	{
 		$this->quantity = '0.0000';
@@ -104,8 +113,10 @@ class OrderEntry
 		$this->unitPriceBase = '0.0000';
 		$this->totalPrice = '0.0000';
 		$this->totalPriceBase = '0.0000';
+		$this->fulfillmentSource = OrderEntryFulfillmentSource::STOCK;
 		$this->inventoryDocumentLines = new ArrayCollection();
 		$this->stockReservations = new ArrayCollection();
+		$this->productionOrders = new ArrayCollection();
 	}
 
     public function getId(): ?int
@@ -165,6 +176,8 @@ class OrderEntry
 	public function setWarehouse(?Warehouse $warehouse): self { $this->warehouse = $warehouse; return $this; }
 	public function getWarehouseStockBatch(): ?WarehouseStockBatch { return $this->warehouseStockBatch; }
 	public function setWarehouseStockBatch(?WarehouseStockBatch $warehouseStockBatch): self { $this->warehouseStockBatch = $warehouseStockBatch; return $this; }
+	public function getFulfillmentSource(): OrderEntryFulfillmentSource { return $this->fulfillmentSource; }
+	public function setFulfillmentSource(OrderEntryFulfillmentSource $fulfillmentSource): self { $this->fulfillmentSource = $fulfillmentSource; return $this; }
 	public function getDiscountRule(): ?ProductDiscountRule { return $this->discountRule; }
 	public function setDiscountRule(?ProductDiscountRule $discountRule): self { $this->discountRule = $discountRule; return $this; }
 
@@ -220,5 +233,13 @@ class OrderEntry
 		}
 
 		return $this;
+	}
+
+	/**
+	 * @return Collection<int, ProductionOrder>
+	 */
+	public function getProductionOrders(): Collection
+	{
+		return $this->productionOrders;
 	}
 }

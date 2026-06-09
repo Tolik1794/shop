@@ -61,6 +61,7 @@
 			<tr><th>{{ 'Status'|trans }}</th><td>{{ entity.status.value }}</td></tr>
 			<tr><th>{{ 'Product'|trans }}</th><td>{{ entity.product.name }}</td></tr>
 			<tr><th>{{ 'Recipe'|trans }}</th><td>{{ entity.recipe ? entity.recipe.name : '' }}</td></tr>
+			<tr><th>{{ 'Sales order'|trans }}</th><td>{% if entity.sourceOrderEntry and entity.sourceOrderEntry.order %}<a href="{{ path('app_admin_order_index', {store_id: app.request.attributes.get('store_id'), id: entity.sourceOrderEntry.order.id}) }}">{{ entity.sourceOrderEntry.order.number }} · {{ entity.sourceOrderEntry.productNameSnapshot }}</a>{% endif %}</td></tr>
 			<tr><th>{{ 'Warehouse'|trans }}</th><td>{{ entity.warehouse ? entity.warehouse.name : '' }}</td></tr>
 			<tr><th>{{ 'Planned quantity'|trans }}</th><td>{{ entity.plannedQuantity|quantity(entity.product) }}</td></tr>
 			<tr><th>{{ 'Completed quantity'|trans }}</th><td>{{ entity.completedQuantity|quantity(entity.product) }}</td></tr>

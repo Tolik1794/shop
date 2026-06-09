@@ -3,7 +3,9 @@
 namespace App\Validator\Constraints;
 
 use App\Entity\OrderEntry;
+use App\Entity\OrderEntryFulfillmentSource;
 use App\Entity\Product;
+use App\Enum\ProductKindEnum;
 use App\Repository\WarehouseStockRepository;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
@@ -45,7 +47,36 @@ class OrderEntryForStoreValidator extends ConstraintValidator
 				->addViolation();
 		}
 
-		if (!$isProductValid || !$isWarehouseValid || $warehouse === null) {
+		if (
+			$warehouse === null
+			&& $product?->getProductKind() !== ProductKindEnum::SERVICE
+			&& $value->getFulfillmentSource() === OrderEntryFulfillmentSource::STOCK
+		) {
+			$this->context
+				->buildViolation($constraint->warehouseRequiredMessage)
+				->atPath('warehouse')
+				->addViolation();
+		}
+
+		if (
+			$isProductValid
+			&& (
+				($product->getProductKind() === ProductKindEnum::SERVICE && $value->getFulfillmentSource() !== OrderEntryFulfillmentSource::SERVICE)
+				|| ($product->getProductKind() !== ProductKindEnum::SERVICE && $value->getFulfillmentSource() === OrderEntryFulfillmentSource::SERVICE)
+			)
+		) {
+			$this->context
+				->buildViolation($constraint->invalidFulfillmentSourceMessage)
+				->atPath('fulfillmentSource')
+				->addViolation();
+		}
+
+		if (
+			!$isProductValid
+			|| !$isWarehouseValid
+			|| $warehouse === null
+			|| $value->getFulfillmentSource() !== OrderEntryFulfillmentSource::STOCK
+		) {
 			return;
 		}
 

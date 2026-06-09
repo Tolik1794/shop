@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Entity\Order;
 use App\Entity\OrderEntry;
+use App\Entity\OrderEntryFulfillmentSource;
 use App\Entity\OrderStatus;
 use App\Entity\Purchase;
 use App\Entity\PurchaseStatus;
@@ -175,6 +176,17 @@ class BusinessDocumentStatusSynchronizer
 			return false;
 		}
 
+		if ($entry->getFulfillmentSource() === OrderEntryFulfillmentSource::PRODUCTION) {
+			$required = max(
+				0,
+				$this->numberValue($entry->getQuantity())
+				- $this->numberValue($entry->getCanceledQuantity())
+				- $this->numberValue($entry->getShippedQuantity()),
+			);
+
+			return $this->isEnough($this->activeReservedQuantity($entry), $required);
+		}
+
 		$warehouseStock = $this->warehouseStockRepository->findOneByProductAndWarehouse($product, $warehouse);
 		if (!$warehouseStock) {
 			return false;
@@ -198,6 +210,18 @@ class BusinessDocumentStatusSynchronizer
 		}
 
 		return $this->isEnough($available, $required);
+	}
+
+	private function activeReservedQuantity(OrderEntry $entry): float
+	{
+		$quantity = 0.0;
+		foreach ($entry->getStockReservations() as $reservation) {
+			if ($reservation instanceof StockReservation && $reservation->getStatus() === StockReservationStatus::ACTIVE) {
+				$quantity += $this->numberValue($reservation->getQuantity());
+			}
+		}
+
+		return $quantity;
 	}
 
 	private function numberValue(mixed $value): float

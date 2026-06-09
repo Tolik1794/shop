@@ -131,6 +131,78 @@ export default class extends Controller {
         }
     }
 
+    async submitShipment(event) {
+        event.preventDefault()
+
+        const form = event.currentTarget
+        const submitButton = form.querySelector('[type="submit"]')
+
+        this.showShipmentErrors(form, [])
+
+        if (!form.checkValidity()) {
+            form.reportValidity()
+            return
+        }
+
+        if (submitButton) {
+            submitButton.disabled = true
+        }
+
+        try {
+            const response = await fetch(form.action, {
+                method: form.method || 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+            })
+            const data = await response.json()
+            const flashes = data.flashes || []
+
+            if (!response.ok) {
+                this.showShipmentErrors(form, flashes.map((flash) => flash.message).filter(Boolean))
+                return
+            }
+
+            await this.hideModal(form.closest('.modal'))
+            this.showFlashes(flashes)
+            this.replaceQuickActionFragments(data.fragments || {})
+        } catch (error) {
+            this.showShipmentErrors(form, ['Action failed. Please try again.'])
+        } finally {
+            if (submitButton) {
+                submitButton.disabled = false
+            }
+        }
+    }
+
+    showShipmentErrors(form, messages) {
+        const container = form.querySelector('[data-shipment-errors]')
+
+        if (!container) {
+            return
+        }
+
+        container.classList.toggle('d-none', messages.length === 0)
+        container.innerHTML = messages.map((message) => `<div>${this.escapeHtml(message)}</div>`).join('')
+    }
+
+    hideModal(modal) {
+        if (!modal || !window.bootstrap || !window.bootstrap.Modal) {
+            return Promise.resolve()
+        }
+
+        if (!modal.classList.contains('show')) {
+            return Promise.resolve()
+        }
+
+        return new Promise((resolve) => {
+            modal.addEventListener('hidden.bs.modal', resolve, { once: true })
+            window.bootstrap.Modal.getOrCreateInstance(modal).hide()
+        })
+    }
+
     replaceQuickActionFragments(fragments) {
         if (fragments.card && this.hasCardTarget) {
             const div = document.createElement('div')

@@ -4,6 +4,7 @@ namespace App\Tests\Service;
 
 use App\Entity\Order;
 use App\Entity\OrderEntry;
+use App\Entity\OrderEntryFulfillmentSource;
 use App\Entity\OrderStatus;
 use App\Entity\Product;
 use App\Entity\StockReservation;
@@ -111,6 +112,19 @@ class BusinessDocumentStatusSynchronizerTest extends TestCase
 		$this->synchronizer->syncOrder($order, TransitionContext::system());
 
 		self::assertSame(OrderStatus::READY_TO_SHIP, $order->getStatus());
+	}
+
+	public function testProductionEntryRequiresItsOwnActiveReservationEvenWhenStockExists(): void
+	{
+		$order = $this->orderWithEntry('0.0000', '0.0000');
+		$orderEntry = $order->getOrderEntries()->first();
+		$orderEntry->setFulfillmentSource(OrderEntryFulfillmentSource::PRODUCTION);
+		$this->warehouseStockRepository->method('findOneByProductAndWarehouse')
+			->willReturn((new WarehouseStock())->setQuantityOnHand('5.0000'));
+
+		$this->synchronizer->syncOrder($order, TransitionContext::system());
+
+		self::assertSame(OrderStatus::AWAITING_STOCK, $order->getStatus());
 	}
 
 	/**

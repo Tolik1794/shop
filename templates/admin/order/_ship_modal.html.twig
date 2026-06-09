@@ -3,13 +3,15 @@
 <div class="modal fade" id="order-ship-modal-{{ entity.id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form method="post" action="{{ path('app_admin_order_ship', {store_id: store_id, id: entity.id}) }}">
+            <form method="post" action="{{ path('app_admin_order_ship', {store_id: store_id, id: entity.id}) }}"
+                  data-action="submit->reload-card#submitShipment">
                 <input type="hidden" name="_token" value="{{ csrf_token('ship_order_' ~ entity.id) }}">
                 <div class="modal-header">
                     <h5 class="modal-title">{{ 'admin.order.ship_modal.title'|trans }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ 'admin.common.close'|trans }}"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="alert alert-danger d-none" role="alert" data-shipment-errors></div>
                     <p class="text-muted small">{{ 'admin.order.ship_modal.hint'|trans }}</p>
                     <div class="table-responsive">
                         <table class="table table-sm align-middle mb-0">

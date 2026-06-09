@@ -186,6 +186,8 @@ note bottom
   - ProductionRecipe.product should usually have canBeManufactured=true.
   - ProductionRecipeItem.material and ProductionOrderMaterial.material should usually not be productKind=service.
   - Production actual material usage is recorded via InventoryDocumentLine OUT lines, not by editing ProductionOrderMaterial.
+  - OrderEntry.fulfillmentSource=production requires a warehouse and an active default recipe before confirmation.
+  - Only one non-completed/non-canceled ProductionOrder may reference the same sourceOrderEntry.
 end note
 note bottom
   Recommended indexes:
@@ -257,6 +259,7 @@ note bottom
   ProductionOrder(created_by_id)
   ProductionOrder(canceled_by_id)
   ProductionOrder(canceled_at)
+  ProductionOrder(source_order_entry_id)
   ProductionOrderMaterial(production_order_id)
   ProductionOrderMaterial(material_id)
   StockReservation(order_entry_id)

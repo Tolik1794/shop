@@ -259,10 +259,44 @@
                                     {% if product_code is not empty %}
                                         <div class="text-muted small">{{ product_code }}</div>
                                     {% endif %}
-                                    {% set is_production = entry.warehouse is null %}
+                                    {% set is_production = entry.fulfillmentSource.value == 'production' %}
+                                    {% set source_label = {
+                                        stock: 'admin.order.source.stock'|trans,
+                                        production: 'admin.order.source.production'|trans,
+                                        service: 'admin.order.source.service'|trans
+                                    }[entry.fulfillmentSource.value]|default(entry.fulfillmentSource.value) %}
                                     <div class="text-muted small order-show-product-source">
-                                        <i class="fa-solid {{ is_production ? 'fa-industry' : 'fa-warehouse' }} me-1"></i>{{ is_production ? 'admin.order.source.production'|trans : ('admin.order.source.stock'|trans ~ ' · ' ~ entry.warehouse.name) }}
+                                        <i class="fa-solid {{ is_production ? 'fa-industry' : (entry.fulfillmentSource.value == 'service' ? 'fa-bell-concierge' : 'fa-warehouse') }} me-1"></i>{{ source_label }}{% if entry.warehouse %} · {{ entry.warehouse.name }}{% endif %}
                                     </div>
+                                    {% set has_active_production = false %}
+                                    {% for production_order in entry.productionOrders %}
+                                        {% if production_order.status.value in ['draft', 'planned', 'materials_reserved', 'in_progress'] %}
+                                            {% set has_active_production = true %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if is_production and entry.productionOrders|length > 0 %}
+                                        <div class="text-muted small">
+                                            {% for production_order in entry.productionOrders %}
+                                                <a href="{{ path('app_admin_production_order_index', {store_id: app.request.attributes.get('store_id'), id: production_order.id}) }}">#{{ production_order.id }}</a>
+                                                {{ include('admin/_components/status/_badge.html.twig', {value: production_order.status.value}) }}
+                                                {% if not loop.last %}<span class="mx-1">·</span>{% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    {% if is_production and not has_active_production and entity.status.value in ['confirmed', 'awaiting_stock'] and is_granted('order.edit') and is_granted('production_order.create') %}
+                                        <form method="post"
+                                              action="{{ path('app_admin_order_plan_production', {store_id: app.request.attributes.get('store_id'), id: entity.id, entryId: entry.id}) }}"
+                                              class="d-flex gap-2 mt-2" data-action="submit->reload-card#submitQuickAction">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('plan_production_order_entry_' ~ entry.id) }}">
+                                            <select name="warehouse_id" class="form-select form-select-sm" required>
+                                                <option value="">{{ 'Select warehouse'|trans }}</option>
+                                                {% for warehouse in production_warehouses|default([]) %}
+                                                    <option value="{{ warehouse.id }}" {{ entry.warehouse and entry.warehouse.id == warehouse.id ? 'selected' : '' }}>{{ warehouse.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <button class="btn btn-outline-primary btn-sm" type="submit">{{ 'Plan production'|trans }}</button>
+                                        </form>
+                                    {% endif %}
                                     {% if show_fulfillment %}
                                         <div class="order-show-product-fulfillment mt-1">
                                             {{ include('admin/_components/status/_badge.html.twig', {context: 'order_entry', value: progress.state.value}) }}

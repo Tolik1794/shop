@@ -3,6 +3,8 @@
 namespace App\Repository;
 
 use App\Entity\ProductionOrder;
+use App\Entity\ProductionOrderStatus;
+use App\Entity\OrderEntry;
 use App\Entity\Store;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -32,6 +34,10 @@ class ProductionOrderRepository extends ServiceEntityRepository
 			->addSelect('warehouse')
 			->leftJoin('productionOrder.recipe', 'recipe')
 			->addSelect('recipe')
+			->leftJoin('productionOrder.sourceOrderEntry', 'sourceOrderEntry')
+			->addSelect('sourceOrderEntry')
+			->leftJoin('sourceOrderEntry.order', 'sourceOrder')
+			->addSelect('sourceOrder')
 			->leftJoin('productionOrder.materials', 'material')
 			->addSelect('material')
 			->leftJoin('material.material', 'materialProduct')
@@ -52,5 +58,23 @@ class ProductionOrderRepository extends ServiceEntityRepository
 			->getSingleScalarResult();
 
 		return max(1, (int) ceil($count / $limit));
+	}
+
+	public function findActiveForOrderEntry(OrderEntry $orderEntry): ?ProductionOrder
+	{
+		return $this->createQueryBuilder('productionOrder')
+			->andWhere('productionOrder.sourceOrderEntry = :orderEntry')
+			->andWhere('productionOrder.status IN (:statuses)')
+			->setParameter('orderEntry', $orderEntry)
+			->setParameter('statuses', [
+				ProductionOrderStatus::DRAFT,
+				ProductionOrderStatus::PLANNED,
+				ProductionOrderStatus::MATERIALS_RESERVED,
+				ProductionOrderStatus::IN_PROGRESS,
+			])
+			->orderBy('productionOrder.id', 'DESC')
+			->setMaxResults(1)
+			->getQuery()
+			->getOneOrNullResult();
 	}
 }

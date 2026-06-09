@@ -38,6 +38,12 @@ enum OrderDiscountModeEnum {
     manual_override
 }
 
+enum OrderEntryFulfillmentSource {
+    stock
+    production
+    service
+}
+
 enum CommentTypeEnum {
     general
     manager
@@ -100,6 +106,7 @@ entity OrderEntry {
     * unitNameSnapshot: string(255)
     * order: Order
     * product: Product
+    * fulfillmentSource: OrderEntryFulfillmentSource
     warehouse: Warehouse?
     warehouseStockBatch: WarehouseStockBatch?
     discountRule: ProductDiscountRule?
@@ -156,6 +163,7 @@ Order ||--o{ OrderEntry : has
 Order |o--o{ Payment : paid by
 Order ||--o{ InventoryDocument : generates stock docs
 Product ||--o{ OrderEntry : ordered as
+OrderEntryFulfillmentSource ||--o{ OrderEntry : fulfills through
 Warehouse |o--o{ OrderEntry : ships from
 WarehouseStockBatch |o--o{ OrderEntry : priced/reserved from
 ProductDiscountRule |o--o{ OrderEntry : discount source
@@ -169,6 +177,7 @@ User |o--o{ OrderHistory : performs
 OrderHistorySource ||--o{ OrderHistory : classifies source
 OrderEntry |o--o{ InventoryDocumentLine : ships/returns
 OrderEntry ||--o{ StockReservation : reserves
+OrderEntry |o--o{ ProductionOrder : creates production demand
 
 note right of Order
   Customer is optional to allow quick one-time orders.
