@@ -272,9 +272,10 @@ class OrderShipmentControllerTest extends WebTestCase
 		$this->client->followRedirect();
 
 		// Open the order and submit the Return modal as AJAX; it must close in place (JSON fragments),
-		// not redirect to the inventory-document list.
+		// not redirect to the inventory-document list. Select the form inside the return modal (the
+		// card-footer button that opens the modal shares the same label in EN, so navigate by modal ID).
 		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/show', $store->getId(), $order->getId()));
-		$form = $crawler->selectButton('Create return')->form();
+		$form = $crawler->filter('[id^="order-return-modal-"] form')->form();
 
 		$this->client->request(
 			$form->getMethod(),

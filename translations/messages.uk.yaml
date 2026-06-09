@@ -272,7 +272,7 @@ admin:
       rollback_status: 'Відкотити статус'
       open_product: 'Відкрити товар'
       ship: 'Відвантажити'
-      return: 'Повернути'
+      return: 'Оформити повернення'
       refuse: 'Відмова'
       mark_delivered: 'Доставлено'
       complete: 'Завершити'

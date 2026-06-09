@@ -46,25 +46,15 @@
             <tr>
                 <th>{{ 'Email'|trans }}</th>
                 <td>
-                    <span>{{ entity.email }} </span>
-                    <span
-                            data-copy-text="{{ entity.email }}"
-                            onclick="navigator.clipboard.writeText(this.dataset.copyText)"
-                    >
-                        <i class="fa-regular fa-copy fa-sm zoom"></i>
-                    </span>
+                    <span>{{ entity.email }}</span>
+                    {{ include('admin/order/_copy_button.html.twig', {value: entity.email}) }}
                 </td>
             </tr>
             <tr>
                 <th>{{ 'Phone'|trans }}</th>
                 <td>
-                    <span>{{ entity.phone }} </span>
-                    <span
-                            data-copy-text="{{ entity.phone }}"
-                            onclick="navigator.clipboard.writeText(this.dataset.copyText)"
-                    >
-                    <i class="fa-regular fa-copy fa-sm zoom"></i>
-                    </span>
+                    <span>{{ entity.phone }}</span>
+                    {{ include('admin/order/_copy_button.html.twig', {value: entity.phone}) }}
                 </td>
             </tr>
             <tr>

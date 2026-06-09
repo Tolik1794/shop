@@ -3,11 +3,12 @@
     <button
             type="button"
             class="btn btn-link btn-sm order-icon-action order-copy-action"
-            data-copy-text="{{ value|e('html_attr') }}"
-            data-copy-feedback="{{ feedback_message|e('html_attr') }}"
-            onclick="event.stopPropagation(); navigator.clipboard.writeText(this.dataset.copyText).then(() => { const container = this.closest('.order-show-copyable'); const feedback = container ? container.querySelector('[data-copy-feedback]') : null; if (!feedback) return; feedback.textContent = this.dataset.copyFeedback; feedback.classList.add('is-visible'); window.clearTimeout(Number(feedback.dataset.timerId || 0)); feedback.dataset.timerId = window.setTimeout(() => feedback.classList.remove('is-visible'), 1600); })"
+            data-controller="clipboard"
+            data-clipboard-text-value="{{ value|e('html_attr') }}"
+            data-clipboard-message-value="{{ feedback_message|e('html_attr') }}"
+            data-action="click->clipboard#copy"
             title="{{ title|default('admin.common.copy'|trans) }}"
-        aria-label="{{ title|default('admin.common.copy'|trans) }}"
+            aria-label="{{ title|default('admin.common.copy'|trans) }}"
     >
         <i class="fa-regular fa-copy"></i>
         {% if label|default(null) %}

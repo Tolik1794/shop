@@ -225,57 +225,63 @@
                             {% set product_code = entry.productCodeSnapshot|default('')|trim %}
                             {% set unit_code = entry.unitCodeSnapshot|default('')|trim %}
                             {% set quantity_label = entry.quantity|quantity(entry.product) ~ (unit_code is not empty ? ' ' ~ unit_code : '') %}
-                            {% set product_copy_text = (product_name is not empty ? product_name : empty_text) ~ '\n' ~ ('admin.common.quantity'|trans) ~ ': ' ~ quantity_label %}
                             {% set progress = order_entry_progress(entry) %}
                             {% set show_fulfillment = entity.status.value not in ['draft', 'canceled'] %}
+                            {% set is_production = entry.fulfillmentSource.value == 'production' %}
+                            {% set source_label = {
+                                stock: 'admin.order.source.stock'|trans,
+                                production: 'admin.order.source.production'|trans,
+                                service: 'admin.order.source.service'|trans
+                            }[entry.fulfillmentSource.value]|default(entry.fulfillmentSource.value) %}
+                            {% set has_active_production = false %}
+                            {% for production_order in entry.productionOrders %}
+                                {% if production_order.status.value in ['draft', 'planned', 'materials_reserved', 'in_progress'] %}
+                                    {% set has_active_production = true %}
+                                {% endif %}
+                            {% endfor %}
                             <div class="order-show-product-card">
-                                <div class="order-show-product-main">
-                                    <div class="order-show-product-heading order-show-copyable">
-                                        <strong class="order-show-product-name">{{ product_name is not empty ? product_name : empty_text }}</strong>
-                                        <button
-                                                type="button"
-                                                class="btn btn-link btn-sm order-icon-action order-show-product-action"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#{{ modal_id }}"
-                                                title="{{ 'admin.order.actions.open_product'|trans }}"
-                                                aria-label="{{ 'admin.order.actions.open_product'|trans }}"
-                                        >
-                                            <i class="fa-solid fa-circle-info"></i>
-                                        </button>
-                                        {% if product_name is not empty %}
-                                            {{ include('admin/order/_copy_button.html.twig', {
-                                                value: product_copy_text,
-                                                title: 'admin.order.product.copy_name'|trans,
-                                                feedback: 'Copied'|trans
-                                            }) }}
-                                            <span class="order-copy-feedback" data-copy-feedback aria-live="polite"></span>
+                                <div class="order-show-product-header">
+                                    <div class="order-show-product-main">
+                                        <div class="order-show-product-heading order-show-copyable">
+                                            <strong class="order-show-product-name">{{ product_name is not empty ? product_name : empty_text }}</strong>
+                                            <button
+                                                    type="button"
+                                                    class="btn btn-link btn-sm order-icon-action order-show-product-action"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#{{ modal_id }}"
+                                                    title="{{ 'admin.order.actions.open_product'|trans }}"
+                                                    aria-label="{{ 'admin.order.actions.open_product'|trans }}"
+                                            >
+                                                <i class="fa-solid fa-circle-info"></i>
+                                            </button>
+                                            {% if product_name is not empty %}
+                                                {{ include('admin/order/_copy_button.html.twig', {
+                                                    value: product_name,
+                                                    title: 'admin.order.product.copy_name'|trans,
+                                                    feedback: 'Copied'|trans
+                                                }) }}
+                                            {% endif %}
+                                        </div>
+                                        {% if product_code is not empty %}
+                                            <div class="order-show-product-sku text-muted small">{{ product_code }}</div>
                                         {% endif %}
                                     </div>
-                                    <div class="text-muted small order-show-product-meta">
-                                        <span>{{ quantity_label }}</span>
-                                        <span class="mx-1">·</span>
-                                        <span class="order-show-product-total">{{ entry.totalPrice|money }} {{ currency_code }}</span>
+                                    <div class="order-show-product-right">
+                                        <div class="fw-semibold">{{ entry.totalPrice|money }} {{ currency_code }}</div>
+                                        <div class="text-muted small">{{ quantity_label }}</div>
                                     </div>
-                                    {% if product_code is not empty %}
-                                        <div class="text-muted small">{{ product_code }}</div>
+                                </div>
+                                <div class="text-muted small">
+                                    {% if is_production %}
+                                        <div class="order-show-product-source"><i class="fa-solid fa-industry me-1"></i>{{ source_label }}</div>
+                                    {% elseif entry.fulfillmentSource.value == 'service' %}
+                                        <div class="order-show-product-source"><i class="fa-solid fa-bell-concierge me-1"></i>{{ source_label }}</div>
                                     {% endif %}
-                                    {% set is_production = entry.fulfillmentSource.value == 'production' %}
-                                    {% set source_label = {
-                                        stock: 'admin.order.source.stock'|trans,
-                                        production: 'admin.order.source.production'|trans,
-                                        service: 'admin.order.source.service'|trans
-                                    }[entry.fulfillmentSource.value]|default(entry.fulfillmentSource.value) %}
-                                    <div class="text-muted small order-show-product-source">
-                                        <i class="fa-solid {{ is_production ? 'fa-industry' : (entry.fulfillmentSource.value == 'service' ? 'fa-bell-concierge' : 'fa-warehouse') }} me-1"></i>{{ source_label }}{% if entry.warehouse %} · {{ entry.warehouse.name }}{% endif %}
-                                    </div>
-                                    {% set has_active_production = false %}
-                                    {% for production_order in entry.productionOrders %}
-                                        {% if production_order.status.value in ['draft', 'planned', 'materials_reserved', 'in_progress'] %}
-                                            {% set has_active_production = true %}
-                                        {% endif %}
-                                    {% endfor %}
+                                    {% if entry.warehouse %}
+                                        <div><i class="fa-solid fa-warehouse me-1"></i>{{ entry.warehouse.name }}</div>
+                                    {% endif %}
                                     {% if is_production and entry.productionOrders|length > 0 %}
-                                        <div class="text-muted small">
+                                        <div>
                                             {% for production_order in entry.productionOrders %}
                                                 <a href="{{ path('app_admin_production_order_index', {store_id: app.request.attributes.get('store_id'), id: production_order.id}) }}">#{{ production_order.id }}</a>
                                                 {{ include('admin/_components/status/_badge.html.twig', {value: production_order.status.value}) }}
@@ -283,47 +289,49 @@
                                             {% endfor %}
                                         </div>
                                     {% endif %}
-                                    {% if is_production and not has_active_production and entity.status.value in ['confirmed', 'awaiting_stock'] and is_granted('order.edit') and is_granted('production_order.create') %}
-                                        <form method="post"
-                                              action="{{ path('app_admin_order_plan_production', {store_id: app.request.attributes.get('store_id'), id: entity.id, entryId: entry.id}) }}"
-                                              class="d-flex gap-2 mt-2" data-action="submit->reload-card#submitQuickAction">
-                                            <input type="hidden" name="_token" value="{{ csrf_token('plan_production_order_entry_' ~ entry.id) }}">
-                                            <select name="warehouse_id" class="form-select form-select-sm" required>
-                                                <option value="">{{ 'Select warehouse'|trans }}</option>
-                                                {% for warehouse in production_warehouses|default([]) %}
-                                                    <option value="{{ warehouse.id }}" {{ entry.warehouse and entry.warehouse.id == warehouse.id ? 'selected' : '' }}>{{ warehouse.name }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <button class="btn btn-outline-primary btn-sm" type="submit">{{ 'Plan production'|trans }}</button>
-                                        </form>
-                                    {% endif %}
-                                    {% if show_fulfillment %}
-                                        <div class="order-show-product-fulfillment mt-1">
-                                            {{ include('admin/_components/status/_badge.html.twig', {context: 'order_entry', value: progress.state.value}) }}
-                                            <span class="text-muted small ms-1">
-                                                {{ 'admin.order.fulfillment.shipped'|trans }}: {{ progress.shipped|quantity(entry.product) }}{% if progress.hasReturned %} · {{ 'admin.order.fulfillment.returned'|trans }}: {{ progress.returned|quantity(entry.product) }}{% endif %}{% if progress.hasRemaining %} · {{ 'admin.order.fulfillment.remaining'|trans }}: {{ progress.remaining|quantity(entry.product) }}{% endif %}{% if progress.hasCanceled %} · {{ 'admin.order.fulfillment.refused'|trans }}: {{ progress.canceled|quantity(entry.product) }}{% endif %}
-                                            </span>
-                                            {% set can_refuse = progress.hasRemaining and is_granted('order.refuse') %}
-                                            {% set can_return = progress.hasReturnable and is_granted('order.return') %}
-                                            {% if can_refuse or can_return %}
-                                                <div class="order-show-product-actions mt-1">
-                                                    {% if can_refuse %}
-                                                        <button type="button" class="btn btn-outline-danger btn-sm"
-                                                                data-bs-toggle="modal" data-bs-target="#order-refuse-modal-{{ entity.id }}-{{ entry.id }}">
-                                                            {{ 'admin.order.actions.refuse'|trans }}
-                                                        </button>
-                                                    {% endif %}
-                                                    {% if can_return %}
-                                                        <button type="button" class="btn btn-outline-secondary btn-sm"
-                                                                data-bs-toggle="modal" data-bs-target="#order-return-modal-{{ entity.id }}-{{ entry.id }}">
-                                                            {{ 'admin.order.actions.return'|trans }}
-                                                        </button>
-                                                    {% endif %}
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    {% endif %}
                                 </div>
+                                {% if is_production and not has_active_production and entity.status.value in ['confirmed', 'awaiting_stock'] and is_granted('order.edit') and is_granted('production_order.create') %}
+                                    <form method="post"
+                                          action="{{ path('app_admin_order_plan_production', {store_id: app.request.attributes.get('store_id'), id: entity.id, entryId: entry.id}) }}"
+                                          class="d-flex gap-2 mt-2" data-action="submit->reload-card#submitQuickAction">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('plan_production_order_entry_' ~ entry.id) }}">
+                                        <select name="warehouse_id" class="form-select form-select-sm" required>
+                                            <option value="">{{ 'Select warehouse'|trans }}</option>
+                                            {% for warehouse in production_warehouses|default([]) %}
+                                                <option value="{{ warehouse.id }}" {{ entry.warehouse and entry.warehouse.id == warehouse.id ? 'selected' : '' }}>{{ warehouse.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <button class="btn btn-outline-primary btn-sm" type="submit">{{ 'Plan production'|trans }}</button>
+                                    </form>
+                                {% endif %}
+                                {% if show_fulfillment %}
+                                    {% set can_refuse = progress.hasRemaining and is_granted('order.refuse') %}
+                                    {% set can_return = progress.hasReturnable and is_granted('order.return') %}
+                                    <div class="order-show-product-footer">
+                                        <div class="d-flex align-items-center gap-1 flex-wrap">
+                                            {{ include('admin/_components/status/_badge.html.twig', {context: 'order_entry', value: progress.state.value}) }}
+                                            <span class="text-muted small">
+                                                {{ 'admin.order.fulfillment.shipped'|trans }}: {{ progress.shipped|quantity(entry.product) }} / {{ progress.ordered|quantity(entry.product) }}{% if progress.hasReturned %} · {{ 'admin.order.fulfillment.returned'|trans }}: {{ progress.returned|quantity(entry.product) }}{% endif %}{% if progress.hasCanceled %} · {{ 'admin.order.fulfillment.refused'|trans }}: {{ progress.canceled|quantity(entry.product) }}{% endif %}
+                                            </span>
+                                        </div>
+                                        {% if can_refuse or can_return %}
+                                            <div class="d-flex gap-1 flex-wrap">
+                                                {% if can_refuse %}
+                                                    <button type="button" class="btn btn-outline-danger btn-sm"
+                                                            data-bs-toggle="modal" data-bs-target="#order-refuse-modal-{{ entity.id }}-{{ entry.id }}">
+                                                        {{ 'admin.order.actions.refuse'|trans }}
+                                                    </button>
+                                                {% endif %}
+                                                {% if can_return %}
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                            data-bs-toggle="modal" data-bs-target="#order-return-modal-{{ entity.id }}-{{ entry.id }}">
+                                                        {{ 'admin.order.actions.return'|trans }}
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
                             </div>
                         {% endfor %}
                     </div>

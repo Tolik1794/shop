@@ -251,7 +251,7 @@ admin:
       rollback_status: 'Rollback status'
       open_product: 'Open product'
       ship: 'Ship'
-      return: 'Return'
+      return: 'Create return'
       refuse: 'Refuse'
       mark_delivered: 'Mark delivered'
       complete: 'Complete'
