@@ -10,10 +10,12 @@ use App\Entity\ProductionRecipe;
 use App\Entity\StockReservation;
 use App\Entity\StockReservationStatus;
 use App\Entity\WarehouseStock;
+use App\Entity\WarehouseStockBatch;
 use App\Enum\ActiveStatusEnum;
 use App\Exception\ProductionDemandException;
 use App\Repository\ProductionOrderRepository;
 use App\Repository\ProductionRecipeRepository;
+use App\Repository\StockReservationRepository;
 use App\Repository\WarehouseStockRepository;
 use App\Service\BusinessDocumentStatusSynchronizer;
 use App\Service\Concurrency\ConcurrencyGuard;
@@ -31,6 +33,7 @@ class ProductionDemandService
 		private readonly ProductionRecipeRepository $productionRecipeRepository,
 		private readonly ProductionOrderRepository $productionOrderRepository,
 		private readonly WarehouseStockRepository $warehouseStockRepository,
+		private readonly StockReservationRepository $stockReservationRepository,
 		private readonly StockReservationService $stockReservationService,
 		private readonly BusinessDocumentStatusSynchronizer $statusSynchronizer,
 		private readonly StatusTransitionService $statusTransitionService,
@@ -150,10 +153,27 @@ class ProductionDemandService
 			if ($warehouseStock instanceof WarehouseStock) {
 				$uncovered = $this->uncoveredQuantity($entry);
 				$available = max(0, $this->numberValue($warehouseStock->getQuantityOnHand()) - $this->numberValue($warehouseStock->getReservedQuantity()));
-				$quantityToReserve = min($uncovered, $available, $this->numberValue($productionOrder->getCompletedQuantity()));
+				$productionBatch = $this->productionOutputBatch($productionOrder);
+				$batchAvailable = $productionBatch instanceof WarehouseStockBatch
+					? max(
+						0,
+						$this->numberValue($productionBatch->getRemainingQuantity())
+						- $this->numberValue($this->stockReservationRepository->getActiveQuantityForBatch($productionBatch)),
+					)
+					: $available;
+				$quantityToReserve = min(
+					$uncovered,
+					$available,
+					$this->numberValue($productionOrder->getCompletedQuantity()),
+					$batchAvailable,
+				);
 
 				if ($quantityToReserve > 0.00005) {
-					$this->stockReservationService->reserve($entry, $warehouseStock, $this->formatQuantity($quantityToReserve));
+					if ($productionBatch instanceof WarehouseStockBatch) {
+						$this->stockReservationService->reserveBatch($entry, $productionBatch, $this->formatQuantity($quantityToReserve));
+					} else {
+						$this->stockReservationService->reserve($entry, $warehouseStock, $this->formatQuantity($quantityToReserve));
+					}
 				}
 			}
 
@@ -163,6 +183,27 @@ class ProductionDemandService
 			$this->ensurePlannedDemand($entry, $context);
 			$this->entityManager->flush();
 		});
+	}
+
+	private function productionOutputBatch(ProductionOrder $productionOrder): ?WarehouseStockBatch
+	{
+		$product = $productionOrder->getProduct();
+
+		foreach ($productionOrder->getInventoryDocuments() as $document) {
+			foreach ($document->getLines() as $line) {
+				if ($line->getProduct() !== $product) {
+					continue;
+				}
+
+				foreach ($line->getStockMovements() as $movement) {
+					if ((float) $movement->getQuantityChange() > 0 && $movement->getWarehouseStockBatch() instanceof WarehouseStockBatch) {
+						return $movement->getWarehouseStockBatch();
+					}
+				}
+			}
+		}
+
+		return null;
 	}
 
 	private function createPlannedDemand(OrderEntry $entry, string $quantity, TransitionContext $context): ProductionOrder

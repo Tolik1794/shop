@@ -841,7 +841,7 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSelectorTextContains('[data-order-form-target~="entries"] [data-order-entry-target~="discountRule"]', 'No discount');
 		self::assertSelectorTextContains('[data-order-form-target~="entries"] [data-order-entry-target~="discountRule"]', $discountRule->getName());
 		self::assertSelectorTextContains('[data-order-form-target~="entries"] .order-entry-head__avail', (string) $product->getUnit()?->getCode());
-		self::assertSelectorExists('[data-order-form-target~="entries"] .order-entry-discount.col-md-4');
+		self::assertSelectorExists('[data-order-form-target~="entries"] .order-entry-discount.col-md-3');
 		self::assertSelectorExists('[data-order-form-target~="entries"] .order-entry-discount > .order-entry-discount-select .form-select.form-select-sm');
 		self::assertSelectorExists('[data-order-form-target~="entries"] .order-entry-discount > .order-entry-manual-field .input-group.input-group-sm');
 		self::assertSelectorExists('[data-order-form-target~="entries"] .order-entry-total.col-md-4');
@@ -1443,6 +1443,174 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSame($product->getId(), $order->getOrderEntries()->first()->getProduct()?->getId());
 	}
 
+	public function testEntryCardHidesSourceSelectorAndShowsWarehouseOnlyForProduction(): void
+	{
+		$this->client->loginUser($this->createUser('order-builder-entry-source-ui-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-builder-entry-source-ui-store-' . uniqid());
+		$customer = $this->createCustomer($store);
+		$stockProduct = $this->createProduct($store, 'Stock source UI product');
+		$productionProduct = $this->createProduct($store, 'Production source UI product', true);
+		$serviceProduct = $this->createProduct($store, 'Service source UI product')->setProductKind(ProductKindEnum::SERVICE);
+		$warehouse = $this->createWarehouse($store);
+		$order = (new Order())
+			->setStore($store)
+			->setCustomer($customer)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber('SO-source-ui-' . uniqid());
+		$stockEntry = $this->orderEntry($stockProduct, OrderEntryFulfillmentSource::STOCK, $warehouse);
+		$productionEntry = $this->orderEntry($productionProduct, OrderEntryFulfillmentSource::PRODUCTION, $warehouse);
+		$serviceEntry = $this->orderEntry($serviceProduct, OrderEntryFulfillmentSource::SERVICE);
+		$order
+			->addOrderEntry($stockEntry)
+			->addOrderEntry($productionEntry)
+			->addOrderEntry($serviceEntry);
+		$this->entityManager->persist($order);
+		$this->entityManager->persist($stockEntry);
+		$this->entityManager->persist($productionEntry);
+		$this->entityManager->persist($serviceEntry);
+		$this->entityManager->flush();
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/%d/edit', $store->getId(), $order->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorCount(3, '[data-order-form-target~="entries"] [data-order-entry-target~="source"].d-none');
+		self::assertSelectorNotExists('[data-order-form-target~="entries"] label + [data-order-entry-target~="source"].form-select');
+		self::assertSelectorExists('[data-order-form-target~="entries"] [data-source-type="production"] [data-order-entry-target~="warehouseField"]:not(.d-none)');
+		self::assertSelectorCount(2, '[data-order-form-target~="entries"] [data-order-entry-target~="warehouseField"].d-none');
+	}
+
+	public function testExistingOrderEntryFulfillmentSourceCannotBeChangedBySubmit(): void
+	{
+		$this->client->loginUser($this->createUser('order-builder-entry-source-submit-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-builder-entry-source-submit-store-' . uniqid());
+		$customer = $this->createCustomer($store);
+		$product = $this->createProduct($store, 'Immutable production source product', true);
+		$warehouse = $this->createWarehouse($store);
+		$newProductionWarehouse = $this->createWarehouse($store);
+		$order = (new Order())
+			->setStore($store)
+			->setCustomer($customer)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber('SO-source-submit-' . uniqid());
+		$entry = $this->orderEntry($product, OrderEntryFulfillmentSource::PRODUCTION, $warehouse);
+		$order->addOrderEntry($entry);
+		$this->entityManager->persist($order);
+		$this->entityManager->persist($entry);
+		$this->entityManager->flush();
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/edit', $store->getId(), $order->getId()));
+		$token = $crawler->filter('input[name="order[_token]"]')->attr('value');
+		$version = $crawler->filter('input[name="order[version]"]')->attr('value');
+
+		$this->client->request('POST', sprintf('/admin/store/%d/order/%d/edit', $store->getId(), $order->getId()), [
+			'order' => [
+				'version' => $version,
+				'customer' => $customer->getId(),
+				'customerPhone' => $customer->getPhone(),
+				'customerName' => $customer->getName(),
+				'customerLastName' => $customer->getLastName(),
+				'currency' => $store->getBaseCurrency()?->getCode(),
+				'orderEntries' => [[
+					'fulfillmentSource' => OrderEntryFulfillmentSource::STOCK->value,
+					'warehouse' => $newProductionWarehouse->getId(),
+					'quantity' => '1',
+					'unitPrice' => '10.0000',
+				]],
+				'_token' => $token,
+			],
+		]);
+
+		self::assertResponseRedirects(sprintf('/admin/store/%d/order/?id=%d', $store->getId(), $order->getId()));
+		$savedOrder = $this->entityManager->getRepository(Order::class)->find($order->getId());
+		self::assertInstanceOf(Order::class, $savedOrder);
+		self::assertSame(OrderEntryFulfillmentSource::PRODUCTION, $savedOrder->getOrderEntries()->first()->getFulfillmentSource());
+		self::assertSame($newProductionWarehouse->getId(), $savedOrder->getOrderEntries()->first()->getWarehouse()?->getId());
+	}
+
+	public function testExistingStockEntryWarehouseCannotBeChangedBySubmit(): void
+	{
+		$this->client->loginUser($this->createUser('order-builder-entry-stock-warehouse-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-builder-entry-stock-warehouse-store-' . uniqid());
+		$customer = $this->createCustomer($store);
+		$product = $this->createProduct($store, 'Immutable stock warehouse product');
+		$warehouse = $this->createWarehouse($store);
+		$otherWarehouse = $this->createWarehouse($store);
+		$this->createWarehouseStock($warehouse, $product, '2.0000');
+		$this->createWarehouseStock($otherWarehouse, $product, '2.0000');
+		$order = (new Order())
+			->setStore($store)
+			->setCustomer($customer)
+			->setCurrency($store->getBaseCurrency())
+			->setNumber('SO-stock-warehouse-' . uniqid());
+		$entry = $this->orderEntry($product, OrderEntryFulfillmentSource::STOCK, $warehouse);
+		$order->addOrderEntry($entry);
+		$this->entityManager->persist($order);
+		$this->entityManager->persist($entry);
+		$this->entityManager->flush();
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/%d/edit', $store->getId(), $order->getId()));
+		$token = $crawler->filter('input[name="order[_token]"]')->attr('value');
+		$version = $crawler->filter('input[name="order[version]"]')->attr('value');
+
+		$this->client->request('POST', sprintf('/admin/store/%d/order/%d/edit', $store->getId(), $order->getId()), [
+			'order' => [
+				'version' => $version,
+				'customer' => $customer->getId(),
+				'customerPhone' => $customer->getPhone(),
+				'customerName' => $customer->getName(),
+				'customerLastName' => $customer->getLastName(),
+				'currency' => $store->getBaseCurrency()?->getCode(),
+				'orderEntries' => [[
+					'fulfillmentSource' => OrderEntryFulfillmentSource::PRODUCTION->value,
+					'warehouse' => $otherWarehouse->getId(),
+					'quantity' => '1',
+					'unitPrice' => '10.0000',
+				]],
+				'_token' => $token,
+			],
+		]);
+
+		self::assertResponseRedirects(sprintf('/admin/store/%d/order/?id=%d', $store->getId(), $order->getId()));
+		$savedOrder = $this->entityManager->getRepository(Order::class)->find($order->getId());
+		self::assertInstanceOf(Order::class, $savedOrder);
+		self::assertSame(OrderEntryFulfillmentSource::STOCK, $savedOrder->getOrderEntries()->first()->getFulfillmentSource());
+		self::assertSame($warehouse->getId(), $savedOrder->getOrderEntries()->first()->getWarehouse()?->getId());
+	}
+
+	public function testInvalidProductionEntryKeepsWarehouseFieldVisibleAndSelected(): void
+	{
+		$this->client->loginUser($this->createUser('order-builder-production-rerender-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('order-builder-production-rerender-store-' . uniqid());
+		$customer = $this->createCustomer($store);
+		$product = $this->createProduct($store, 'Production rerender product', true);
+		$warehouse = $this->createWarehouse($store);
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/order/new', $store->getId()));
+		$token = $crawler->filter('input[name="order[_token]"]')->attr('value');
+
+		$this->client->request('POST', sprintf('/admin/store/%d/order/new', $store->getId()), [
+			'order' => [
+				'customer' => $customer->getId(),
+				'customerPhone' => $customer->getPhone(),
+				'customerName' => $customer->getName(),
+				'customerLastName' => $customer->getLastName(),
+				'currency' => $store->getBaseCurrency()?->getCode(),
+				'orderEntries' => [[
+					'product' => $product->getId(),
+					'fulfillmentSource' => OrderEntryFulfillmentSource::PRODUCTION->value,
+					'warehouse' => $warehouse->getId(),
+					'quantity' => '0',
+					'unitPrice' => '10.0000',
+				]],
+				'_token' => $token,
+			],
+		]);
+
+		self::assertResponseStatusCodeSame(422);
+		self::assertSelectorExists('[data-order-form-target~="entries"] [data-source-type="production"] [data-order-entry-target~="warehouseField"]:not(.d-none)');
+		self::assertSelectorExists(sprintf('[data-order-form-target~="entries"] [data-order-entry-target~="warehouse"] option[value="%d"][selected]', $warehouse->getId()));
+		self::assertSelectorTextContains('.order-entry-item .form-error', 'Quantity must be greater than zero.');
+	}
+
 	public function testEditPageShowsCommentsAndHistory(): void
 	{
 		$user = $this->createUser('order-builder-edit-history-admin-' . uniqid() . '@example.com');
@@ -1792,6 +1960,26 @@ class OrderBuilderControllerTest extends WebTestCase
 		$this->entityManager->flush();
 
 		return $warehouse;
+	}
+
+	private function orderEntry(
+		Product $product,
+		OrderEntryFulfillmentSource $fulfillmentSource,
+		?Warehouse $warehouse = null,
+	): OrderEntry {
+		return (new OrderEntry())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setFulfillmentSource($fulfillmentSource)
+			->setProductNameSnapshot($product->getName())
+			->setProductCodeSnapshot($product->getCode())
+			->setUnitCodeSnapshot($product->getUnit()?->getCode() ?? 'pc')
+			->setUnitNameSnapshot($product->getUnit()?->getName() ?? 'Piece')
+			->setQuantity('1.0000')
+			->setUnitPrice('10.0000')
+			->setUnitPriceBase('10.0000')
+			->setTotalPrice('10.0000')
+			->setTotalPriceBase('10.0000');
 	}
 
 	private function createWarehouseStock(Warehouse $warehouse, Product $product, string $quantityOnHand, string $reservedQuantity = '0.0000'): WarehouseStock

@@ -23,6 +23,7 @@ use App\Entity\ProductionRecipe;
 use App\Entity\ProductionRecipeItem;
 use App\Entity\StockReservation;
 use App\Entity\StockReservationStatus;
+use App\Entity\StockMovement;
 use App\Entity\Store;
 use App\Entity\Unit;
 use App\Entity\Warehouse;
@@ -289,6 +290,28 @@ class OrderManagerTest extends KernelTestCase
 		self::assertInstanceOf(ProductionOrder::class, $completedProduction);
 
 		$warehouseStock = $this->persistWarehouseStock($warehouse, $product, '1.0000');
+		$outputBatch = $this->persistWarehouseStockBatch($warehouseStock, '1.0000', '14.0000');
+		$productionDocument = (new InventoryDocument())
+			->setStore($store)
+			->setNumber('PROD-' . uniqid())
+			->setType(InventoryDocumentType::PRODUCTION)
+			->setProductionOrder($completedProduction);
+		$outputLine = (new InventoryDocumentLine())
+			->setProduct($product)
+			->setWarehouse($warehouse)
+			->setWarehouseStock($warehouseStock)
+			->setDirection(InventoryDirection::IN)
+			->setQuantity('1.0000');
+		$outputMovement = (new StockMovement())
+			->setWarehouseStock($warehouseStock)
+			->setWarehouseStockBatch($outputBatch)
+			->setQuantityChange('1.0000')
+			->setUnitCost('14.0000');
+		$productionDocument->addLine($outputLine);
+		$outputLine->addStockMovement($outputMovement);
+		$this->entityManager->persist($productionDocument);
+		$this->entityManager->persist($outputLine);
+		$this->entityManager->persist($outputMovement);
 		$completedProduction
 			->setStatus(ProductionOrderStatus::COMPLETED)
 			->setCompletedQuantity('1.0000')
@@ -311,6 +334,7 @@ class OrderManagerTest extends KernelTestCase
 
 		self::assertInstanceOf(StockReservation::class, $reservation);
 		self::assertSame('1.0000', $reservation->getQuantity());
+		self::assertSame($outputBatch, $reservation->getWarehouseStockBatch());
 		self::assertSame('1.0000', $warehouseStock->getReservedQuantity());
 		self::assertInstanceOf(ProductionOrder::class, $continuation);
 		self::assertSame('1.0000', $continuation->getPlannedQuantity());

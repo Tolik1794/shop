@@ -26,15 +26,38 @@ class StockReservationService
 
 	public function reserve(OrderEntry $orderEntry, WarehouseStock $warehouseStock, string $quantity, ?DateTimeImmutable $expiresAt = null): StockReservation
 	{
+		return $this->reserveWithBatch($orderEntry, $warehouseStock, $orderEntry->getWarehouseStockBatch(), $quantity, $expiresAt);
+	}
+
+	public function reserveBatch(OrderEntry $orderEntry, WarehouseStockBatch $batch, string $quantity, ?DateTimeImmutable $expiresAt = null): StockReservation
+	{
+		$warehouseStock = $batch->getWarehouseStock();
+		if (!$warehouseStock instanceof WarehouseStock) {
+			throw new StockOperationException('Reservation batch has no warehouse stock.');
+		}
+
+		return $this->reserveWithBatch($orderEntry, $warehouseStock, $batch, $quantity, $expiresAt);
+	}
+
+	private function reserveWithBatch(
+		OrderEntry $orderEntry,
+		WarehouseStock $warehouseStock,
+		?WarehouseStockBatch $batch,
+		string $quantity,
+		?DateTimeImmutable $expiresAt,
+	): StockReservation
+	{
 		if (!$this->entityManager->getConnection()->isTransactionActive()) {
-			return $this->entityManager->wrapInTransaction(fn (): StockReservation => $this->reserve($orderEntry, $warehouseStock, $quantity, $expiresAt));
+			return $this->entityManager->wrapInTransaction(
+				fn (): StockReservation => $this->reserveWithBatch($orderEntry, $warehouseStock, $batch, $quantity, $expiresAt)
+			);
 		}
 
 		$this->assertPositiveQuantity($quantity);
 		$this->assertReservationMatchesOrderEntry($orderEntry, $warehouseStock);
 		$this->lockPersisted($warehouseStock);
-		$batch = $this->validatedBatch($orderEntry, $warehouseStock);
 		if ($batch instanceof WarehouseStockBatch) {
+			$this->assertBatchMatchesWarehouseStock($batch, $warehouseStock);
 			$this->lockPersisted($batch);
 		}
 
@@ -99,17 +122,29 @@ class StockReservationService
 		$this->close($reservation, StockReservationStatus::COMPLETED);
 	}
 
-	public function completeForOrderEntry(OrderEntry $orderEntry, string $quantity, bool $flush = true): void
+	public function completeForOrderEntry(OrderEntry $orderEntry, string $quantity, bool $flush = true, bool $lock = true): void
 	{
+		if (!$this->entityManager->getConnection()->isTransactionActive()) {
+			$this->entityManager->wrapInTransaction(function () use ($orderEntry, $quantity, $flush, $lock): void {
+				$this->completeForOrderEntry($orderEntry, $quantity, $flush, $lock);
+			});
+
+			return;
+		}
+
 		$remainingQuantity = $this->normalize($quantity);
 		$this->assertPositiveQuantity($remainingQuantity);
+		$reservations = $this->stockReservationRepository->findActiveForOrderEntry($orderEntry);
+		if ($lock) {
+			$this->lockReservationTargets($reservations);
+		}
 
-		foreach ($this->stockReservationRepository->findActiveForOrderEntry($orderEntry) as $reservation) {
+		foreach ($reservations as $reservation) {
 			if ((float) $remainingQuantity <= 0) {
 				break;
 			}
 
-			$remainingQuantity = $this->completeReservedQuantity($reservation, $remainingQuantity);
+			$remainingQuantity = $this->completeReservedQuantity($reservation, $remainingQuantity, false);
 		}
 
 		if ($flush) {
@@ -134,13 +169,15 @@ class StockReservationService
 
 		$remainingQuantity = $this->normalize($quantity);
 		$this->assertPositiveQuantity($remainingQuantity);
+		$reservations = $this->stockReservationRepository->findActiveForOrderEntry($orderEntry);
+		$this->lockReservationTargets($reservations);
 
-		foreach ($this->stockReservationRepository->findActiveForOrderEntry($orderEntry) as $reservation) {
+		foreach ($reservations as $reservation) {
 			if ((float) $remainingQuantity <= 0) {
 				break;
 			}
 
-			$remainingQuantity = $this->releaseReservedQuantity($reservation, $remainingQuantity);
+			$remainingQuantity = $this->releaseReservedQuantity($reservation, $remainingQuantity, false);
 		}
 
 		if ($flush) {
@@ -150,16 +187,20 @@ class StockReservationService
 
 	public function expireOldReservations(DateTimeImmutable $now): int
 	{
-		$count = 0;
+		if (!$this->entityManager->getConnection()->isTransactionActive()) {
+			return $this->entityManager->wrapInTransaction(fn (): int => $this->expireOldReservations($now));
+		}
 
-		foreach ($this->stockReservationRepository->findExpiredActiveReservations($now) as $reservation) {
-			$this->close($reservation, StockReservationStatus::EXPIRED, false);
-			$count++;
+		$reservations = $this->stockReservationRepository->findExpiredActiveReservations($now);
+		$this->lockReservationTargets($reservations);
+
+		foreach ($reservations as $reservation) {
+			$this->close($reservation, StockReservationStatus::EXPIRED, false, false);
 		}
 
 		$this->entityManager->flush();
 
-		return $count;
+		return count($reservations);
 	}
 
 	public function getActiveQuantityForOrderEntry(OrderEntry $orderEntry): string
@@ -167,11 +208,11 @@ class StockReservationService
 		return $this->stockReservationRepository->getActiveQuantityForOrderEntry($orderEntry);
 	}
 
-	private function close(StockReservation $reservation, StockReservationStatus $status, bool $flush = true): void
+	private function close(StockReservation $reservation, StockReservationStatus $status, bool $flush = true, bool $lock = true): void
 	{
 		if (!$this->entityManager->getConnection()->isTransactionActive()) {
-			$this->entityManager->wrapInTransaction(function () use ($reservation, $status, $flush): void {
-				$this->close($reservation, $status, $flush);
+			$this->entityManager->wrapInTransaction(function () use ($reservation, $status, $flush, $lock): void {
+				$this->close($reservation, $status, $flush, $lock);
 			});
 
 			return;
@@ -185,10 +226,12 @@ class StockReservationService
 		if (!$warehouseStock instanceof WarehouseStock) {
 			throw new StockOperationException('Reservation has no warehouse stock.');
 		}
-		$this->lockPersisted($warehouseStock);
 		$batch = $reservation->getWarehouseStockBatch();
-		if ($batch instanceof WarehouseStockBatch) {
-			$this->lockPersisted($batch);
+		if ($lock) {
+			$this->lockPersisted($warehouseStock);
+			if ($batch instanceof WarehouseStockBatch) {
+				$this->lockPersisted($batch);
+			}
 		}
 
 		$newReservedQuantity = $this->subtract($warehouseStock->getReservedQuantity(), $reservation->getQuantity());
@@ -204,7 +247,7 @@ class StockReservationService
 		}
 	}
 
-	private function completeReservedQuantity(StockReservation $reservation, string $quantityToComplete): string
+	private function completeReservedQuantity(StockReservation $reservation, string $quantityToComplete, bool $lock = true): string
 	{
 		$warehouseStock = $reservation->getWarehouseStock();
 		$orderEntry = $reservation->getOrderEntry();
@@ -214,7 +257,7 @@ class StockReservationService
 
 		$reservationQuantity = $this->normalize($reservation->getQuantity());
 		if ((float) $quantityToComplete >= (float) $reservationQuantity) {
-			$this->close($reservation, StockReservationStatus::COMPLETED, false);
+			$this->close($reservation, StockReservationStatus::COMPLETED, false, $lock);
 
 			return $this->subtract($quantityToComplete, $reservationQuantity);
 		}
@@ -237,13 +280,13 @@ class StockReservationService
 		return '0.0000';
 	}
 
-	private function releaseReservedQuantity(StockReservation $reservation, string $quantityToRelease): string
+	private function releaseReservedQuantity(StockReservation $reservation, string $quantityToRelease, bool $lock = true): string
 	{
 		$reservationQuantity = $this->normalize($reservation->getQuantity());
 
 		// Releasing the whole reservation reuses close(), which also revalidates stock and status.
 		if ((float) $quantityToRelease >= (float) $reservationQuantity) {
-			$this->close($reservation, StockReservationStatus::CANCELED, false);
+			$this->close($reservation, StockReservationStatus::CANCELED, false, $lock);
 
 			return $this->subtract($quantityToRelease, $reservationQuantity);
 		}
@@ -253,10 +296,12 @@ class StockReservationService
 			throw new StockOperationException('Reservation has no warehouse stock.');
 		}
 
-		$this->lockPersisted($warehouseStock);
 		$batch = $reservation->getWarehouseStockBatch();
-		if ($batch instanceof WarehouseStockBatch) {
-			$this->lockPersisted($batch);
+		if ($lock) {
+			$this->lockPersisted($warehouseStock);
+			if ($batch instanceof WarehouseStockBatch) {
+				$this->lockPersisted($batch);
+			}
 		}
 
 		$newReservedQuantity = $this->subtract($warehouseStock->getReservedQuantity(), $quantityToRelease);
@@ -268,6 +313,37 @@ class StockReservationService
 		$warehouseStock->setReservedQuantity($newReservedQuantity);
 
 		return '0.0000';
+	}
+
+	/**
+	 * @param list<StockReservation> $reservations
+	 */
+	private function lockReservationTargets(array $reservations): void
+	{
+		$targets = [];
+
+		foreach ($reservations as $reservation) {
+			$warehouseStock = $reservation->getWarehouseStock();
+			if ($warehouseStock instanceof WarehouseStock) {
+				$targets[$this->entityKey($warehouseStock)] = $warehouseStock;
+			}
+
+			$batch = $reservation->getWarehouseStockBatch();
+			if ($batch instanceof WarehouseStockBatch) {
+				$targets[$this->entityKey($batch)] = $batch;
+			}
+		}
+
+		$this->concurrencyGuard->lockAll(array_values($targets));
+	}
+
+	private function entityKey(object $entity): string
+	{
+		$identifier = $this->entityManager->getClassMetadata($entity::class)->getIdentifierValues($entity);
+
+		return $identifier === []
+			? sprintf('%s:object:%d', $entity::class, spl_object_id($entity))
+			: sprintf('%s:id:%s', $entity::class, implode(':', array_map('strval', $identifier)));
 	}
 
 	private function assertReservationMatchesOrderEntry(OrderEntry $orderEntry, WarehouseStock $warehouseStock): void
@@ -288,19 +364,11 @@ class StockReservationService
 		}
 	}
 
-	private function validatedBatch(OrderEntry $orderEntry, WarehouseStock $warehouseStock): ?WarehouseStockBatch
+	private function assertBatchMatchesWarehouseStock(WarehouseStockBatch $batch, WarehouseStock $warehouseStock): void
 	{
-		$batch = $orderEntry->getWarehouseStockBatch();
-
-		if (!$batch instanceof WarehouseStockBatch) {
-			return null;
-		}
-
 		if ($batch->getWarehouseStock() !== $warehouseStock) {
 			throw new StockOperationException('Reservation batch must match warehouse stock.');
 		}
-
-		return $batch;
 	}
 
 	private function assertPositiveQuantity(string $quantity): void

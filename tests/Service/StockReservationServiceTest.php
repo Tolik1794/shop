@@ -4,17 +4,26 @@ namespace App\Tests\Service;
 
 use App\Entity\Category;
 use App\Entity\Currency;
+use App\Entity\InventoryDocument;
+use App\Entity\InventoryDocumentLine;
 use App\Entity\Order;
 use App\Entity\OrderEntry;
 use App\Entity\Product;
+use App\Entity\StockReservation;
 use App\Entity\StockReservationStatus;
 use App\Entity\Store;
 use App\Entity\Unit;
 use App\Entity\Warehouse;
 use App\Entity\WarehouseStock;
+use App\Entity\WarehouseStockBatch;
+use App\Entity\StockMovement;
+use App\Enum\InventoryDirection;
+use App\Enum\InventoryDocumentType;
 use App\Enum\ProductKindEnum;
 use App\Exception\StockOperationException;
+use App\Service\InventoryPostingService;
 use App\Service\StockReservationService;
+use App\Service\StockReservationReconciler;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -23,18 +32,20 @@ class StockReservationServiceTest extends KernelTestCase
 {
 	private EntityManagerInterface $entityManager;
 	private StockReservationService $stockReservationService;
+	private StockReservationReconciler $stockReservationReconciler;
 
 	protected function setUp(): void
 	{
 		self::bootKernel();
 		$this->entityManager = static::getContainer()->get(EntityManagerInterface::class);
 		$this->stockReservationService = static::getContainer()->get(StockReservationService::class);
+		$this->stockReservationReconciler = static::getContainer()->get(StockReservationReconciler::class);
 	}
 
 	protected function tearDown(): void
 	{
 		parent::tearDown();
-		unset($this->entityManager, $this->stockReservationService);
+		unset($this->entityManager, $this->stockReservationService, $this->stockReservationReconciler);
 	}
 
 	public function testReserveCreatesActiveReservationAndUpdatesAggregate(): void
@@ -96,6 +107,126 @@ class StockReservationServiceTest extends KernelTestCase
 		self::assertSame('3.0000', $this->stockReservationService->getActiveQuantityForOrderEntry($orderEntry));
 	}
 
+	public function testCompleteForOrderEntryCompletesMultipleReservationsWithoutRestoringAggregate(): void
+	{
+		[$orderEntry, $warehouseStock] = $this->createOrderEntryAndStock('2.0000', '0.0000', '2.0000');
+		$first = $this->stockReservationService->reserve($orderEntry, $warehouseStock, '1.0000');
+		$second = $this->stockReservationService->reserve($orderEntry, $warehouseStock, '1.0000');
+
+		$this->stockReservationService->completeForOrderEntry($orderEntry, '2.0000');
+		$this->entityManager->clear();
+		$warehouseStock = $this->entityManager->find(WarehouseStock::class, $warehouseStock->getId());
+
+		self::assertSame(StockReservationStatus::COMPLETED, $this->entityManager->find(StockReservation::class, $first->getId())?->getStatus());
+		self::assertSame(StockReservationStatus::COMPLETED, $this->entityManager->find(StockReservation::class, $second->getId())?->getStatus());
+		self::assertSame('0.0000', $warehouseStock?->getReservedQuantity());
+	}
+
+	public function testReleaseForOrderEntryCancelsMultipleReservationsWithoutRestoringAggregate(): void
+	{
+		[$orderEntry, $warehouseStock] = $this->createOrderEntryAndStock('2.0000', '0.0000', '2.0000');
+		$first = $this->stockReservationService->reserve($orderEntry, $warehouseStock, '1.0000');
+		$second = $this->stockReservationService->reserve($orderEntry, $warehouseStock, '1.0000');
+
+		$this->stockReservationService->releaseForOrderEntry($orderEntry, '2.0000');
+		$this->entityManager->clear();
+		$warehouseStock = $this->entityManager->find(WarehouseStock::class, $warehouseStock->getId());
+
+		self::assertSame(StockReservationStatus::CANCELED, $this->entityManager->find(StockReservation::class, $first->getId())?->getStatus());
+		self::assertSame(StockReservationStatus::CANCELED, $this->entityManager->find(StockReservation::class, $second->getId())?->getStatus());
+		self::assertSame('0.0000', $warehouseStock?->getReservedQuantity());
+	}
+
+	public function testPostingMultipleShipmentLinesConsumesBatchesAndCompletesReservations(): void
+	{
+		[$firstEntry, $warehouseStock] = $this->createOrderEntryAndStock('3.0000', '0.0000', '1.0000');
+		$order = $firstEntry->getOrder();
+		$product = $firstEntry->getProduct();
+		$warehouse = $firstEntry->getWarehouse();
+		self::assertInstanceOf(Order::class, $order);
+		self::assertInstanceOf(Product::class, $product);
+		self::assertInstanceOf(Warehouse::class, $warehouse);
+
+		$entries = [$firstEntry];
+		for ($index = 0; $index < 2; $index++) {
+			$entry = (new OrderEntry())
+				->setProduct($product)
+				->setWarehouse($warehouse)
+				->setQuantity('1.0000')
+				->setUnitPrice('10.0000')
+				->setUnitPriceBase('10.0000')
+				->setTotalPrice('10.0000')
+				->setTotalPriceBase('10.0000')
+				->setProductNameSnapshot((string) $product->getName())
+				->setProductCodeSnapshot((string) $product->getCode())
+				->setUnitCodeSnapshot('pc')
+				->setUnitNameSnapshot('Piece');
+			$order->addOrderEntry($entry);
+			$this->entityManager->persist($entry);
+			$entries[] = $entry;
+		}
+
+		$batches = [];
+		foreach ($entries as $index => $entry) {
+			$batch = (new WarehouseStockBatch())
+				->setWarehouseStock($warehouseStock)
+				->setInitialQuantity('1.0000')
+				->setRemainingQuantity('1.0000')
+				->setUnitCost('10.0000')
+				->setReceivedAt(new DateTimeImmutable(sprintf('2026-01-%02d', $index + 1)));
+			$warehouseStock->addWarehouseStockBatch($batch);
+			$entry->setWarehouseStockBatch($batch);
+			$this->entityManager->persist($batch);
+			$batches[] = $batch;
+		}
+		$this->entityManager->flush();
+
+		foreach ($entries as $index => $entry) {
+			$this->stockReservationService->reserveBatch($entry, $batches[$index], '1.0000');
+		}
+
+		$document = (new InventoryDocument())
+			->setStore($order->getStore())
+			->setOrder($order)
+			->setNumber('SHP-' . uniqid())
+			->setType(InventoryDocumentType::SALE_SHIPMENT)
+			->setCurrency($order->getCurrency())
+			->setExchangeRateToBase('1.00000000');
+		foreach ($entries as $entry) {
+			$document->addLine((new InventoryDocumentLine())
+				->setProduct($product)
+				->setWarehouse($warehouse)
+				->setOrderEntry($entry)
+				->setDirection(InventoryDirection::OUT)
+				->setQuantity('1.0000')
+				->setUnitPrice('10.0000')
+				->setUnitPriceBase('10.0000'));
+		}
+		$this->entityManager->persist($document);
+		$this->entityManager->flush();
+
+		static::getContainer()->get(InventoryPostingService::class)->post($document);
+		$stockId = $warehouseStock->getId();
+		$this->entityManager->clear();
+		$warehouseStock = $this->entityManager->find(WarehouseStock::class, $stockId);
+		$movements = $this->entityManager->getRepository(StockMovement::class)->findBy(
+			['warehouseStock' => $warehouseStock],
+			['createdAt' => 'ASC', 'id' => 'ASC'],
+		);
+
+		self::assertSame('0.0000', $warehouseStock?->getQuantityOnHand());
+		self::assertSame('0.0000', $warehouseStock?->getReservedQuantity());
+		self::assertCount(3, $warehouseStock?->getWarehouseStockBatches() ?? []);
+		self::assertSame(['0.0000', '0.0000', '0.0000'], array_map(
+			static fn (WarehouseStockBatch $batch): ?string => $batch->getRemainingQuantity(),
+			$warehouseStock?->getWarehouseStockBatches()->toArray() ?? [],
+		));
+		self::assertSame(['2.0000', '1.0000', '0.0000'], array_map(
+			static fn (StockMovement $movement): ?string => $movement->getBalanceAfter(),
+			$movements,
+		));
+	}
+
 	public function testExpiredReservationIsReleasedFromAggregate(): void
 	{
 		[$orderEntry, $warehouseStock] = $this->createOrderEntryAndStock('5.0000', '0.0000', '2.0000');
@@ -125,6 +256,55 @@ class StockReservationServiceTest extends KernelTestCase
 		self::assertSame('2.0000', $reservation->getQuantity());
 		self::assertSame('2.0000', $warehouseStock->getReservedQuantity());
 		self::assertSame('2.0000', $this->stockReservationService->getActiveQuantityForOrderEntry($orderEntry));
+	}
+
+	public function testReserveBatchBindsReservationToExactBatch(): void
+	{
+		[$orderEntry, $warehouseStock] = $this->createOrderEntryAndStock('2.0000', '0.0000', '1.0000');
+		$batch = (new WarehouseStockBatch())
+			->setWarehouseStock($warehouseStock)
+			->setInitialQuantity('2.0000')
+			->setRemainingQuantity('2.0000')
+			->setUnitCost('10.0000')
+			->setReceivedAt(new DateTimeImmutable());
+		$warehouseStock->addWarehouseStockBatch($batch);
+		$this->entityManager->persist($batch);
+		$this->entityManager->flush();
+
+		$reservation = $this->stockReservationService->reserveBatch($orderEntry, $batch, '1.0000');
+
+		self::assertSame($batch, $reservation->getWarehouseStockBatch());
+		self::assertSame('1.0000', $warehouseStock->getReservedQuantity());
+	}
+
+	public function testReconcilerDryRunThenCancelsStaleActiveReservation(): void
+	{
+		[$orderEntry, $warehouseStock] = $this->createOrderEntryAndStock('2.0000', '0.0000', '1.0000');
+		$active = $this->stockReservationService->reserve($orderEntry, $warehouseStock, '1.0000');
+		$completed = (new StockReservation())
+			->setOrderEntry($orderEntry)
+			->setWarehouseStock($warehouseStock)
+			->setQuantity('1.0000')
+			->setStatus(StockReservationStatus::COMPLETED);
+		$orderEntry->setShippedQuantity('1.0000')->addStockReservation($completed);
+		$warehouseStock->addStockReservation($completed);
+		$this->entityManager->persist($completed);
+		$this->entityManager->flush();
+
+		$dryRun = $this->stockReservationReconciler->reconcile(orderId: $orderEntry->getOrder()?->getId());
+
+		self::assertCount(1, $dryRun['entries']);
+		self::assertSame('1.0000', $dryRun['entries'][0]['cancel']);
+		self::assertSame(StockReservationStatus::ACTIVE, $active->getStatus());
+		self::assertSame('1.0000', $warehouseStock->getReservedQuantity());
+
+		$applied = $this->stockReservationReconciler->reconcile(orderId: $orderEntry->getOrder()?->getId(), apply: true);
+		$this->entityManager->refresh($active);
+		$this->entityManager->refresh($warehouseStock);
+
+		self::assertCount(1, $applied['entries']);
+		self::assertSame(StockReservationStatus::CANCELED, $active->getStatus());
+		self::assertSame('0.0000', $warehouseStock->getReservedQuantity());
 	}
 
 	private function createOrderEntryAndStock(string $quantityOnHand, string $reservedQuantity, string $entryQuantity, bool $allowBackorders = false): array

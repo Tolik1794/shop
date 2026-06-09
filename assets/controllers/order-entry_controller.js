@@ -7,6 +7,7 @@ export default class extends Controller {
         'productLabel',
         'productMeta',
         'warehouse',
+        'warehouseField',
         'warehouseStockBatch',
         'source',
         'sourceLabel',
@@ -35,6 +36,7 @@ export default class extends Controller {
         this.recalculate()
         this.formatAvailable()
         this.updateAvailabilityVisibility()
+        this.updateWarehouseVisibility()
     }
 
     // Strip excess precision from the initial field values ("49600.0000" -> "49600",
@@ -101,6 +103,12 @@ export default class extends Controller {
         }
     }
 
+    updateWarehouseVisibility() {
+        if (this.hasWarehouseFieldTarget) {
+            this.warehouseFieldTarget.classList.toggle('d-none', this.element.dataset.sourceType !== 'production')
+        }
+    }
+
     sourceChanged() {
         const sourceType = this.hasSourceTarget ? this.sourceTarget.value : 'stock'
         const warehouse = this.hasWarehouseTarget ? this.warehouseTarget.selectedOptions[0] : null
@@ -117,6 +125,7 @@ export default class extends Controller {
                 : sourceLabel
         }
         this.updateAvailabilityVisibility()
+        this.updateWarehouseVisibility()
         this.changed()
     }
 

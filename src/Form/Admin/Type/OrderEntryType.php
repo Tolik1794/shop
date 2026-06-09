@@ -117,7 +117,13 @@ class OrderEntryType extends AbstractType
 				return;
 			}
 
-			if (empty($data['fulfillmentSource'])) {
+			if ($orderEntry?->getId() !== null) {
+				$data['fulfillmentSource'] = $orderEntry->getFulfillmentSource()->value;
+				if ($orderEntry->getFulfillmentSource() !== OrderEntryFulfillmentSource::PRODUCTION) {
+					$data['warehouse'] = $orderEntry->getWarehouse()?->getId();
+				}
+				$event->setData($data);
+			} elseif (empty($data['fulfillmentSource'])) {
 				$data['fulfillmentSource'] = empty($data['warehouse'])
 					? OrderEntryFulfillmentSource::PRODUCTION->value
 					: OrderEntryFulfillmentSource::STOCK->value;

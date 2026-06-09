@@ -119,8 +119,14 @@ class InventoryPostingService
 		$context = $this->transitionContext($actor, $postedAt);
 		$this->ensurePersistedIdentity($document);
 
-		foreach ($this->linesForPosting($document) as $line) {
+		$lines = $this->linesForPosting($document);
+
+		foreach ($lines as $line) {
 			$this->postLine($line);
+			// Stock and its reservation aggregate must be flushed together to preserve reserved <= on hand.
+			// The stock and selected batches were already locked while posting this line.
+			$this->completeReservationsForShipment($line, false);
+			$this->entityManager->flush();
 		}
 
 		$document
@@ -219,7 +225,6 @@ class InventoryPostingService
 			$movements = $this->warehouseStockBatchPostingService->createReversalMovements($line, $warehouseStock, $originalLine, $oldQuantity);
 			if ($movements !== null) {
 				$this->entityManager->persist($warehouseStock);
-				$this->completeReservationsForShipment($line);
 
 				return;
 			}
@@ -232,10 +237,9 @@ class InventoryPostingService
 		}
 
 		$this->entityManager->persist($warehouseStock);
-		$this->completeReservationsForShipment($line);
 	}
 
-	private function completeReservationsForShipment(InventoryDocumentLine $line): void
+	private function completeReservationsForShipment(InventoryDocumentLine $line, bool $lock = true): void
 	{
 		$document = $line->getInventoryDocument();
 		$orderEntry = $line->getOrderEntry();
@@ -248,7 +252,7 @@ class InventoryPostingService
 			return;
 		}
 
-		$this->stockReservationService->completeForOrderEntry($orderEntry, (string) $line->getQuantity(), false);
+		$this->stockReservationService->completeForOrderEntry($orderEntry, (string) $line->getQuantity(), false, $lock);
 	}
 
 	/**

@@ -318,6 +318,7 @@ note right of StockMovement
 
   In average_cost mode, OUT movement unitCost usually equals WarehouseStock.averageCost at posting time.
   In fifo mode, one InventoryDocumentLine may create multiple StockMovement rows for different batches.
+  quantityChange is immutable stock history; balanceAfter can be reconciled by replaying movements in posting order.
 end note
 
 note right of StockReservation
@@ -325,6 +326,9 @@ note right of StockReservation
   WarehouseStock.reservedQuantity can be calculated from active reservations.
   warehouseStockBatch is optional; when filled, it reserves a concrete FIFO batch
   and must match the reservation WarehouseStock.
+  Linked production output reserves its exact output batch for the source OrderEntry.
+  Shipments consume their own reserved batches before general FIFO.
+  Shipment stock/batch consumption and reservation completion must be flushed atomically per line.
 end note
 
 @enduml

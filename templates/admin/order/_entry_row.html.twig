@@ -72,6 +72,12 @@
         </div>
         <div class="order-entry-head__source">
             {{ form_widget(entry.warehouseStockBatchId) }}
+            {{ form_widget(entry.fulfillmentSource, {
+                attr: {
+                    class: 'd-none',
+                    'data-order-entry-target': 'source'
+                }
+            }) }}
             <div class="order-entry-head__source-label fw-semibold" data-order-entry-target="sourceLabel">{{ sourceDetail ?: 'admin.order.source.undefined'|trans }}</div>
             <div class="order-entry-head__source-meta text-muted small">
                 <span data-order-entry-target="sourceMeta">{{ sourceLabel }}</span>
@@ -86,17 +92,7 @@
     </div>
 
     <div class="order-entry-main row g-2 align-items-start mt-0">
-        <div class="col-6 col-md-2">
-            <label class="form-label">{{ 'admin.order.fields.source'|trans }}</label>
-            {{ form_widget(entry.fulfillmentSource, {
-                attr: {
-                    class: 'form-select form-select-sm',
-                    'data-order-entry-target': 'source',
-                    'data-action': 'change->order-entry#sourceChanged'
-                }
-            }) }}
-        </div>
-        <div class="col-6 col-md-2">
+        <div class="col-6 col-md-2 {{ sourceType == 'production' ? '' : 'd-none' }}" data-order-entry-target="warehouseField">
             <label class="form-label">{{ 'Warehouse'|trans }}</label>
             {{ form_widget(entry.warehouse, {
                 attr: {
@@ -106,7 +102,7 @@
                 }
             }) }}
         </div>
-        <div class="col-4 col-md-2">
+        <div class="col-4 col-md-1">
             <label class="form-label">{{ 'admin.common.quantity'|trans }}</label>
             {{ form_widget(entry.quantity, {
                 attr: {
@@ -127,7 +123,7 @@
             }) }}
         </div>
         {% set isManualOverride = entryData and entryData.discountMode and entryData.discountMode.value == 'manual_override' %}
-        <div class="col-12 col-md-4 order-entry-discount">
+        <div class="col-12 col-md-3 order-entry-discount">
             <div class="order-entry-discount-head">
                 <label class="form-label mb-0">{{ 'admin.order.fields.discount'|trans }}</label>
                 {% if can_discount_override|default(false) %}
@@ -203,6 +199,7 @@
         <div class="form-error order-entry-errors mt-3 mb-0">
             {{ form_errors(entry) }}
             {{ form_errors(entry.product) }}
+            {{ form_errors(entry.fulfillmentSource) }}
             {{ form_errors(entry.warehouse) }}
             {{ form_errors(entry.quantity) }}
             {{ form_errors(entry.unitPrice) }}

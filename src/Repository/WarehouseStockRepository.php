@@ -97,4 +97,57 @@ class WarehouseStockRepository extends ServiceEntityRepository
 
 		return max(1, (int) ceil($count / $limit));
 	}
+
+	/**
+	 * @return WarehouseStock[]
+	 */
+	public function findForReservationReconciliation(?int $storeId = null, ?int $orderId = null): array
+	{
+		$queryBuilder = $this->createQueryBuilder('warehouseStock')
+			->innerJoin('warehouseStock.warehouse', 'warehouse')
+			->orderBy('warehouseStock.id', 'ASC');
+
+		if ($storeId !== null) {
+			$queryBuilder
+				->andWhere('IDENTITY(warehouse.store) = :storeId')
+				->setParameter('storeId', $storeId);
+		}
+
+		if ($orderId !== null) {
+			$queryBuilder
+				->distinct()
+				->innerJoin('warehouseStock.stockReservations', 'stockReservation')
+				->innerJoin('stockReservation.orderEntry', 'orderEntry')
+				->andWhere('IDENTITY(orderEntry.order) = :orderId')
+				->setParameter('orderId', $orderId);
+		}
+
+		return $queryBuilder->getQuery()->getResult();
+	}
+
+	/**
+	 * @return WarehouseStock[]
+	 */
+	public function findForMovementReconciliation(?int $storeId = null, ?int $stockId = null): array
+	{
+		$queryBuilder = $this->createQueryBuilder('warehouseStock')
+			->distinct()
+			->innerJoin('warehouseStock.warehouse', 'warehouse')
+			->innerJoin('warehouseStock.stockMovements', 'stockMovement')
+			->orderBy('warehouseStock.id', 'ASC');
+
+		if ($storeId !== null) {
+			$queryBuilder
+				->andWhere('IDENTITY(warehouse.store) = :storeId')
+				->setParameter('storeId', $storeId);
+		}
+
+		if ($stockId !== null) {
+			$queryBuilder
+				->andWhere('warehouseStock.id = :stockId')
+				->setParameter('stockId', $stockId);
+		}
+
+		return $queryBuilder->getQuery()->getResult();
+	}
 }

@@ -16,6 +16,8 @@
 
 - Completing linked production posts the normal `production` inventory document.
 - Produced stock is reserved for the source order entry before the general awaiting-stock FIFO queue runs.
+- The reservation is bound to the exact output batch created by the linked production inventory document. A sale shipment for the source entry consumes its reserved batches before the general FIFO sequence.
+- General outgoing documents and shipments for other entries cannot consume quantities reserved on that production batch.
 - Partial completion creates a new planned production order for the uncovered quantity.
 - Order cancellation or refusal cancels/replaces only draft or planned linked production. Reserved or started production is preserved and any excess output becomes general stock.
 

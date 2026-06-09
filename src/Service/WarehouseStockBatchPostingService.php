@@ -4,12 +4,14 @@ namespace App\Service;
 
 use App\Entity\InventoryDocumentLine;
 use App\Entity\PurchaseEntry;
+use App\Entity\OrderEntry;
 use App\Entity\StockMovement;
 use App\Entity\WarehouseStock;
 use App\Entity\WarehouseStockBatch;
 use App\Enum\CostingMethodEnum;
 use App\Exception\StockOperationException;
 use App\Repository\WarehouseStockBatchRepository;
+use App\Repository\StockReservationRepository;
 use App\Service\Concurrency\ConcurrencyGuard;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
@@ -19,6 +21,7 @@ class WarehouseStockBatchPostingService
 	public function __construct(
 		private readonly EntityManagerInterface $entityManager,
 		private readonly WarehouseStockBatchRepository $warehouseStockBatchRepository,
+		private readonly StockReservationRepository $stockReservationRepository,
 		private readonly ConcurrencyGuard $concurrencyGuard,
 	)
 	{
@@ -91,6 +94,11 @@ class WarehouseStockBatchPostingService
 
 		if ($selectedBatch instanceof WarehouseStockBatch) {
 			$this->concurrencyGuard->lock($selectedBatch);
+			$available = $this->availableForLine($selectedBatch, $line->getOrderEntry());
+
+			if ($quantity > $available + 0.00005) {
+				throw new StockOperationException('Selected stock batch does not have enough available quantity.');
+			}
 
 			return [$this->consumeBatch(
 				line: $line,
@@ -103,7 +111,7 @@ class WarehouseStockBatchPostingService
 			)];
 		}
 
-		$batches = $this->openBatches($warehouseStock);
+		$batches = $this->orderedBatchesForLine($warehouseStock, $line->getOrderEntry());
 		$this->concurrencyGuard->lockAll($batches);
 
 		foreach ($batches as $batch) {
@@ -111,29 +119,23 @@ class WarehouseStockBatchPostingService
 				break;
 			}
 
-			$batchRemaining = $this->numberValue($batch->getRemainingQuantity());
-			if ($batchRemaining <= 0.00005) {
+			$available = $this->availableForLine($batch, $line->getOrderEntry());
+			if ($available <= 0.00005) {
 				continue;
 			}
 
-			$consumed = min($remaining, $batchRemaining);
+			$consumed = min($remaining, $available);
 			$remaining -= $consumed;
-			$balance -= $consumed;
-			$batch->setRemainingQuantity($this->formatQuantity($batchRemaining - $consumed));
-
-			$movement = $this->movement(
+			$movement = $this->consumeBatch(
 				$line,
 				$warehouseStock,
-				-$consumed,
-				$useFifoCost ? $this->numberValue($batch->getUnitCost()) : $fallbackUnitCost,
+				$batch,
+				$consumed,
+				$fallbackUnitCost,
 				$balance,
+				$useFifoCost,
 			);
-			$movement->setWarehouseStockBatch($batch);
-			$batch->addStockMovement($movement);
-			$line->addStockMovement($movement);
-
-			$this->entityManager->persist($batch);
-			$this->entityManager->persist($movement);
+			$balance -= $consumed;
 			$movements[] = $movement;
 		}
 
@@ -142,6 +144,37 @@ class WarehouseStockBatchPostingService
 		}
 
 		return $movements;
+	}
+
+	/**
+	 * Shipment lines consume their own reserved batches before the general FIFO sequence.
+	 *
+	 * @return list<WarehouseStockBatch>
+	 */
+	private function orderedBatchesForLine(WarehouseStock $warehouseStock, ?OrderEntry $orderEntry): array
+	{
+		$preferred = [];
+
+		if ($orderEntry instanceof OrderEntry) {
+			foreach ($this->stockReservationRepository->findActiveForOrderEntry($orderEntry) as $reservation) {
+				$batch = $reservation->getWarehouseStockBatch();
+				if ($batch instanceof WarehouseStockBatch && $batch->getWarehouseStock() === $warehouseStock) {
+					$preferred[] = $batch;
+				}
+			}
+		}
+
+		return $this->uniqueBatches(array_merge($preferred, $this->openBatches($warehouseStock)));
+	}
+
+	private function availableForLine(WarehouseStockBatch $batch, ?OrderEntry $orderEntry): float
+	{
+		$active = $this->numberValue($this->stockReservationRepository->getActiveQuantityForBatch($batch));
+		$ownActive = $orderEntry instanceof OrderEntry
+			? $this->numberValue($this->stockReservationRepository->getActiveQuantityForBatchAndOrderEntry($batch, $orderEntry))
+			: 0.0;
+
+		return max(0.0, $this->numberValue($batch->getRemainingQuantity()) - $active + $ownActive);
 	}
 
 	private function consumeBatch(
@@ -285,20 +318,13 @@ class WarehouseStockBatchPostingService
 	 */
 	private function openBatches(WarehouseStock $warehouseStock): array
 	{
-		$batches = array_merge(
+		$batches = $this->uniqueBatches(array_merge(
 			$this->warehouseStockBatchRepository->findOpenByWarehouseStock($warehouseStock),
 			$warehouseStock->getWarehouseStockBatches()
 				->filter(static fn (WarehouseStockBatch $batch): bool => (float) $batch->getRemainingQuantity() > 0)
 				->toArray(),
-		);
+		));
 
-		$unique = [];
-		foreach ($batches as $batch) {
-			$key = $batch->getId() !== null ? 'id-' . $batch->getId() : 'object-' . spl_object_id($batch);
-			$unique[$key] = $batch;
-		}
-
-		$batches = array_values($unique);
 		usort($batches, static function (WarehouseStockBatch $left, WarehouseStockBatch $right): int {
 			$dateCompare = $left->getReceivedAt() <=> $right->getReceivedAt();
 
@@ -310,6 +336,21 @@ class WarehouseStockBatchPostingService
 		});
 
 		return $batches;
+	}
+
+	/**
+	 * @param list<WarehouseStockBatch> $batches
+	 * @return list<WarehouseStockBatch>
+	 */
+	private function uniqueBatches(array $batches): array
+	{
+		$unique = [];
+		foreach ($batches as $batch) {
+			$key = $batch->getId() !== null ? 'id-' . $batch->getId() : 'object-' . spl_object_id($batch);
+			$unique[$key] = $batch;
+		}
+
+		return array_values($unique);
 	}
 
 	private function movement(

@@ -573,6 +573,10 @@ export default class extends Controller {
         if (noteEl) {
             noteEl.classList.toggle('d-none', !isProduction)
         }
+        const warehouseField = row.querySelector('[data-order-entry-target~="warehouseField"]')
+        if (warehouseField) {
+            warehouseField.classList.toggle('d-none', !isProduction)
+        }
     }
 
     setUnit(row, unit) {

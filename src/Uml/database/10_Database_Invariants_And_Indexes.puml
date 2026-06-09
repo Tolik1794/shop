@@ -70,14 +70,18 @@ note bottom
   - warehouseStock must match the InventoryDocumentLine product and warehouse.
   - OUT movement must not make WarehouseStock.quantityOnHand negative.
   - In FIFO mode, OUT movements using batches must not exceed WarehouseStockBatch.remainingQuantity.
+  - quantityChange is immutable stock history; balanceAfter and aggregate stock can be reconciled from ordered movements.
 
   StockReservation:
   - quantity > 0.
   - active reservations must not exceed available stock: quantityOnHand - reservedQuantity.
   - warehouseStockBatch, when filled, must belong to the same WarehouseStock.
   - active batch reservations must not exceed WarehouseStockBatch.remainingQuantity.
+  - OUT movements must not consume quantities batch-reserved for another OrderEntry.
+  - Linked production output should reserve its exact output WarehouseStockBatch.
   - Backordered OrderEntry rows should remain unreserved until stock is available.
   - completed/canceled/expired reservations should not be counted in WarehouseStock.reservedQuantity.
+  - Shipment stock/batch consumption and reservation completion must be flushed atomically per line.
 
   OrderEntry / PurchaseEntry:
   - quantity > 0.
