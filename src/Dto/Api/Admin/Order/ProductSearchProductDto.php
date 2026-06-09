@@ -150,6 +150,16 @@ class ProductSearchProductDto implements JsonSerializable
 		);
 	}
 
+	public function getStockOptions(): array
+	{
+		return $this->stockOptions;
+	}
+
+	public function getProductionOption(): ?ProductSearchProductionOptionDto
+	{
+		return $this->productionOption;
+	}
+
 	public function jsonSerialize(): array
 	{
 		return [

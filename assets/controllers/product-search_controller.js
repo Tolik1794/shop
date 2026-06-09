@@ -23,11 +23,14 @@ export default class extends Controller {
         this.currentQuery = ''
         this.requestId = 0
         this.currencyChangedHandler = this.currencyChanged.bind(this)
+        this.keydownHandler = this.handleKeydown.bind(this)
         this.element.addEventListener('change', this.currencyChangedHandler)
+        this.queryTarget.addEventListener('keydown', this.keydownHandler)
     }
 
     disconnect() {
         this.element.removeEventListener('change', this.currencyChangedHandler)
+        this.queryTarget.removeEventListener('keydown', this.keydownHandler)
     }
 
     search() {
@@ -158,6 +161,10 @@ export default class extends Controller {
     }
 
     renderProducts(products, append) {
+        if (!append) {
+            this.resultsTarget.querySelectorAll('.is-focused').forEach(el => el.classList.remove('is-focused'))
+        }
+
         if (!append && products.length === 0) {
             this.resultsTarget.innerHTML = `<div class="order-product-results-empty">${this.escapeHtml(trans('common.no_results', 'No results found.'))}</div>`
             this.resultsTarget.classList.remove('d-none')
@@ -306,7 +313,45 @@ export default class extends Controller {
         `
     }
 
+    handleKeydown(event) {
+        if (event.key === 'Escape') {
+            event.preventDefault()
+            this.clearResults()
+            return
+        }
+
+        const rows = Array.from(this.resultsTarget.querySelectorAll('.order-product-result-row:not([disabled])'))
+        if (!rows.length) return
+
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault()
+            const current = this.resultsTarget.querySelector('.order-product-result-row.is-focused')
+            const idx = current ? rows.indexOf(current) : -1
+            const next = event.key === 'ArrowDown'
+                ? rows[idx + 1] ?? rows[0]
+                : rows[idx - 1] ?? rows[rows.length - 1]
+            this.setKeyboardFocus(rows, next)
+            return
+        }
+
+        if (event.key === 'Enter') {
+            event.preventDefault()
+            const focused = this.resultsTarget.querySelector('.order-product-result-row.is-focused')
+            if (focused) focused.click()
+        }
+    }
+
+    setKeyboardFocus(rows, target) {
+        rows.forEach(row => row.classList.remove('is-focused'))
+        if (target) {
+            target.classList.add('is-focused')
+            target.scrollIntoView({block: 'nearest'})
+        }
+    }
+
     clearResults() {
+        this.resultsTarget.querySelectorAll('.order-product-result-row.is-focused')
+            .forEach(el => el.classList.remove('is-focused'))
         this.resultsTarget.innerHTML = ''
         this.resultsTarget.classList.add('d-none')
         this.page = 1

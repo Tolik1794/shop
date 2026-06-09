@@ -267,8 +267,10 @@
 		line-height: 1.3;
 
 		&:hover,
-		&:focus {
+		&:focus,
+		&.is-focused {
 			background: mix($primary, $white, 7%);
+			outline: none;
 		}
 	}
 

@@ -5,6 +5,7 @@ namespace App\Controller\Api\Admin;
 use App\Dto\Api\Admin\Order\ProductSearchProductDto;
 use App\Dto\Api\Admin\Order\ProductSearchResponseDto;
 use App\Entity\Currency;
+use App\Entity\Product;
 use App\Entity\Store;
 use App\Repository\CurrencyRepository;
 use App\Repository\CustomerRepository;
@@ -156,36 +157,43 @@ class OrderController extends AbstractController
 	 */
 	private function findProductsForOrderEntrySearch(Store $store, Currency $currency, string $search, array $excludedOptionKeys, int $page, int $limit): array
 	{
-		$chunkSize = 50;
-		$offset = 0;
+		$allMatches = $this->productRepository->findForOrderEntrySearch($store, $search);
+
+		$searchLower = mb_strtolower(trim($search));
+		usort($allMatches, static function (Product $a, Product $b) use ($searchLower): int {
+			return self::productSearchScore($a, $searchLower) <=> self::productSearchScore($b, $searchLower)
+				?: strnatcasecmp($a->getName() ?? '', $b->getName() ?? '');
+		});
+
 		$neededCount = ($page * $limit) + 1;
 		$products = [];
 
-		do {
-			$foundProducts = $this->productRepository->findChoicesByStoreAndSearch($store, $search, $chunkSize, $offset);
+		foreach ($allMatches as $product) {
+			$productDto = ProductSearchProductDto::fromProduct(
+				$product,
+				$store,
+				$this->catalogPriceResolver->tryResolve($product, $store, $currency)?->getAmount(),
+				$excludedOptionKeys,
+				$this->orderBatchPricingService,
+				$currency,
+				$this->productDiscountResolver,
+			);
 
-			foreach ($foundProducts as $product) {
-				$productDto = ProductSearchProductDto::fromProduct(
-					$product,
-					$store,
-					$this->catalogPriceResolver->tryResolve($product, $store, $currency)?->getAmount(),
-					$excludedOptionKeys,
-					$this->orderBatchPricingService,
-					$currency,
-					$this->productDiscountResolver,
-				);
-
-				if ($productDto instanceof ProductSearchProductDto) {
-					$products[] = $productDto;
-				}
+			if ($productDto instanceof ProductSearchProductDto) {
+				$products[] = $productDto;
 
 				if (count($products) >= $neededCount) {
-					break 2;
+					break;
 				}
 			}
+		}
 
-			$offset += $chunkSize;
-		} while (count($foundProducts) === $chunkSize);
+		usort($products, static function (ProductSearchProductDto $a, ProductSearchProductDto $b): int {
+			$aHas = count($a->getStockOptions()) > 0 || $a->getProductionOption() !== null ? 0 : 1;
+			$bHas = count($b->getStockOptions()) > 0 || $b->getProductionOption() !== null ? 0 : 1;
+
+			return $aHas <=> $bHas;
+		});
 
 		$pageOffset = ($page - 1) * $limit;
 
@@ -193,6 +201,19 @@ class OrderController extends AbstractController
 			'products' => array_slice($products, $pageOffset, $limit),
 			'hasMore' => count($products) > $pageOffset + $limit,
 		];
+	}
+
+	private static function productSearchScore(Product $product, string $searchLower): int
+	{
+		$code = mb_strtolower($product->getCode() ?? '');
+		$name = mb_strtolower($product->getName() ?? '');
+
+		if ($code === $searchLower) return 0;
+		if (str_starts_with($code, $searchLower)) return 1;
+		if ($name === $searchLower) return 2;
+		if (str_starts_with($name, $searchLower)) return 3;
+
+		return 5;
 	}
 
 	private function resolveSearchCurrency(Request $request, Store $store): Currency

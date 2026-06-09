@@ -285,7 +285,7 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSelectorTextContains('.order-show-summary', 'Draft');
 		self::assertSelectorTextContains('.order-show-summary', 'Unpaid');
 		self::assertSelectorExists('.order-show-summary__item--identity .order-copy-action[aria-label="Copy order number"]');
-		self::assertSelectorExists('.order-show-summary__copyable .order-copy-action[data-copy-text="+380956554307"]');
+		self::assertSelectorExists('.order-show-summary__copyable .order-copy-action[data-clipboard-text-value="+380956554307"]');
 		self::assertSelectorExists('.order-show-summary__item--statuses.order-show-summary__item--wide .order-show-summary__statuses');
 		self::assertSelectorExists('.order-show-grid');
 		self::assertSelectorTextContains('.order-show-card', 'Customer details');
@@ -299,8 +299,8 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSelectorTextContains('.order-show-product-card', 'Show card desk');
 		self::assertSelectorTextContains('.order-show-product-card', '1 pc');
 		self::assertSelectorTextContains('.order-show-product-card', '10 000.00 UAH');
-		self::assertSelectorExists('.order-show-product-card .order-copy-action[data-copy-feedback="Copied"]');
-		self::assertSelectorExists('.order-show-product-card [data-copy-feedback][aria-live="polite"]');
+		self::assertSelectorExists('.order-show-product-card .order-copy-action[data-clipboard-message-value="Copied"]');
+		self::assertSelectorExists('.order-show-product-card [data-controller~="clipboard"]');
 		self::assertSelectorExists('.order-show-product-action[aria-label="Open product"]');
 	}
 
@@ -589,9 +589,9 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertArrayHasKey('history', $data['fragments']);
 		self::assertArrayHasKey('payments', $data['fragments']);
 		self::assertStringContainsString('Awaiting stock', $data['fragments']['row']);
-		self::assertStringContainsString('order.status_changed', $data['fragments']['history']);
-		self::assertStringContainsString('draft', $data['fragments']['history']);
-		self::assertStringContainsString('confirmed', $data['fragments']['history']);
+		self::assertStringContainsString('Status changed', $data['fragments']['history']);
+		self::assertStringContainsString('Draft', $data['fragments']['history']);
+		self::assertStringContainsString('Confirmed', $data['fragments']['history']);
 		self::assertStringContainsString('Add incoming payment', $data['fragments']['payments']);
 		self::assertStringContainsString('Add payment', $data['fragments']['payments']);
 		self::assertStringContainsString('data-reload-card-target="paymentsCard"', $data['fragments']['payments']);
@@ -1724,7 +1724,7 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertResponseIsSuccessful();
 		self::assertSelectorTextContains('body', 'Added without page reload');
 		self::assertSelectorExists('[data-controller~="order-discussion"]');
-		self::assertSelectorTextContains('body', 'order.comment_added');
+		self::assertSelectorTextContains('body', 'Comment added');
 	}
 
 	public function testEditPageEditsAndDeletesCommentWithoutRedirectForXmlHttpRequest(): void
@@ -1774,7 +1774,7 @@ class OrderBuilderControllerTest extends WebTestCase
 
 		self::assertResponseIsSuccessful();
 		self::assertSelectorTextContains('body', 'Comment after edit');
-		self::assertSelectorTextContains('body', 'order.comment_edited');
+		self::assertSelectorTextContains('body', 'Comment edited');
 
 		$deleteForm = $crawler->filter('form[data-confirm="Delete comment?"]')->form();
 		$this->client->request(
@@ -1788,7 +1788,7 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertResponseIsSuccessful();
 		self::assertSelectorTextContains('body', 'No comments.');
 		self::assertSelectorNotExists('[data-order-discussion-comment]');
-		self::assertSelectorTextContains('body', 'order.comment_deleted');
+		self::assertSelectorTextContains('body', 'Comment deleted');
 	}
 
 	private function createUser(string $email): User
