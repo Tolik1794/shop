@@ -51,7 +51,7 @@ final class PermissionCatalog
 		'inventory_document.cancel' => ['Inventory', 'Cancel inventory documents', 'Can cancel inventory documents.'],
 		'inventory_reason.manage' => ['Inventory', 'Manage inventory reasons', 'Can manage inventory reason dictionary.'],
 		'category.manage' => ['Catalog', 'Manage categories', 'Can manage product categories.'],
-		'category_parameter.manage' => ['Catalog', 'Manage category parameters', 'Can manage category parameter dictionary.'],
+		'category_parameter.manage' => ['Catalog', 'Manage category parameters', 'Can manage category parameter assignments.'],
 		'product.view' => ['Catalog', 'View products', 'Can view products.'],
 		'product.manage' => ['Catalog', 'Manage products', 'Can create and edit products.'],
 		'product_price.manage' => ['Catalog', 'Manage product prices', 'Can manage product prices.'],

@@ -7,11 +7,14 @@ use App\Entity\Store;
 use App\Form\Admin\FilterType\CategoryFilterType;
 use App\Form\Admin\Type\CategoryType;
 use App\Manager\CategoryManager;
+use App\Repository\CategoryProductParameterNameRepository;
 use App\Repository\CategoryRepository;
+use App\Repository\ProductParameterNameRepository;
 use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -69,12 +72,18 @@ class CategoryController extends AbstractAdvancedController
 
 	#[IsGranted('category.manage')]
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
-	public function new(Request $request, #[MapEntity(expr: 'repository.find(store_id)')] Store $store): Response
+	public function new(
+		Request $request,
+		CategoryProductParameterNameRepository $categoryParameterRepository,
+		#[MapEntity(expr: 'repository.find(store_id)')] Store $store,
+	): Response
 	{
 		$category = new Category();
 		$category->setStore($store);
+		$canManageParameters = $this->isGranted('category_parameter.manage');
 		$form = $this->createForm(CategoryType::class, $category, [
 			'method' => 'POST',
+			'manage_parameters' => $canManageParameters,
 			'attr' => [
 				'data-controller' => 'select-two',
 				'data-select-two-target' => 'form',
@@ -95,7 +104,8 @@ class CategoryController extends AbstractAdvancedController
 
 		return $this->render('admin/category/form.html.twig', [
 			'entity' => $category,
-			'form' => $form
+			'form' => $form,
+			'inherited_parameters' => $this->buildInheritedParameters($category->getParent(), $categoryParameterRepository),
 		]);
 	}
 
@@ -106,10 +116,13 @@ class CategoryController extends AbstractAdvancedController
 		Category $category,
 		#[MapEntity(expr: 'repository.find(store_id)')]
 		Store $store,
+		CategoryProductParameterNameRepository $categoryParameterRepository,
 	): Response
 	{
+		$canManageParameters = $this->isGranted('category_parameter.manage');
 		$form = $this->createForm(CategoryType::class, $category, [
 			'method' => 'POST',
+			'manage_parameters' => $canManageParameters,
 			'attr' => [
 				'data-controller' => 'select-two',
 				'data-select-two-target' => 'form',
@@ -126,6 +139,46 @@ class CategoryController extends AbstractAdvancedController
 		return $this->render('admin/category/form.html.twig', [
 			'entity' => $category,
 			'form' => $form,
+			'inherited_parameters' => $this->buildInheritedParameters($category->getParent(), $categoryParameterRepository),
+		]);
+	}
+
+	#[Route('/parameter-options', name: 'parameter_options', methods: ['GET'])]
+	public function parameterOptions(
+		Request $request,
+		CategoryRepository $categoryRepository,
+		CategoryProductParameterNameRepository $categoryParameterRepository,
+		ProductParameterNameRepository $parameterNameRepository,
+		#[MapEntity(expr: 'repository.find(store_id)')] Store $store,
+	): JsonResponse
+	{
+		$parent = null;
+		$parentId = $request->query->getInt('parent_id');
+		if ($parentId > 0) {
+			$parent = $categoryRepository->find($parentId);
+			if (!$parent || $parent->getStore()?->getId() !== $store->getId()) {
+				return $this->json(['available' => [], 'inherited' => []], Response::HTTP_NOT_FOUND);
+			}
+		}
+
+		$inherited = $this->buildInheritedParameters($parent, $categoryParameterRepository);
+		$available = [];
+
+		if ($this->isGranted('category_parameter.manage')) {
+			$inheritedIds = array_fill_keys(array_column($inherited, 'id'), true);
+			foreach ($parameterNameRepository->findBy([], ['name' => 'ASC']) as $parameterName) {
+				if ($parameterName->getId() && !isset($inheritedIds[$parameterName->getId()])) {
+					$available[] = [
+						'id' => $parameterName->getId(),
+						'name' => $parameterName->getName(),
+					];
+				}
+			}
+		}
+
+		return $this->json([
+			'available' => $available,
+			'inherited' => $inherited,
 		]);
 	}
 
@@ -136,5 +189,31 @@ class CategoryController extends AbstractAdvancedController
 			'entity' => $category,
 			'query_params' => $request->query->all()
 		]);
+	}
+
+	private function buildInheritedParameters(
+		?Category $parent,
+		CategoryProductParameterNameRepository $categoryParameterRepository,
+	): array {
+		$parameters = [];
+		foreach ($categoryParameterRepository->findInheritedByParent($parent) as $categoryParameter) {
+			$parameterName = $categoryParameter->getProductParameterName();
+			$sourceCategory = $categoryParameter->getCategory();
+			if (!$parameterName?->getId() || isset($parameters[$parameterName->getId()])) {
+				continue;
+			}
+
+			$parameters[$parameterName->getId()] = [
+				'id' => $parameterName->getId(),
+				'name' => $parameterName->getName(),
+				'isRequired' => (bool) $categoryParameter->isIsRequired(),
+				'isFilter' => (bool) $categoryParameter->isIsFilter(),
+				'sourceCategory' => $sourceCategory?->getNameWithParent(),
+			];
+		}
+
+		uasort($parameters, static fn (array $left, array $right): int => strcmp($left['name'], $right['name']));
+
+		return array_values($parameters);
 	}
 }

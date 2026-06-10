@@ -52,4 +52,29 @@ class CategoryProductParameterNameRepository extends ServiceEntityRepository
 				ArrayParameterType::INTEGER
 			)->getQuery()->execute();
 	}
+
+	/**
+	 * @return CategoryProductParameterName[]
+	 */
+	public function findInheritedByParent(?Category $parent): array
+	{
+		if (!$parent) {
+			return [];
+		}
+
+		return $this->createQueryBuilder('category_product_parameter_name')
+			->addSelect('category', 'product_parameter_name')
+			->innerJoin('category_product_parameter_name.category', 'category')
+			->innerJoin('category_product_parameter_name.productParameterName', 'product_parameter_name')
+			->where('category.id in (:categories)')
+			->setParameter(
+				'categories',
+				$this->getEntityManager()->getRepository(Category::class)->findAllParentIdRecursive($parent),
+				ArrayParameterType::INTEGER
+			)
+			->orderBy('category.level', 'DESC')
+			->addOrderBy('product_parameter_name.name', 'ASC')
+			->getQuery()
+			->getResult();
+	}
 }

@@ -190,6 +190,27 @@ admin:
     no_important_notes: 'No important notes.'
     no_returns: 'No returns.'
     no_customer: 'No customer linked to this order.'
+  category:
+    title:
+      new: 'New category'
+      edit: 'Edit category'
+    fields:
+      parent: 'Parent category'
+    sections:
+      basic: 'Basic information'
+    parameters:
+      title: 'Category parameters'
+      local: 'Local parameters'
+      inherited: 'Inherited parameters'
+      add: 'Add parameter'
+      remove: 'Remove parameter'
+      parameter: 'Parameter'
+      select_parameter: 'Select parameter'
+      required: 'Required'
+      filter: 'Filter'
+      source: 'Source category'
+      no_local: 'No local parameters.'
+      no_inherited: 'No parameters are inherited from parent categories.'
   product:
     relations:
       title: 'Related products'

@@ -1,68 +1,134 @@
 {% extends 'admin/_store_components/layout.html.twig' %}
+{% set can_manage_parameters = is_granted('category_parameter.manage') %}
 
-{% block title %}Hello MainController!{% endblock %}
+{% block title %}{{ entity.id ? 'admin.category.title.edit'|trans : 'admin.category.title.new'|trans }}{% endblock %}
 
 {% block navbar_breadcrumb %}
     {{ include('admin/_components/_resource_breadcrumb.html.twig', {
         section_label: 'Categories',
         section_url: path('admin_category_index', {store_id: app.request.attributes.get('store_id')}),
-        current_label: entity is defined and entity.id ? entity.name : 'New'
+        current_label: entity.id ? entity.name : 'New'
     }) }}
 {% endblock %}
 
 {% block main_content %}
     <main class="content">
         <div class="container-fluid p-0">
-            {{ form_start(form) }}
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">{{ entity is defined ? entity.name : 'New' }}</h5>
+            <h1 class="h3 mb-3">{{ entity.id ? 'admin.category.title.edit'|trans : 'admin.category.title.new'|trans }}</h1>
+
+            {{ form_start(form, {attr: {
+                class: 'category-form',
+                'data-controller': 'select-two category-parameters',
+                'data-select-two-target': 'form',
+                'data-category-parameters-options-url-value': path('admin_category_parameter_options', {store_id: app.request.attributes.get('store_id')}),
+                'data-category-parameters-parent-select-id-value': form.parent.vars.id,
+                'data-category-parameters-editable-value': can_manage_parameters ? 'true' : 'false',
+                'data-category-parameters-duplicate-message-value': 'This category parameter is already added.'|trans,
+                'data-category-parameters-inherited-conflict-message-value': 'This parameter is already inherited from a parent category.'|trans,
+                'data-category-parameters-required-label-value': 'admin.category.parameters.required'|trans,
+                'data-category-parameters-filter-label-value': 'admin.category.parameters.filter'|trans,
+                'data-category-parameters-source-label-value': 'admin.category.parameters.source'|trans
+            }}) }}
+            {% if form._token is defined %}
+                {{ form_widget(form._token) }}
+            {% endif %}
+            {{ form_errors(form) }}
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{{ 'admin.category.sections.basic'|trans }}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            {{ form_row(form.name) }}
+                        </div>
+                        <div class="col-12 col-md-6">
+                            {{ form_row(form.parent) }}
+                        </div>
+                        <div class="col-12">
+                            {{ form_row(form.description) }}
+                        </div>
                     </div>
-                    <div class="card-body">
-                        {{ form_errors(form) }}
+                </div>
+            </div>
 
-                        {% for name, widget in form %}
-                            <div class="mb-2">
-                                {% set widget_type = widget.vars.block_prefixes|first %}
-                                {% if widget_type != 'button' %}
-                                    {% if name != '_token' %}
-                                        <div class="font-weight-bold">
-                                            {{ form_label(widget, null, {label_attr: {class: 'form-label'}}) }}
+            <div class="card">
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="card-title mb-0">{{ 'admin.category.parameters.title'|trans }}</h5>
+                    {% if can_manage_parameters %}
+                        <button type="button" class="btn btn-sm btn-light" data-action="category-parameters#addEntry">
+                            <i class="fa-solid fa-plus me-1"></i>{{ 'admin.category.parameters.add'|trans }}
+                        </button>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if can_manage_parameters %}
+                        <h6>{{ 'admin.category.parameters.local'|trans }}</h6>
+                        <div class="d-none category-parameter-row category-parameter-row--head text-muted small fw-bold {{ form.categoryProductParameterNames|length > 0 ? 'd-md-grid' : '' }}" {{ stimulus_target('category-parameters', 'head') }}>
+                            <div>{{ 'admin.category.parameters.parameter'|trans }}</div>
+                            <div>{{ 'admin.category.parameters.required'|trans }}</div>
+                            <div>{{ 'admin.category.parameters.filter'|trans }}</div>
+                            <div></div>
+                        </div>
+                        <div {{ stimulus_target('category-parameters', 'entries') }}>
+                            {% for parameter in form.categoryProductParameterNames %}
+                                {{ include('admin/category/_parameter_row.html.twig', {parameter: parameter}) }}
+                            {% endfor %}
+                        </div>
+                        <p class="text-muted small {{ form.categoryProductParameterNames|length > 0 ? 'd-none' : '' }}" {{ stimulus_target('category-parameters', 'emptyState') }}>
+                            {{ 'admin.category.parameters.no_local'|trans }}
+                        </p>
+                        <template {{ stimulus_target('category-parameters', 'prototype') }}>
+                            {{ include('admin/category/_parameter_row.html.twig', {parameter: form.categoryProductParameterNames.vars.prototype}) }}
+                        </template>
+                    {% else %}
+                        <h6>{{ 'admin.category.parameters.local'|trans }}</h6>
+                        {% if entity.categoryProductParameterNames|length > 0 %}
+                            <div class="category-parameter-readonly-list mb-3">
+                                {% for parameter in entity.categoryProductParameterNames %}
+                                    <div class="category-parameter-readonly">
+                                        <strong>{{ parameter.productParameterName.name }}</strong>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% if parameter.isIsRequired %}<span class="badge bg-warning text-dark">{{ 'admin.category.parameters.required'|trans }}</span>{% endif %}
+                                            {% if parameter.isIsFilter %}<span class="badge bg-info">{{ 'admin.category.parameters.filter'|trans }}</span>{% endif %}
                                         </div>
-                                    {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted small">{{ 'admin.category.parameters.no_local'|trans }}</p>
+                        {% endif %}
+                    {% endif %}
 
-                                    {{ form_widget(widget, {attr: {class: (widget.vars.attr.class|default('') ~ ' form-control')|trim}}) }}
-
-                                    <small>{{ form_help(widget) }}</small>
-
-                                    {% if widget.vars.errors|length > 0 %}
-                                        <div class="form-error">
-                                            {{ form_errors(widget) }}
-                                        </div>
-                                    {% endif %}
-                                {% endif %}
+                    <hr>
+                    <h6>{{ 'admin.category.parameters.inherited'|trans }}</h6>
+                    <div class="category-parameter-readonly-list {{ inherited_parameters|length > 0 ? '' : 'd-none' }}" {{ stimulus_target('category-parameters', 'inheritedList') }}>
+                        {% for parameter in inherited_parameters %}
+                            <div class="category-parameter-readonly">
+                                <div>
+                                    <strong>{{ parameter.name }}</strong>
+                                    <div class="text-muted small">{{ 'admin.category.parameters.source'|trans }}: {{ parameter.sourceCategory }}</div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% if parameter.isRequired %}<span class="badge bg-warning text-dark">{{ 'admin.category.parameters.required'|trans }}</span>{% endif %}
+                                    {% if parameter.isFilter %}<span class="badge bg-info">{{ 'admin.category.parameters.filter'|trans }}</span>{% endif %}
+                                </div>
                             </div>
                         {% endfor %}
-
                     </div>
+                    <p class="text-muted small mb-0 {{ inherited_parameters|length > 0 ? 'd-none' : '' }}" {{ stimulus_target('category-parameters', 'inheritedEmpty') }}>
+                        {{ 'admin.category.parameters.no_inherited'|trans }}
+                    </p>
                 </div>
-                {{ include('admin/_components/_form_actions.html.twig', {
-                    cancel_url: path('admin_category_index', app.request.query.all|merge(app.request.attributes.get('_route_params')))
-                }) }}
-            {{ form_end(form, {'render_rest': false}) }}
+            </div>
 
-            {% if entity.id %}
-                <div>
-                    {{ render(controller(
-                        'App\\Controller\\Admin\\CategoryProductParameterNameController::index',
-                        {
-                            store_id: app.request.attributes.get('store_id'),
-                            category_id: entity.id,
-                            request: app.request
-                        }
-                    )) }}
-                </div>
-            {% endif %}
+            {{ include('admin/_components/_form_actions.html.twig', {
+                cancel_url: path('admin_category_index', app.request.query.all|merge(app.request.attributes.get('_route_params'))),
+                context: entity.name ?: 'admin.category.title.new'|trans
+            }) }}
+
+            {{ form_end(form, {'render_rest': false}) }}
         </div>
     </main>
 {% endblock %}

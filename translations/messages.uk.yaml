@@ -197,6 +197,27 @@ admin:
     no_important_notes: 'Важливих приміток немає.'
     no_returns: 'Повернень немає.'
     no_customer: 'До цього замовлення не прив’язано клієнта.'
+  category:
+    title:
+      new: 'Нова категорія'
+      edit: 'Редагування категорії'
+    fields:
+      parent: 'Батьківська категорія'
+    sections:
+      basic: 'Основна інформація'
+    parameters:
+      title: 'Параметри категорії'
+      local: 'Локальні параметри'
+      inherited: 'Успадковані параметри'
+      add: 'Додати параметр'
+      remove: 'Видалити параметр'
+      parameter: 'Параметр'
+      select_parameter: 'Оберіть параметр'
+      required: 'Обов’язковий'
+      filter: 'Фільтр'
+      source: 'Категорія-джерело'
+      no_local: 'Локальні параметри не налаштовані.'
+      no_inherited: 'Параметри від батьківських категорій не успадковуються.'
   product:
     sections:
       basic: 'Основна інформація'
@@ -630,6 +651,8 @@ Manual order discount requires discount override permission.: 'Ручна зни
 Discounted order line total is below cost and requires discount override permission.: 'Сума позиції після знижки нижча за собівартість і потребує окремого права.'
 This product parameter is already added.: 'Цей параметр товару вже додано.'
 This product parameter is not available for the selected category.: 'Цей параметр товару недоступний для вибраної категорії.'
+This category parameter is already added.: 'Цей параметр категорії вже додано.'
+This parameter is already inherited from a parent category.: 'Цей параметр уже успадковується від батьківської категорії.'
 Nothing to show...: 'Немає даних для показу...'
 Edit: 'Редагувати'
 Archive: 'Архівувати'

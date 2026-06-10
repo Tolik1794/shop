@@ -1,0 +1,23 @@
+<div class="category-parameter-row" {{ stimulus_target('category-parameters', 'row') }}>
+    <div class="category-parameter-row__cell">
+        {{ form_label(parameter.productParameterName, 'admin.category.parameters.parameter'|trans, {label_attr: {class: 'form-label d-md-none'}}) }}
+        {{ form_widget(parameter.productParameterName, {attr: {'data-action': 'change->category-parameters#parameterChanged'}}) }}
+        {{ form_errors(parameter.productParameterName) }}
+        <div class="text-danger small mt-1 d-none" {{ stimulus_target('category-parameters', 'warning') }}></div>
+    </div>
+    <div class="category-parameter-row__cell category-parameter-row__check">
+        {{ form_label(parameter.isRequired, 'admin.category.parameters.required'|trans, {label_attr: {class: 'form-check-label'}}) }}
+        {{ form_widget(parameter.isRequired, {attr: {class: 'form-check-input'}}) }}
+        {{ form_errors(parameter.isRequired) }}
+    </div>
+    <div class="category-parameter-row__cell category-parameter-row__check">
+        {{ form_label(parameter.isFilter, 'admin.category.parameters.filter'|trans, {label_attr: {class: 'form-check-label'}}) }}
+        {{ form_widget(parameter.isFilter, {attr: {class: 'form-check-input'}}) }}
+        {{ form_errors(parameter.isFilter) }}
+    </div>
+    <div class="category-parameter-row__action">
+        <button type="button" class="btn btn-sm btn-outline-danger" data-action="category-parameters#removeEntry" title="{{ 'admin.category.parameters.remove'|trans }}" aria-label="{{ 'admin.category.parameters.remove'|trans }}">
+            <i class="fa-solid fa-trash"></i>
+        </button>
+    </div>
+</div>

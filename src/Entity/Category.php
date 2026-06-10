@@ -66,7 +66,12 @@ class Category
 	#[ORM\OneToMany(mappedBy: 'category', targetEntity: CategoryAdditionalName::class)]
 	private Collection $categoryAdditionalNames;
 
-	#[ORM\OneToMany(mappedBy: 'category', targetEntity: CategoryProductParameterName::class)]
+	#[ORM\OneToMany(
+		mappedBy: 'category',
+		targetEntity: CategoryProductParameterName::class,
+		cascade: ['persist'],
+		orphanRemoval: true
+	)]
 	private Collection $categoryProductParameterNames;
 
 	public function __construct()
