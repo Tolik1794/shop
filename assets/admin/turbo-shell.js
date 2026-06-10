@@ -154,6 +154,7 @@ const handleBeforeRender = event => {
 
     if (!currentContext || !nextContext || currentContext !== nextContext) {
         event.preventDefault()
+        document.documentElement.classList.remove(loadingClass)
         window.location.assign(lastFetchResponseUrl || lastVisitUrl || window.location.href)
         return
     }
@@ -195,6 +196,9 @@ document.addEventListener('turbo:before-fetch-response', event => {
     lastFetchResponseUrl = event.detail.fetchResponse.response.url
 })
 document.addEventListener('turbo:before-render', handleBeforeRender)
+document.addEventListener('turbo:render', () => {
+    document.documentElement.classList.remove(loadingClass)
+})
 document.addEventListener('turbo:fetch-request-error', () => {
     document.documentElement.classList.remove(loadingClass)
 })
