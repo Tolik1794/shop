@@ -4,15 +4,12 @@ namespace App\Controller\Admin;
 
 use App\Entity\Category;
 use App\Entity\Store;
-use App\Form\Admin\FilterType\CategoryFilterType;
 use App\Form\Admin\Type\CategoryType;
 use App\Manager\CategoryManager;
 use App\Repository\CategoryProductParameterNameRepository;
 use App\Repository\CategoryRepository;
 use App\Repository\ProductParameterNameRepository;
-use App\Service\FilterFormHandler;
 use App\Tools\AbstractAdvancedController;
-use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -30,43 +27,19 @@ class CategoryController extends AbstractAdvancedController
 	#[Route('/', name: 'index', methods: ['GET'])]
 	public function index(
 		Request $request,
-		PaginatorInterface $paginator,
-		FilterFormHandler $filterTypeHandler,
 		#[MapEntity(expr: 'repository.find(store_id)')]
 		Store $store
 	): Response
 	{
-		$queryBuilder = $this->categoryManager
-			->getRepository()
-			->findAvailableCategoriesQB($store);
-
-		$filterForm = $this->createForm(CategoryFilterType::class);
-		$filterForm->handleRequest($request);
-
-		if ($filterForm->isSubmitted() && $filterForm->isValid()) {
-			$filterTypeHandler->handleFilterForm($filterForm, $queryBuilder);
-		}
-
-		$page = $request->query->getInt('page', 1);
-
-		if ($page < 1) return $this->redirectToFirstPage();
-
-		$pagination = $paginator->paginate($queryBuilder, $page);
-
-		if ($pagination->count() === 0 && $pagination->getTotalItemCount() > 0) {
-			return $this->redirectToLastPage($pagination);
-		}
-
-		if ($id = $request->query->get('id')) {
-			$category = $this->categoryManager->getRepository()->find($id);
-		} else {
-			$category = $pagination->current();
-		}
+		$categories = $this->categoryManager->getRepository()->findTreeCategories($store);
+		$categoryTree = $this->buildCategoryTree($categories);
+		$category = $this->findSelectedCategory($categories, $request->query->getInt('id'));
 
 		return $this->render('admin/category/index.html.twig', [
-			'pagination' => $pagination,
+			'categories' => $categories,
+			'category_tree' => $categoryTree,
 			'first_entity' => $category,
-			'filter_form' => $filterForm->createView()
+			'active_path_ids' => $this->buildCategoryPathIds($category),
 		]);
 	}
 
@@ -74,12 +47,23 @@ class CategoryController extends AbstractAdvancedController
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
 	public function new(
 		Request $request,
+		CategoryRepository $categoryRepository,
 		CategoryProductParameterNameRepository $categoryParameterRepository,
 		#[MapEntity(expr: 'repository.find(store_id)')] Store $store,
 	): Response
 	{
 		$category = new Category();
 		$category->setStore($store);
+		$parentId = $request->query->getInt('parent_id');
+		if ($parentId > 0) {
+			$parent = $categoryRepository->find($parentId);
+			if (!$parent || $parent->getStore()?->getId() !== $store->getId()) {
+				throw $this->createNotFoundException();
+			}
+
+			$category->setParent($parent);
+		}
+
 		$canManageParameters = $this->isGranted('category_parameter.manage');
 		$form = $this->createForm(CategoryType::class, $category, [
 			'method' => 'POST',
@@ -215,5 +199,56 @@ class CategoryController extends AbstractAdvancedController
 		uasort($parameters, static fn (array $left, array $right): int => strcmp($left['name'], $right['name']));
 
 		return array_values($parameters);
+	}
+
+	/**
+	 * @param Category[] $categories
+	 *
+	 * @return array<int, Category[]>
+	 */
+	private function buildCategoryTree(array $categories): array
+	{
+		$tree = [];
+
+		foreach ($categories as $category) {
+			$parentId = $category->getParent()?->getId() ?? 0;
+			$tree[$parentId][] = $category;
+		}
+
+		return $tree;
+	}
+
+	/**
+	 * @param Category[] $categories
+	 */
+	private function findSelectedCategory(array $categories, int $selectedId): ?Category
+	{
+		if ($selectedId > 0) {
+			foreach ($categories as $category) {
+				if ($category->getId() === $selectedId) {
+					return $category;
+				}
+			}
+		}
+
+		return $categories[0] ?? null;
+	}
+
+	/**
+	 * @return int[]
+	 */
+	private function buildCategoryPathIds(?Category $category): array
+	{
+		$path = [];
+
+		while ($category) {
+			if ($category->getId()) {
+				$path[] = $category->getId();
+			}
+
+			$category = $category->getParent();
+		}
+
+		return $path;
 	}
 }

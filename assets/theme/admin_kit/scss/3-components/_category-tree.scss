@@ -1,0 +1,148 @@
+.category-tree-card {
+	.card-body {
+		padding-top: .75rem;
+	}
+}
+
+.category-tree {
+	display: grid;
+	gap: .15rem;
+}
+
+.category-tree__children {
+	position: relative;
+	display: grid;
+	gap: .15rem;
+	margin-left: .85rem;
+	padding-left: 1rem;
+
+	&::before {
+		position: absolute;
+		top: 0;
+		bottom: .85rem;
+		left: .35rem;
+		border-left: 1px solid $gray-300;
+		content: "";
+	}
+}
+
+.category-tree__row {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+	border: 1px solid transparent;
+	border-radius: $border-radius;
+
+	&:hover,
+	&:focus-within {
+		background: $gray-100;
+		border-color: $gray-200;
+
+		.category-tree__actions {
+			opacity: 1;
+			pointer-events: auto;
+		}
+	}
+}
+
+.category-tree__toggle {
+	display: inline-flex;
+	flex: 0 0 1.8rem;
+	align-items: center;
+	justify-content: center;
+	align-self: stretch;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: $text-muted;
+	font-size: .7rem;
+
+	i {
+		transition: transform .15s ease;
+	}
+
+	&[aria-expanded="true"] i {
+		transform: rotate(90deg);
+	}
+}
+
+.category-tree__toggle--placeholder {
+	pointer-events: none;
+}
+
+.category-tree__select {
+	position: relative;
+	display: flex;
+	flex: 1 1 auto;
+	gap: .55rem;
+	align-items: center;
+	min-width: 0;
+	padding: .55rem .4rem;
+	border: 0;
+	background: transparent;
+	color: $body-color;
+	text-align: left;
+
+	&:focus-visible {
+		border-radius: $border-radius;
+		outline: 2px solid rgba($primary, .35);
+		outline-offset: -2px;
+	}
+
+	&.table-active {
+		border-radius: $border-radius;
+		background: rgba($primary, .1);
+		color: $primary;
+		font-weight: 600;
+
+		&::before {
+			position: absolute;
+			top: .3rem;
+			bottom: .3rem;
+			left: 0;
+			width: .2rem;
+			border-radius: $border-radius;
+			background: $primary;
+			content: "";
+		}
+	}
+}
+
+.category-tree__icon {
+	flex: 0 0 auto;
+	color: $text-muted;
+}
+
+.category-tree__name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.category-tree__count {
+	flex: 0 0 auto;
+	margin-left: auto;
+}
+
+.category-tree__actions {
+	display: flex;
+	flex: 0 0 auto;
+	gap: .2rem;
+	padding-right: .25rem;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity .15s ease;
+
+	.btn {
+		min-width: 1.8rem;
+		padding-right: .4rem;
+		padding-left: .4rem;
+	}
+}
+
+@media (hover: none) {
+	.category-tree__actions {
+		opacity: 1;
+		pointer-events: auto;
+	}
+}

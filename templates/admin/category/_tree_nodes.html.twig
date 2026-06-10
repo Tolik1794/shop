@@ -1,0 +1,77 @@
+{% for entity in nodes %}
+    {% set children = category_tree[entity.id]|default([]) %}
+    {% set has_children = children|length > 0 %}
+    {% set expanded = entity.id in active_path_ids %}
+    {% set is_active = first_entity and entity.id == first_entity.id %}
+
+    <div class="category-tree__node"
+         role="treeitem"
+         aria-level="{{ depth + 1 }}"
+         data-category-tree-target="node"
+         data-category-id="{{ entity.id }}"
+         data-category-parent-id="{{ entity.parent ? entity.parent.id : '' }}"
+         data-category-name="{{ entity.name|lower }}">
+        <div class="category-tree__row">
+            {% if has_children %}
+                <button class="category-tree__toggle"
+                        type="button"
+                        aria-label="{{ (expanded ? 'admin.category.tree.collapse' : 'admin.category.tree.expand')|trans }}"
+                        aria-expanded="{{ expanded ? 'true' : 'false' }}"
+                        data-category-tree-target="toggle"
+                        data-category-id="{{ entity.id }}"
+                        data-expand-label="{{ 'admin.category.tree.expand'|trans }}"
+                        data-collapse-label="{{ 'admin.category.tree.collapse'|trans }}"
+                        data-action="click->category-tree#toggle">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            {% else %}
+                <span class="category-tree__toggle category-tree__toggle--placeholder"></span>
+            {% endif %}
+
+            <button id="{{ entity.id }}"
+                    class="category-tree__select{{ is_active ? ' table-active' : '' }}"
+                    type="button"
+                    data-id-column="id"
+                    data-link="{{ path('admin_category_show', {store_id: app.request.attributes.get('store_id'), category_id: entity.id}) }}"
+                    data-breadcrumb-label="{{ entity.nameWithParent }}"
+                    data-action="click->reload-card#reloadCard click->reload-card#tableActivate">
+                <i class="fa-regular {{ has_children ? 'fa-folder' : 'fa-folder-closed' }} category-tree__icon"></i>
+                <span class="category-tree__name">{{ entity.name }}</span>
+                {% if has_children %}
+                    <span class="badge badge-soft category-tree__count">{{ children|length }}</span>
+                {% endif %}
+            </button>
+
+            <div class="category-tree__actions">
+                <a class="btn btn-light btn-sm"
+                   href="{{ path('admin_category_edit', app.request.query.all|merge({store_id: app.request.attributes.get('store_id'), category_id: entity.id})) }}"
+                   title="{{ 'admin.common.edit'|trans }}"
+                   aria-label="{{ 'admin.common.edit'|trans }}">
+                    <i class="fa-solid fa-pen"></i>
+                </a>
+                <a class="btn btn-light btn-sm"
+                   href="{{ path('admin_category_new', {store_id: app.request.attributes.get('store_id'), parent_id: entity.id}) }}"
+                   title="{{ 'admin.category.actions.add_child'|trans }}"
+                   aria-label="{{ 'admin.category.actions.add_child'|trans }}">
+                    <i class="fa-solid fa-plus"></i>
+                </a>
+            </div>
+        </div>
+
+        {% if has_children %}
+            <div class="category-tree__children{{ expanded ? '' : ' d-none' }}"
+                 role="group"
+                 data-category-tree-target="children"
+                 data-category-parent-id="{{ entity.id }}"
+                 data-initial-expanded="{{ expanded ? 'true' : 'false' }}">
+                {{ include('admin/category/_tree_nodes.html.twig', {
+                    nodes: children,
+                    category_tree: category_tree,
+                    first_entity: first_entity,
+                    active_path_ids: active_path_ids,
+                    depth: depth + 1
+                }) }}
+            </div>
+        {% endif %}
+    </div>
+{% endfor %}

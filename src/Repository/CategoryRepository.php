@@ -158,4 +158,20 @@ class CategoryRepository extends ServiceEntityRepository
 			->setParameter('store', $store)
 			->setParameter('level', $maxLevel);
 	}
+
+	/**
+	 * @return Category[]
+	 */
+	public function findTreeCategories(Store $store): array
+	{
+		return $this->createQueryBuilder('category')
+			->addSelect('parent')
+			->leftJoin('category.parent', 'parent')
+			->where('category.store = :store')
+			->setParameter('store', $store)
+			->orderBy('category.level', 'ASC')
+			->addOrderBy('category.name', 'ASC')
+			->getQuery()
+			->getResult();
+	}
 }

@@ -48,6 +48,76 @@ class CategoryControllerTest extends WebTestCase
 		self::assertSelectorExists('.form-actions');
 	}
 
+	public function testIndexDisplaysCategoryTreeAndSelectsFirstRoot(): void
+	{
+		$store = $this->createStore('category-tree-' . uniqid());
+		$root = $this->createCategory($store, 'Furniture');
+		$child = $this->createCategory($store, 'Tables', $root);
+		$this->createCategory($store, 'Dining tables', $child);
+		$this->client->loginUser($this->createUser('category-tree-admin-' . uniqid() . '@example.com'));
+
+		$this->client->request('GET', sprintf('/admin/store/%d/category/', $store->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorCount(3, '[data-category-tree-target~="node"]');
+		self::assertSelectorExists(sprintf('.category-tree__select.table-active#%d', $root->getId()));
+		self::assertSelectorTextContains('.category-tree', 'Dining tables');
+		self::assertSelectorTextContains('.show-card', 'Furniture');
+		self::assertSelectorNotExists('[data-bs-target*="-filters"]');
+	}
+
+	public function testIndexDisplaysSelectedCategoryPathAndActions(): void
+	{
+		$store = $this->createStore('category-selected-' . uniqid());
+		$root = $this->createCategory($store, 'Furniture');
+		$child = $this->createCategory($store, 'Tables', $root);
+		$this->client->loginUser($this->createUser('category-selected-admin-' . uniqid() . '@example.com'));
+
+		$this->client->request('GET', sprintf('/admin/store/%d/category/?id=%d', $store->getId(), $child->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorExists(sprintf('.category-tree__select.table-active#%d', $child->getId()));
+		self::assertSelectorTextContains('#admin-navbar-breadcrumb', 'Furniture > Tables');
+		self::assertSelectorTextContains('.show-card-header__subtitle', 'Furniture > Tables');
+		self::assertSelectorTextContains('.detail-list', 'Categories > Furniture > Tables');
+		self::assertSelectorExists(sprintf('a[href="/admin/store/%d/category/new?parent_id=%d"]', $store->getId(), $child->getId()));
+	}
+
+	public function testIndexDisplaysEmptyStateWithoutCategories(): void
+	{
+		$store = $this->createStore('category-empty-' . uniqid());
+		$this->client->loginUser($this->createUser('category-empty-admin-' . uniqid() . '@example.com'));
+
+		$this->client->request('GET', sprintf('/admin/store/%d/category/', $store->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorTextContains('.col-xl-5 .empty-state__text', 'Select a category from the list');
+	}
+
+	public function testNewCategoryPrefillsParentFromQuery(): void
+	{
+		$store = $this->createStore('category-parent-' . uniqid());
+		$parent = $this->createCategory($store, 'Furniture');
+		$this->client->loginUser($this->createUser('category-parent-admin-' . uniqid() . '@example.com'));
+
+		$this->client->request('GET', sprintf('/admin/store/%d/category/new?parent_id=%d', $store->getId(), $parent->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorExists(sprintf('select[name="category[parent]"] option[value="%d"][selected]', $parent->getId()));
+	}
+
+	public function testNewCategoryRejectsParentFromAnotherStore(): void
+	{
+		$store = $this->createStore('category-parent-store-' . uniqid());
+		$otherStore = $this->createStore('category-parent-other-' . uniqid());
+		$parent = $this->createCategory($otherStore, 'Other furniture');
+		$this->client->loginUser($this->createUser('category-parent-store-admin-' . uniqid() . '@example.com'));
+
+		$this->client->request('GET', sprintf('/admin/store/%d/category/new?parent_id=%d', $store->getId(), $parent->getId()));
+
+		self::assertResponseStatusCodeSame(404);
+	}
+
 	public function testNewCategorySavesInlineParameters(): void
 	{
 		$store = $this->createStore('category-inline-save-' . uniqid());

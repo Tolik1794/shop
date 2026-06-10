@@ -4,56 +4,100 @@
 
 {% block navbar_breadcrumb %}
     {% set page_breadcrumb %}
-    {{ include('admin/_components/_resource_breadcrumb.html.twig', {
-        section_label: 'Categories',
-        section_url: path('admin_category_index', {store_id: app.request.attributes.get('store_id')}),
-        current_label: first_entity ? first_entity.name : ''
-    }) }}
+        {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+            section_label: 'Categories',
+            section_url: path('admin_category_index', {store_id: app.request.attributes.get('store_id')}),
+            current_label: first_entity ? first_entity.nameWithParent : ''
+        }) }}
     {% endset %}
-    {{ include('admin/_components/_navbar_header.html.twig', {title: 'Categories'|trans, breadcrumb: page_breadcrumb}) }}
+    {{ include('admin/_components/_navbar_header.html.twig', {
+        title: 'Categories'|trans,
+        subtitle: 'admin.category.index.subtitle'|trans,
+        breadcrumb: page_breadcrumb
+    }) }}
 {% endblock %}
 
-{% set category_filter_params = app.request.query.all(filter_form.vars.name) %}
-{% set category_filter_collapse_id = filter_form.vars.id ~ '-filters' %}
-
-{% set table_actions %}
+{% set create_action %}
     {% if is_granted('category.manage') %}
         <a class="btn btn-light btn-sm"
-           href="{{ path('admin_category_new', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-plus me-1"></i>{{ 'New'|trans }}</a>
+           href="{{ path('admin_category_new', {store_id: app.request.attributes.get('store_id')}) }}">
+            <i class="fa-solid fa-plus me-1"></i>{{ 'admin.category.actions.new'|trans }}
+        </a>
     {% endif %}
 {% endset %}
 
-{% set table_head %}
-    <tr>
-        <th>{{ 'Name'|trans }}</th>
-    </tr>
-{% endset %}
-
-{% set table_body %}
-    {% for entity in pagination %}
-        <tr
-                id="{{ entity.id }}"
-                data-id-column="id"
-                class="{{ entity.id == first_entity.id ? 'table-active' : '' }}"
-                data-action="click->reload-card#reloadCard click->reload-card#tableActivate"
-                data-link="{{ path('admin_category_show', {store_id: app.request.attributes.get('store_id'), category_id: entity.id}) }}"
-                data-breadcrumb-label="{{ entity.name }}"
-                onclick="document.getElementById('first-tab').click()"
-        >
-            {% if entity.level > 0 %}
-                <td class="{{ 'ps-'~(entity.level + 3) }}"><i class="fa-solid fa-angles-right"></i>{{ entity.name }}
-                </td>
-            {% else %}
-                <td>{{ entity.name }}</td>
-            {% endif %}
-        </tr>
-    {% endfor %}
+{% set empty_detail %}
+    <div class="card">
+        <div class="card-body">
+            {{ include('admin/_components/_empty_state.html.twig', {
+                icon: 'fa-solid fa-folder-tree',
+                title: 'admin.category.empty.title'|trans,
+                text: 'admin.category.empty.text'|trans
+            }) }}
+        </div>
+    </div>
 {% endset %}
 
 {% block main_content %}
-    <main class="content" {{ stimulus_controller('reload-card') }}>
+    <main class="content" data-controller="reload-card category-tree">
         <div class="container-fluid p-0">
             <div class="row">
+                <div class="col-12 col-xl-7 col-lg-7 order-first">
+                    <div class="card category-tree-card">
+                        <div class="card-header pb-0">
+                            <div class="admin-index-toolbar">
+                                <div class="admin-index-toolbar__title">
+                                    <h5 class="card-title mb-0">{{ 'Categories'|trans }}</h5>
+                                    <span class="text-muted small">{{ 'admin.pagination.records'|trans({'%count%': categories|length}) }}</span>
+                                </div>
+                                <div class="admin-index-toolbar__controls">
+                                    <div class="admin-index-toolbar__search">
+                                        <label class="index-search">
+                                            <span class="visually-hidden">{{ 'admin.category.search.label'|trans }}</span>
+                                            <span class="input-group input-group-sm">
+                                                <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                                <input type="search"
+                                                       class="form-control"
+                                                       placeholder="{{ 'admin.category.search.placeholder'|trans }}"
+                                                       data-category-tree-target="search"
+                                                       data-action="input->category-tree#search">
+                                            </span>
+                                        </label>
+                                    </div>
+                                    {{ create_action }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            {% if categories %}
+                                <div class="category-tree" role="tree">
+                                    {{ include('admin/category/_tree_nodes.html.twig', {
+                                        nodes: category_tree[0]|default([]),
+                                        category_tree: category_tree,
+                                        first_entity: first_entity,
+                                        active_path_ids: active_path_ids,
+                                        depth: 0
+                                    }) }}
+                                </div>
+                                <div class="d-none" data-category-tree-target="empty">
+                                    {{ include('admin/_components/_empty_state.html.twig', {
+                                        icon: 'fa-solid fa-magnifying-glass',
+                                        title: 'admin.common.no_results'|trans,
+                                        text: 'admin.category.search.no_results'|trans
+                                    }) }}
+                                </div>
+                            {% else %}
+                                {{ include('admin/_components/_empty_state.html.twig', {
+                                    icon: 'fa-solid fa-folder-tree',
+                                    title: 'admin.category.empty.list_title'|trans,
+                                    text: 'admin.category.empty.list_text'|trans,
+                                    action: create_action
+                                }) }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
                 <div class="col-12 col-xl-5 col-lg-5">
                     {{ include('admin/_components/card/_tab_card.html.twig', {
                         tab_head: [
@@ -63,49 +107,9 @@
                             first_entity ? render(controller(
                                 'App\\Controller\\Admin\\CategoryController::show',
                                 { store_id: app.request.attributes.get('store_id'), category: first_entity, 'request': app.request }
-                            )) : '<div class="card"><div class="card-body">' ~ 'Nothing to show...'|trans ~ '</div></div>'
+                            )) : empty_detail
                         ]
                     }) }}
-                </div>
-                <div class="col-12 col-xl-7 col-lg-7 order-first">
-
-                    <div class="card">
-                        <div class="card-header pb-0">
-                            {% set category_header_actions %}
-                                <button class="btn btn-light btn-sm"
-                                        type="button"
-                                        data-bs-toggle="collapse"
-                                        data-bs-target="#{{ category_filter_collapse_id }}"
-                                        aria-expanded="{{ category_filter_params ? 'true' : 'false' }}"
-                                        aria-controls="{{ category_filter_collapse_id }}">
-                                    <i class="fa-solid fa-filter me-1"></i>{{ 'admin.common.filter'|trans }}
-                                    {% if category_filter_params %}
-                                        <span class="badge bg-danger ms-1">{{ category_filter_params|length }}</span>
-                                    {% endif %}
-                                </button>
-                                {{ table_actions }}
-                            {% endset %}
-                            {% if category_header_actions|trim %}
-                                {{ include('admin/_components/card/_actions.html.twig', {actions: category_header_actions}) }}
-                            {% endif %}
-                            <h5 class="card-title mb-0">{{ 'Categories'|trans }}</h5>
-                        </div>
-                        <div class="card-body">
-                            {{ include('admin/_components/filter/_accordion_panel.html.twig', {
-                                form: filter_form,
-                                collapse_id: category_filter_collapse_id,
-                                is_open: category_filter_params ? true : false
-                            }) }}
-
-                            {{ include('admin/_components/card/_collapse_table_card.html.twig', {
-                                items: pagination,
-                                first_entity: first_entity
-                            }) }}
-
-                            {{ include('admin/_components/pagination.html.twig', {pagination: pagination}) }}
-                        </div>
-                    </div>
-
                 </div>
             </div>
         </div>

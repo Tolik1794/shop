@@ -1,31 +1,44 @@
-{% set actions %}
-{#    {% if is_granted('category.manage') %}#}
-        <a class="btn btn-light btn-sm" href="{{ path('admin_category_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), category_id: entity.id})) }}"><i class="fa-solid fa-pen me-1"></i>{{ 'Edit'|trans }}</a>
-{#    {% endif %}#}
+{% set primary_action %}
+    <a class="btn btn-light btn-sm"
+       href="{{ path('admin_category_edit', query_params|merge({store_id: app.request.attributes.get('store_id'), category_id: entity.id})) }}">
+        <i class="fa-solid fa-pen me-1"></i>{{ 'admin.common.edit'|trans }}
+    </a>
+    <a class="btn btn-light btn-sm"
+       href="{{ path('admin_category_new', {store_id: app.request.attributes.get('store_id'), parent_id: entity.id}) }}">
+        <i class="fa-solid fa-plus me-1"></i>{{ 'admin.category.actions.add_child'|trans }}
+    </a>
 {% endset %}
 
-<div class="card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
-    <div class="card-header">
-        {% if actions|trim %}
-            {{ include('admin/_components/card/_actions.html.twig', {actions: actions}) }}
-        {% endif %}
-        <h5 class="card-title mb-0">{{ entity.name }}</h5>
-    </div>
+<div class="card show-card" {{ stimulus_target('reload-card', 'card') }} data-card-id="{{ entity.id }}">
+    {{ include('admin/_components/show_card/_header.html.twig', {
+        title: entity.name,
+        subtitle: entity.nameWithParent,
+        primary_action: primary_action
+    }) }}
     <div class="card-body">
-        <div class="row g-0">
-            <div class="col-sm-9 col-xl-12 col-xxl-9">
-                <strong>{{ 'Description'|trans }}</strong>
-                <p>{{ entity.description }}</p>
-            </div>
-        </div>
+        {% if entity.description %}
+            <p class="mb-4">{{ entity.description }}</p>
+        {% endif %}
 
-        <table class="table table-sm mt-2 mb-4">
-            <tbody>
-            <tr>
-                <th>{{ 'Name'|trans }}</th>
-                <td>{{ entity.nameWithParent }}</td>
-            </tr>
-            </tbody>
-        </table>
+        {% set main_fields %}
+            <dl class="detail-list">
+                <div>
+                    <dt>{{ 'admin.category.fields.path'|trans }}</dt>
+                    <dd>{{ 'Categories'|trans }} &gt; {{ entity.nameWithParent }}</dd>
+                </div>
+                <div>
+                    <dt>{{ 'admin.category.fields.parent'|trans }}</dt>
+                    <dd>{{ entity.parent ? entity.parent.name : '—' }}</dd>
+                </div>
+                <div>
+                    <dt>{{ 'admin.category.fields.children_count'|trans }}</dt>
+                    <dd>{{ entity.children|length }}</dd>
+                </div>
+            </dl>
+        {% endset %}
+        {{ include('admin/_components/detail/_section.html.twig', {
+            title: 'admin.category.sections.details'|trans,
+            body: main_fields
+        }) }}
     </div>
 </div>

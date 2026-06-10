@@ -191,13 +191,33 @@ admin:
     no_returns: 'No returns.'
     no_customer: 'No customer linked to this order.'
   category:
+    index:
+      subtitle: 'Browse the catalog structure and manage subcategories'
     title:
       new: 'New category'
       edit: 'Edit category'
+    actions:
+      new: 'New category'
+      add_child: 'Add subcategory'
     fields:
       parent: 'Parent category'
+      path: 'Category path'
+      children_count: 'Subcategories'
     sections:
       basic: 'Basic information'
+      details: 'Category details'
+    search:
+      label: 'Search categories'
+      placeholder: 'Search categories'
+      no_results: 'Try another category name.'
+    tree:
+      expand: 'Expand category'
+      collapse: 'Collapse category'
+    empty:
+      title: 'Select a category'
+      text: 'Select a category from the list to view details or add a subcategory.'
+      list_title: 'No categories yet'
+      list_text: 'Create the first category to start building the catalog structure.'
     parameters:
       title: 'Category parameters'
       local: 'Local parameters'
