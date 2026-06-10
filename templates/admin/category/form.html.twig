@@ -4,18 +4,23 @@
 {% block title %}{{ entity.id ? 'admin.category.title.edit'|trans : 'admin.category.title.new'|trans }}{% endblock %}
 
 {% block navbar_breadcrumb %}
-    {{ include('admin/_components/_resource_breadcrumb.html.twig', {
-        section_label: 'Categories',
-        section_url: path('admin_category_index', {store_id: app.request.attributes.get('store_id')}),
-        current_label: entity.id ? entity.name : 'New'
+    {% set page_breadcrumb %}
+        {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+            section_label: 'admin.menu.categories'|trans,
+            section_url: path('admin_category_index', {store_id: app.request.attributes.get('store_id')}),
+            current_label: entity.id ? entity.name : 'admin.common.new'|trans
+        }) }}
+    {% endset %}
+    {{ include('admin/_components/_navbar_header.html.twig', {
+        title: entity.id ? 'admin.category.title.edit'|trans : 'admin.category.title.new'|trans,
+        subtitle: entity.name,
+        breadcrumb: page_breadcrumb
     }) }}
 {% endblock %}
 
 {% block main_content %}
     <main class="content">
         <div class="container-fluid p-0">
-            <h1 class="h3 mb-3">{{ entity.id ? 'admin.category.title.edit'|trans : 'admin.category.title.new'|trans }}</h1>
-
             {{ form_start(form, {attr: {
                 class: 'category-form',
                 'data-controller': 'select-two category-parameters',
