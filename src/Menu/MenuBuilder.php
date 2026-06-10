@@ -46,45 +46,37 @@ final class MenuBuilder
 		]);
 
 		$this->addSidebarLink($menu, 'dashboard.view', 'admin.menu.dashboard', 'admin_store_main', $routeParameters, 'fa-gauge-high');
-		$this->addSidebarLink($menu, 'order.view', 'admin.menu.orders', 'app_admin_order_index', $routeParameters, 'fa-cart-shopping');
-		$this->addSidebarLink($menu, 'purchase.view', 'admin.menu.purchases', 'app_admin_purchase_index', $routeParameters, 'fa-basket-shopping');
+
+		$sales = $this->createSidebarGroup('admin.menu.sales', 'fa-cash-register', 'menu-sales');
+		$this->addSidebarLink($sales, 'order.view', 'admin.menu.orders', 'app_admin_order_index', $routeParameters, 'fa-cart-shopping');
+		$this->addSidebarLink($sales, 'customer.view', 'admin.menu.customers', 'app_admin_customer_index', $routeParameters, 'fa-address-book');
+		$this->addSidebarLink($sales, 'payment.view', 'admin.menu.payments', 'app_admin_payment_index', $routeParameters, 'fa-money-bill-wave');
+		$this->addSidebarLink($sales, 'product_discount.view', 'admin.menu.discounts', 'app_admin_product_discount_index', $routeParameters, 'fa-percent');
+		$this->addSidebarGroup($menu, $sales);
+
+		$procurement = $this->createSidebarGroup('admin.menu.procurement', 'fa-basket-shopping', 'menu-procurement');
+		$this->addSidebarLink($procurement, 'purchase.view', 'admin.menu.purchases', 'app_admin_purchase_index', $routeParameters, 'fa-file-invoice');
+		$this->addSidebarLink($procurement, 'supplier.view', 'admin.menu.suppliers', 'app_admin_supplier_index', $routeParameters, 'fa-truck');
+		$this->addSidebarGroup($menu, $procurement);
+
 		$this->addSidebarLink($menu, 'production_order.view', 'admin.menu.production', 'app_admin_production_order_index', $routeParameters, 'fa-industry');
-		$this->addSidebarLink($menu, 'payment.view', 'admin.menu.payments', 'app_admin_payment_index', $routeParameters, 'fa-money-bill-wave');
-		$this->addSidebarLink($menu, 'inventory_document.view', 'admin.menu.inventory_documents', 'app_admin_inventory_document_index', $routeParameters, 'fa-clipboard-list');
-		$this->addSidebarLink($menu, 'customer.view', 'admin.menu.customers', 'app_admin_customer_index', $routeParameters, 'fa-address-book');
-		$this->addSidebarLink($menu, 'supplier.view', 'admin.menu.suppliers', 'app_admin_supplier_index', $routeParameters, 'fa-truck');
 
-		$settings = $this->factory->createItem($this->trans('admin.menu.settings'), [
-			'uri' => '#',
-			'attributes' => [
-				'class' => 'sidebar-item',
-			],
-			'linkAttributes' => [
-				'data-bs-target' => '#setting',
-				'data-bs-toggle' => 'collapse',
-				'aria-expanded' => 'false',
-				'class' => 'sidebar-link collapsed',
-			],
-			'childrenAttributes' => [
-				'class' => 'sidebar-dropdown list-unstyled collapse',
-				'id' => 'setting',
-				'data-bs-parent' => 'sidebar',
-			],
-		]);
-		$settings->setExtra('icon', 'fa-gears');
+		$warehouse = $this->createSidebarGroup('admin.menu.warehouse', 'fa-boxes-stacked', 'menu-warehouse');
+		$this->addSidebarLink($warehouse, 'inventory_document.view', 'admin.menu.inventory_documents', 'app_admin_inventory_document_index', $routeParameters, 'fa-clipboard-list');
+		$this->addSidebarLink($warehouse, 'warehouse.view', 'admin.menu.warehouses', 'app_admin_warehouse_index', $routeParameters, 'fa-warehouse');
+		$this->addSidebarLink($warehouse, 'inventory_reason.manage', 'admin.menu.inventory_reasons', 'app_admin_inventory_reason_index', $routeParameters, 'fa-circle-question');
+		$this->addSidebarGroup($menu, $warehouse);
 
-		$this->addSidebarLink($settings, 'category.manage', 'admin.menu.categories', 'admin_category_index', $routeParameters, 'fa-layer-group');
-		$this->addSidebarLink($settings, 'product.view', 'admin.menu.products', 'admin_product_index', $routeParameters, 'fa-box-open');
-		$this->addSidebarLink($settings, 'product_discount.view', 'admin.menu.discounts', 'app_admin_product_discount_index', $routeParameters, 'fa-percent');
-		$this->addSidebarLink($settings, 'unit.manage', 'admin.menu.units', 'app_admin_unit_index', $routeParameters, 'fa-ruler-combined');
-		$this->addSidebarLink($settings, 'customer_label.view', 'admin.menu.customer_labels', 'app_admin_customer_label_index', $routeParameters, 'fa-tags');
-		$this->addSidebarLink($settings, 'warehouse.view', 'admin.menu.warehouses', 'app_admin_warehouse_index', $routeParameters, 'fa-warehouse');
-		$this->addSidebarLink($settings, 'inventory_reason.manage', 'admin.menu.inventory_reasons', 'app_admin_inventory_reason_index', $routeParameters, 'fa-circle-question');
-		$this->addSidebarLink($settings, 'exchange_rate.manage', 'admin.menu.exchange_rates', 'app_admin_exchange_rate_index', $routeParameters, 'fa-money-bill-transfer');
+		$catalog = $this->createSidebarGroup('admin.menu.catalog', 'fa-shapes', 'menu-catalog');
+		$this->addSidebarLink($catalog, 'product.view', 'admin.menu.products', 'admin_product_index', $routeParameters, 'fa-box-open');
+		$this->addSidebarLink($catalog, 'category.manage', 'admin.menu.categories', 'admin_category_index', $routeParameters, 'fa-layer-group');
+		$this->addSidebarLink($catalog, 'unit.manage', 'admin.menu.units', 'app_admin_unit_index', $routeParameters, 'fa-ruler-combined');
+		$this->addSidebarGroup($menu, $catalog);
 
-		if ($settings->count() > 0) {
-			$menu->addChild($settings);
-		}
+		$system = $this->createSidebarGroup('admin.menu.system', 'fa-gears', 'menu-system');
+		$this->addSidebarLink($system, 'customer_label.view', 'admin.menu.customer_labels', 'app_admin_customer_label_index', $routeParameters, 'fa-tags');
+		$this->addSidebarLink($system, 'exchange_rate.manage', 'admin.menu.exchange_rates', 'app_admin_exchange_rate_index', $routeParameters, 'fa-money-bill-transfer');
+		$this->addSidebarGroup($menu, $system);
 
 		return $menu;
 	}
@@ -116,6 +108,37 @@ final class MenuBuilder
 		}
 
 		return $menu;
+	}
+
+	private function createSidebarGroup(string $label, string $icon, string $collapseId): ItemInterface
+	{
+		$group = $this->factory->createItem($this->trans($label), [
+			'uri' => '#',
+			'attributes' => [
+				'class' => 'sidebar-item',
+			],
+			'linkAttributes' => [
+				'data-bs-target' => '#' . $collapseId,
+				'data-bs-toggle' => 'collapse',
+				'aria-expanded' => 'false',
+				'class' => 'sidebar-link collapsed',
+			],
+			'childrenAttributes' => [
+				'class' => 'sidebar-dropdown list-unstyled collapse',
+				'id' => $collapseId,
+				'data-bs-parent' => 'sidebar',
+			],
+		]);
+		$group->setExtra('icon', $icon);
+
+		return $group;
+	}
+
+	private function addSidebarGroup(ItemInterface $menu, ItemInterface $group): void
+	{
+		if ($group->count() > 0) {
+			$menu->addChild($group);
+		}
 	}
 
 	/**

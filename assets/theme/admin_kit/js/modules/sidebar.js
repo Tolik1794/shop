@@ -8,6 +8,8 @@ const sidebarRailReadyKey = "adminSidebarRailReady";
 const sidebarLabelReadyKey = "adminSidebarLabelReady";
 const submenuOpenClass = "sidebar-submenu-open";
 const labelClass = "sidebar-hover-label";
+/* Keep in sync with the hover bridge width on the flyout in _sidebar.scss */
+const flyoutGap = 8;
 
 const initialize = () => {
   restoreSidebarState();
@@ -43,7 +45,17 @@ const restoreSidebarState = () => {
   document.documentElement.classList.remove("sidebar-collapsed");
 }
 
+let submenuCloseTimer = null;
+
+const cancelSubmenuClose = () => {
+  if(submenuCloseTimer) {
+    window.clearTimeout(submenuCloseTimer);
+    submenuCloseTimer = null;
+  }
+}
+
 const closeSidebarSubmenus = () => {
+  cancelSubmenuClose();
   document.querySelectorAll(`.js-sidebar .${submenuOpenClass}`).forEach(item => {
     item.classList.remove(submenuOpenClass);
 
@@ -51,7 +63,55 @@ const closeSidebarSubmenus = () => {
     if(link) {
       link.setAttribute("aria-expanded", "false");
     }
+
+    const dropdown = item.querySelector(":scope > .sidebar-dropdown");
+    if(dropdown) {
+      dropdown.style.left = "";
+      dropdown.style.top = "";
+    }
   });
+}
+
+const scheduleSubmenuClose = () => {
+  cancelSubmenuClose();
+  submenuCloseTimer = window.setTimeout(closeSidebarSubmenus, 250);
+}
+
+const isCollapsedDesktopSidebar = sidebarElement =>
+  !!sidebarElement && isDesktop() && sidebarElement.classList.contains("collapsed");
+
+/* Opens the child pages of a grouped section as a flyout panel next to the
+   collapsed sidebar rail. The dropdown stays in place in the DOM and is only
+   repositioned with fixed coordinates. */
+const openSidebarSubmenu = item => {
+  const sidebarElement = document.getElementsByClassName("js-sidebar")[0];
+  const link = item.querySelector('[data-bs-toggle="collapse"]');
+  const dropdown = item.querySelector(":scope > .sidebar-dropdown");
+
+  if(!sidebarElement || !link || !dropdown) {
+    return;
+  }
+
+  if(!item.classList.contains(submenuOpenClass)) {
+    closeSidebarSubmenus();
+    item.classList.add(submenuOpenClass);
+    link.setAttribute("aria-expanded", "true");
+  }
+
+  dropdown.setAttribute("data-flyout-title", link.dataset.sidebarLabel || "");
+
+  const linkBounds = link.getBoundingClientRect();
+  const sidebarBounds = sidebarElement.getBoundingClientRect();
+
+  dropdown.style.left = `${sidebarBounds.right + flyoutGap}px`;
+  dropdown.style.top = `${linkBounds.top}px`;
+
+  const overflowBottom = dropdown.getBoundingClientRect().bottom - (window.innerHeight - 8);
+  if(overflowBottom > 0) {
+    dropdown.style.top = `${Math.max(8, linkBounds.top - overflowBottom)}px`;
+  }
+
+  hideSidebarLabel();
 }
 
 const getSidebarLabelElement = () => {
@@ -78,6 +138,13 @@ const hideSidebarLabel = () => {
 const showSidebarLabel = link => {
   const sidebarElement = document.getElementsByClassName("js-sidebar")[0];
   const label = link.dataset.sidebarLabel;
+
+  /* Grouped sections get a flyout submenu with its own title instead of a tooltip,
+     and links inside the flyout already show their labels */
+  if(link.getAttribute("data-bs-toggle") === "collapse" || link.closest(".sidebar-dropdown")) {
+    hideSidebarLabel();
+    return;
+  }
 
   if(!sidebarElement || !isDesktop() || !sidebarElement.classList.contains("collapsed") || !label) {
     hideSidebarLabel();
@@ -141,9 +208,16 @@ const initializeSidebarCollapse = () => {
         writeSidebarState(sidebarElement.classList.contains("collapsed"));
       }
 
-      sidebarElement.addEventListener("transitionend", () => {
+      const onSidebarTransitionEnd = event => {
+        /* transitionend bubbles up from links too - wait for the sidebar itself */
+        if(event.target !== sidebarElement) {
+          return;
+        }
+
+        sidebarElement.removeEventListener("transitionend", onSidebarTransitionEnd);
         window.dispatchEvent(new Event("resize"));
-      }, { once: true });
+      };
+      sidebarElement.addEventListener("transitionend", onSidebarTransitionEnd);
     });
   }
 
@@ -153,7 +227,7 @@ const initializeSidebarCollapse = () => {
       const link = event.target.closest && event.target.closest('.js-sidebar [data-bs-toggle="collapse"]');
       const sidebarElement = document.getElementsByClassName("js-sidebar")[0];
 
-      if(!link || !sidebarElement || !isDesktop() || !sidebarElement.classList.contains("collapsed")) {
+      if(!link || !isCollapsedDesktopSidebar(sidebarElement)) {
         return;
       }
 
@@ -165,15 +239,12 @@ const initializeSidebarCollapse = () => {
         return;
       }
 
-      const wasOpen = item.classList.contains(submenuOpenClass);
-      closeSidebarSubmenus();
-
-      if(wasOpen) {
+      if(item.classList.contains(submenuOpenClass)) {
+        closeSidebarSubmenus();
         return;
       }
 
-      item.classList.add(submenuOpenClass);
-      link.setAttribute("aria-expanded", "true");
+      openSidebarSubmenu(item);
     }, true);
 
     document.addEventListener("click", event => {
@@ -182,6 +253,65 @@ const initializeSidebarCollapse = () => {
       }
 
       closeSidebarSubmenus();
+    });
+
+    document.addEventListener("mouseover", event => {
+      const sidebarElement = document.getElementsByClassName("js-sidebar")[0];
+
+      if(!isCollapsedDesktopSidebar(sidebarElement) || !event.target.closest) {
+        return;
+      }
+
+      const link = event.target.closest('.js-sidebar [data-bs-toggle="collapse"]');
+      if(link) {
+        const item = link.closest(".sidebar-item");
+        if(item) {
+          cancelSubmenuClose();
+          openSidebarSubmenu(item);
+        }
+        return;
+      }
+
+      if(event.target.closest(`.js-sidebar .${submenuOpenClass}`)) {
+        cancelSubmenuClose();
+      }
+    });
+
+    document.addEventListener("mouseout", event => {
+      const item = event.target.closest && event.target.closest(`.js-sidebar .${submenuOpenClass}`);
+
+      if(!item) {
+        return;
+      }
+
+      if(event.relatedTarget && item.contains(event.relatedTarget)) {
+        return;
+      }
+
+      scheduleSubmenuClose();
+    });
+
+    document.addEventListener("focusin", event => {
+      const sidebarElement = document.getElementsByClassName("js-sidebar")[0];
+
+      if(!isCollapsedDesktopSidebar(sidebarElement) || !event.target.closest) {
+        return;
+      }
+
+      const link = event.target.closest('.js-sidebar [data-bs-toggle="collapse"]');
+      if(link) {
+        const item = link.closest(".sidebar-item");
+        if(item) {
+          cancelSubmenuClose();
+          openSidebarSubmenu(item);
+        }
+        return;
+      }
+
+      const openItem = document.querySelector(`.js-sidebar .${submenuOpenClass}`);
+      if(openItem && !openItem.contains(event.target)) {
+        closeSidebarSubmenus();
+      }
     });
 
     document.addEventListener("keydown", event => {

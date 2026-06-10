@@ -15,6 +15,9 @@
     top: 0;
     align-self: flex-start;
     height: 100vh;
+    // Sticky creates a stacking context, so the submenu flyout can only be
+    // painted above the page content if the sidebar itself sits above it
+    z-index: $zindex-sticky;
   }
 }
 
@@ -34,13 +37,22 @@
   flex-grow: 1;
 }
 
+// Vertical rhythm lives on the list items as padding, not on link margins:
+// margins would collapse differently depending on whether a section's hidden
+// dropdown is in flow, shifting the rail by a pixel when a flyout opens
+.sidebar-item {
+  padding: .0625rem 0;
+}
+
 // Sidebar links
 .sidebar-link,
 a.sidebar-link {
   display: block;
   padding: $sidebar-link-padding;
+  margin: $sidebar-link-margin;
+  border-radius: $sidebar-link-border-radius;
   font-weight: $sidebar-link-font-weight;
-  transition: background .1s ease-in-out;
+  transition: background .1s ease-in-out, color .1s ease-in-out;
   position: relative;
   text-decoration: none;
   cursor: pointer;
@@ -49,16 +61,32 @@ a.sidebar-link {
   color: $sidebar-link-color;
   background: $sidebar-link-bg;
   border-left-color: $sidebar-link-border-left-color;
+  // Single-line labels: keeps rows stable while the sidebar width animates
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   i,
   svg {
     margin-right: .75rem;
     color: $sidebar-link-icon-color;
+    transition: color .1s ease-in-out;
   }
+}
+
+// Labels fade in/out while the sidebar width animates
+.sidebar-link .align-middle,
+.sidebar-brand .align-middle {
+  transition: opacity .25s ease-in-out;
 }
 
 .sidebar-link:focus {
   outline: 0;
+}
+
+.sidebar-link:focus-visible {
+  outline: 2px solid rgba($primary, .75);
+  outline-offset: -2px;
 }
 
 .sidebar-link:hover {
@@ -84,6 +112,77 @@ a.sidebar-link {
   }
 }
 
+// Collapsible section header chevron
+.sidebar-link[data-bs-toggle="collapse"] {
+  padding-right: 1.875rem;
+}
+
+.sidebar-link[data-bs-toggle="collapse"]::after {
+  content: "";
+  display: inline-block;
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  padding: 2px;
+  margin-top: -5px;
+  border: solid;
+  border-width: 0 .075rem .075rem 0;
+  transform: rotate(45deg);
+  transition: transform .2s ease-out, margin-top .2s ease-out, opacity .2s ease-out;
+}
+
+.sidebar-link[data-bs-toggle="collapse"][aria-expanded="true"]::after {
+  margin-top: -2px;
+  transform: rotate(-135deg);
+}
+
+// Section header of the currently active nested page: brighter than idle
+// items, but visually weaker than the active child link itself
+.sidebar-item.current_ancestor > .sidebar-link,
+.sidebar-item.current_ancestor > .sidebar-link:hover {
+  color: rgba($gray-200, .9);
+
+  i,
+  svg {
+    color: rgba($gray-200, .9);
+  }
+}
+
+// Nested items
+.sidebar-dropdown {
+  margin: 0 .5rem .125rem 1.5rem;
+  padding: .125rem 0 .25rem .25rem;
+  border-left: 1px solid rgba($gray-200, .1);
+  // Lets an open section fold away smoothly when the sidebar collapses.
+  // Only max-height is animated: a margin/padding transition would briefly
+  // re-expand the section in the rail when the flyout closes
+  max-height: 24rem;
+  overflow: hidden;
+  transition: max-height .35s ease-in-out;
+
+  .sidebar-link,
+  a.sidebar-link {
+    margin-left: 0;
+    margin-right: 0;
+    padding: $sidebar-child-link-padding;
+    font-size: $sidebar-child-link-font-size;
+
+    i,
+    svg {
+      margin-right: .5rem;
+      font-size: .8125em;
+      opacity: .9;
+    }
+  }
+
+  .sidebar-item.active > .sidebar-link,
+  .sidebar-item.active .sidebar-link:hover {
+    color: $sidebar-link-active-color;
+    background: rgba($gray-200, .08);
+    border-left-color: $sidebar-link-active-border-left-color;
+  }
+}
+
 // Sidebar brand
 .sidebar-brand {
   font-weight: $sidebar-brand-font-weight;
@@ -93,6 +192,8 @@ a.sidebar-link {
   align-items: center;
   gap: .75rem;
   color: $sidebar-brand-color;
+  white-space: nowrap;
+  overflow: hidden;
 
   &:hover {
     text-decoration: none;
@@ -125,66 +226,106 @@ a.sidebar-link {
     width: $sidebar-collapsed-width;
     flex-basis: $sidebar-collapsed-width;
 
-    .sidebar-nav {
-      padding-top: .75rem;
-    }
-
-    .sidebar-brand {
-      justify-content: center;
-      gap: 0;
-      padding-right: .75rem;
-      padding-left: .75rem;
-      text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-    }
-
+    // Link and brand geometry stays identical to the expanded state, so the
+    // icons never move during the width transition: labels are clipped by the
+    // shrinking width and fade out
     .sidebar-brand .align-middle,
     .sidebar-link .align-middle {
-      display: none;
+      opacity: 0;
     }
 
+    // No ellipsis in the rail: with the narrow content box it would replace
+    // the icons themselves with dots; plain clipping keeps icons intact
     .sidebar-link,
     a.sidebar-link {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 46px;
-      height: 46px;
-      padding: 0;
-      margin: .125rem auto;
-      border-left-width: 0;
-      border-radius: .375rem;
+      text-overflow: clip;
+    }
 
-      i,
-      svg {
-        margin-right: 0;
+    .sidebar-link[data-bs-toggle="collapse"]::after {
+      opacity: 0;
+    }
+
+    // Fold open sections away smoothly; closed ones are hidden by Bootstrap.
+    // Desktop only: the mobile drawer shares the .collapsed class
+    @media (min-width: #{map-get($grid-breakpoints, 'lg')}) {
+      .sidebar-dropdown.show {
+        max-height: 0;
+        margin-top: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
       }
     }
 
-    .sidebar-dropdown {
-      display: none;
-    }
-
+    // Flyout panel with child pages, positioned by sidebar.js next to the rail
     .sidebar-item.sidebar-submenu-open > .sidebar-dropdown {
+      position: fixed;
+      z-index: 1050;
       display: block;
-      padding: .125rem 0 .375rem;
+      min-width: 200px;
+      max-width: 280px;
+      max-height: none;
+      overflow: visible;
+      transition: none;
+      margin: 0;
+      padding: .375rem;
+      background: $sidebar-cta-bg;
+      border: 1px solid rgba($gray-200, .12);
+      border-radius: .375rem;
+      box-shadow: 0 .5rem 1.5rem rgba($black, .3);
+
+      &::before {
+        content: attr(data-flyout-title);
+        display: block;
+        padding: .25rem .625rem .375rem;
+        color: $gray-500;
+        font-size: .6875rem;
+        font-weight: $font-weight-bold;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        white-space: nowrap;
+      }
+
+      // Invisible bridge over the gap between the rail and the panel, so the
+      // cursor never leaves the menu item while moving onto the flyout
+      &::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 100%;
+        width: 10px;
+      }
     }
 
     .sidebar-item.sidebar-submenu-open > .sidebar-dropdown .sidebar-link,
     .sidebar-item.sidebar-submenu-open > .sidebar-dropdown a.sidebar-link {
       display: flex;
-      justify-content: center;
-      width: 38px;
-      height: 38px;
-      padding: 0;
-      margin: .125rem auto;
+      align-items: center;
+      justify-content: flex-start;
+      width: auto;
+      height: auto;
+      padding: .375rem .625rem;
+      margin: 0;
+      border-left-width: 3px;
       border-radius: .375rem;
+      text-align: left;
+      white-space: nowrap;
 
       i,
       svg {
-        margin-right: 0;
+        margin-right: .625rem;
       }
+    }
+
+    .sidebar-item.sidebar-submenu-open > .sidebar-dropdown .sidebar-link .align-middle {
+      opacity: 1;
+    }
+
+    .sidebar-item.sidebar-submenu-open > .sidebar-dropdown .sidebar-item.active > .sidebar-link {
+      background: rgba($gray-200, .1);
+      border-left-color: $sidebar-link-active-border-left-color;
+      color: $sidebar-link-active-color;
     }
 
     .sidebar-item.active > .sidebar-link,
@@ -216,41 +357,23 @@ a.sidebar-link {
       flex-basis: $sidebar-width;
       margin-left: 0;
 
-      .sidebar-brand {
-        justify-content: flex-start;
-        gap: .75rem;
-        padding: $sidebar-brand-padding-y $sidebar-brand-padding-x;
-        text-align: left;
-      }
-
       .sidebar-brand .align-middle,
       .sidebar-link .align-middle {
-        display: inline;
+        opacity: 1;
       }
 
       .sidebar-link,
       a.sidebar-link {
-        display: block;
-        width: auto;
-        height: auto;
-        padding: $sidebar-link-padding;
-        margin: 0;
-        border-left-width: 3px;
-        border-radius: 0;
-        text-align: left;
+        text-overflow: ellipsis;
+      }
 
-        i,
-        svg {
-          margin-right: .75rem;
-        }
+      .sidebar-link[data-bs-toggle="collapse"]::after {
+        opacity: 1;
       }
 
       .sidebar-dropdown {
         display: block;
-      }
-
-      .sidebar-dropdown .sidebar-item {
-        padding-left: 1rem;
+        max-height: none;
       }
     }
   }

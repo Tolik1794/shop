@@ -234,7 +234,7 @@ $sidebar-transition: min-width .35s ease-in-out, max-width .35s ease-in-out, wid
 $sidebar-bg: #222E3C !default;
 
 // Sidebar brand
-$sidebar-brand-padding-y: 1.15rem !default;
+$sidebar-brand-padding-y: 1rem !default;
 $sidebar-brand-padding-x: 1.5rem !default;
 $sidebar-brand-font-weight: $font-weight-bold !default;
 $sidebar-brand-font-size: 1.15rem !default;
@@ -246,26 +246,32 @@ $sidebar-header-font-size: $font-size-sm !default;
 $sidebar-header-color: $gray-400 !default;
 
 // Sidebar link
-$sidebar-link-padding: .625rem 1.625rem !default;
+$sidebar-link-padding: .5rem .875rem !default;
+$sidebar-link-margin: 0 .75rem !default;
+$sidebar-link-border-radius: .375rem !default;
 $sidebar-link-font-weight: 400 !default;
-$sidebar-link-bg: #222E3C !default;
-$sidebar-link-color: rgba($gray-200, 0.5) !default;
+$sidebar-link-bg: transparent !default;
+$sidebar-link-color: rgba($gray-200, 0.68) !default;
 $sidebar-link-border-left-color: transparent !default;
 
 $sidebar-link-hover-font-weight: $font-weight-normal !default;
-$sidebar-link-hover-bg: #222E3C !default;
-$sidebar-link-hover-color: #{rgba($gray-200, 0.75)} !default;
+$sidebar-link-hover-bg: #{rgba($gray-200, 0.06)} !default;
+$sidebar-link-hover-color: #{rgba($gray-200, 0.92)} !default;
 $sidebar-link-hover-border-left-color: transparent !default;
 
 $sidebar-link-active-font-weight: $font-weight-normal !default;
-$sidebar-link-active-bg: #{linear-gradient(90deg, rgba($primary,0.1) 0%, rgba($primary,0.0875) 50%, rgba($black, 0) 100%)} !default;
-$sidebar-link-active-color: $gray-200 !default;
+$sidebar-link-active-bg: #{rgba($gray-200, 0.1)} !default;
+$sidebar-link-active-color: $gray-100 !default;
 $sidebar-link-active-border-left-color: $primary !default;
 
 // Sidebar link icon
-$sidebar-link-icon-color: #{rgba($gray-200, 0.5)} !default;
-$sidebar-link-icon-hover-color: #{rgba($gray-200, 0.75)} !default;
-$sidebar-link-icon-active-color: $gray-200 !default;
+$sidebar-link-icon-color: #{rgba($gray-200, 0.68)} !default;
+$sidebar-link-icon-hover-color: #{rgba($gray-200, 0.92)} !default;
+$sidebar-link-icon-active-color: $gray-100 !default;
+
+// Sidebar nested link
+$sidebar-child-link-padding: .35rem .5rem .35rem .625rem !default;
+$sidebar-child-link-font-size: .8125rem !default;
 
 // Sidebar bottom
 $sidebar-cta-color: $gray-200 !default;
