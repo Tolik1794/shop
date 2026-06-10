@@ -20,7 +20,6 @@
   @include media-breakpoint-up(md) {
     display: grid;
     gap: $spacer * 0.5;
-    align-items: center;
     margin-bottom: $spacer * 0.25;
 
     .form-control,
@@ -41,11 +40,13 @@
   // параметр / значення / дія
   .product-parameter-row {
     grid-template-columns: minmax(260px, 38%) 1fr 44px;
+    align-items: start;
   }
 
   // пов'язаний товар / тип зв'язку / дія
   .product-relation-row {
     grid-template-columns: 1fr minmax(260px, 320px) 44px;
+    align-items: center;
   }
 }
 

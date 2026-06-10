@@ -671,6 +671,7 @@ Manual order discount requires discount override permission.: 'Ручна зни
 Discounted order line total is below cost and requires discount override permission.: 'Сума позиції після знижки нижча за собівартість і потребує окремого права.'
 This product parameter is already added.: 'Цей параметр товару вже додано.'
 This product parameter is not available for the selected category.: 'Цей параметр товару недоступний для вибраної категорії.'
+'This field is required.': 'Це поле є обов''язковим.'
 This category parameter is already added.: 'Цей параметр категорії вже додано.'
 This parameter is already inherited from a parent category.: 'Цей параметр уже успадковується від батьківської категорії.'
 Nothing to show...: 'Немає даних для показу...'

@@ -98,6 +98,15 @@ class ProductType extends AbstractType
 			    return;
 		    }
 
+		    $requiredIds = [];
+		    $categoryId = isset($data['category']) ? (int) $data['category'] : null;
+		    if ($categoryId) {
+			    $category = $this->em->find(Category::class, $categoryId);
+			    if ($category instanceof Category) {
+				    $requiredIds = array_keys($this->buildRequiredParameterNameIds($category));
+			    }
+		    }
+
 		    foreach ($data['productParameters'] as $key => $parameterData) {
 			    if (!is_array($parameterData)) {
 				    unset($data['productParameters'][$key]);
@@ -107,7 +116,12 @@ class ProductType extends AbstractType
 			    $parameterName = trim((string) ($parameterData['productParameterName'] ?? ''));
 			    $value = trim((string) ($parameterData['value'] ?? ''));
 
-			    if ($parameterName === '' || $value === '') {
+			    if ($parameterName === '') {
+				    unset($data['productParameters'][$key]);
+				    continue;
+			    }
+
+			    if ($value === '' && !in_array((int) $parameterName, $requiredIds, true)) {
 				    unset($data['productParameters'][$key]);
 			    }
 		    }
@@ -169,6 +183,27 @@ class ProductType extends AbstractType
 
 			    $usedParameterNameIds[$parameterNameId] = true;
 		    }
+
+		    $requiredParameterNameIds = $category instanceof Category
+			    ? $this->buildRequiredParameterNameIds($category)
+			    : [];
+
+		    foreach ($form->get('productParameters') as $parameterForm) {
+			    /** @var ProductParameter|null $parameter */
+			    $parameter = $parameterForm->getData();
+			    $parameterName = $parameter instanceof ProductParameter
+				    ? $parameter->getProductParameterName()
+				    : null;
+			    if (!$parameterName instanceof ProductParameterName || !$parameterName->getId()) {
+				    continue;
+			    }
+			    $parameterNameId = (int) $parameterName->getId();
+			    if (isset($requiredParameterNameIds[$parameterNameId])
+				    && trim((string) ($parameter->getValue() ?? '')) === ''
+			    ) {
+				    $parameterForm->get('value')->addError(new FormError('This field is required.'));
+			    }
+		    }
 	    });
     }
 
@@ -205,7 +240,7 @@ class ProductType extends AbstractType
 				continue;
 			}
 
-			$productParameters->set($productParameterName->getName(), $productParameter);
+			$productParameters->set((string) $productParameterName->getId(), $productParameter);
 		}
 
 		if (!$category instanceof Category) {
@@ -213,12 +248,12 @@ class ProductType extends AbstractType
 		}
 
 		foreach ($this->findAllowedParameterNames($category) as $productParameterName) {
-			if ($productParameters->get($productParameterName->getName())) continue;
+			if ($productParameters->get((string) $productParameterName->getId())) continue;
 			$productParameter = new ProductParameter();
 			$productParameter->setProductParameterName($productParameterName)
 				->setProduct($product);
 
-			$productParameters->set($productParameterName->getName(), $productParameter);
+			$productParameters->set((string) $productParameterName->getId(), $productParameter);
 		}
 
 		return $productParameters;
@@ -271,6 +306,28 @@ class ProductType extends AbstractType
 		);
 
 		return array_values($parameterNames);
+	}
+
+	/**
+	 * @return array<int, string> parameterNameId => parameterName for required parameters
+	 */
+	private function buildRequiredParameterNameIds(Category $category): array
+	{
+		$required = [];
+		$records = $this->em->getRepository(CategoryProductParameterName::class)
+			->findAllByCategory($category);
+
+		foreach ($records as $record) {
+			if (!$record->isIsRequired()) {
+				continue;
+			}
+			$pn = $record->getProductParameterName();
+			if ($pn instanceof ProductParameterName && $pn->getId()) {
+				$required[(int) $pn->getId()] = $pn->getName();
+			}
+		}
+
+		return $required;
 	}
 
     public function configureOptions(OptionsResolver $resolver): void
