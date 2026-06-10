@@ -9,10 +9,6 @@
     </div>
 
     {% if not is_draft %}
-        <div class="card mt-3">
-            <div class="card-body">
-                {{ include('admin/order/_history.html.twig') }}
-            </div>
-        </div>
+        {{ include('admin/order/_history_card.html.twig') }}
     {% endif %}
 </div>

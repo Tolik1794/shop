@@ -534,84 +534,87 @@
 		color: $primary;
 	}
 
-	// --- Compact history ---
-	.order-history-compact__entry {
-		border-color: rgba($primary, .35) !important;
-	}
-
-	.order-history-compact__collapse {
-		margin-top: .75rem;
-
-		.order-discussion-scroll {
-			height: auto;
-			overflow: visible;
-			padding: 0;
-		}
-	}
-
-	.order-history-compact__scroll {
-		max-height: 260px;
-		overflow-y: auto;
-		padding: .75rem 1rem .75rem .75rem;
-		scrollbar-color: rgba($primary, .45) rgba($gray-200, .75);
-		scrollbar-width: thin;
-
-		&::-webkit-scrollbar {
-			width: .5rem;
-		}
-
-		&::-webkit-scrollbar-track {
-			background: rgba($gray-200, .75);
-		}
-
-		&::-webkit-scrollbar-thumb {
-			background: rgba($primary, .45);
-			border-radius: 999px;
-		}
-	}
-
-	.order-history-compact__toggle {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 100%;
-		margin-top: .35rem;
-		padding: .3rem;
-		color: $text-muted;
-		background: transparent;
-		border: 0;
-		border-radius: $border-radius;
-
-		&:hover,
-		&:focus {
-			color: $primary;
-			background: mix($primary, $white, 6%);
-		}
-
-		.order-history-compact__toggle-icon--open {
-			display: none;
-		}
-
-		&[aria-expanded="true"] {
-			.order-history-compact__toggle-icon--closed {
-				display: none;
-			}
-
-			.order-history-compact__toggle-icon--open {
-				display: inline-block;
-			}
-		}
-	}
-
-	// Order-history change rows: keep technical status values quiet.
-	.order-history-changes {
-		color: $text-muted;
-		font-variant-numeric: tabular-nums;
-	}
-
 }
 
 // --- Order discussion / comments (shared: order form, order list, history timelines) ---
+.order-discussion > .order-history-card {
+	margin-top: $spacer;
+}
+
+.order-history-compact__entry {
+	border-color: rgba($primary, .35) !important;
+}
+
+.order-history-compact__collapse {
+	margin-top: .75rem;
+
+	.order-discussion-scroll {
+		height: auto;
+		overflow: visible;
+		padding: 0;
+	}
+}
+
+.order-history-compact__scroll {
+	max-height: 260px;
+	overflow-y: auto;
+	padding: .75rem 1rem .75rem .75rem;
+	scrollbar-color: rgba($primary, .45) rgba($gray-200, .75);
+	scrollbar-width: thin;
+
+	&::-webkit-scrollbar {
+		width: .5rem;
+	}
+
+	&::-webkit-scrollbar-track {
+		background: rgba($gray-200, .75);
+	}
+
+	&::-webkit-scrollbar-thumb {
+		background: rgba($primary, .45);
+		border-radius: 999px;
+	}
+}
+
+.order-history-compact__toggle {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	margin-top: .35rem;
+	padding: .3rem;
+	color: $text-muted;
+	background: transparent;
+	border: 0;
+	border-radius: $border-radius;
+
+	&:hover,
+	&:focus {
+		color: $primary;
+		background: mix($primary, $white, 6%);
+	}
+
+	.order-history-compact__toggle-icon--open {
+		display: none;
+	}
+
+	&[aria-expanded="true"] {
+		.order-history-compact__toggle-icon--closed {
+			display: none;
+		}
+
+		.order-history-compact__toggle-icon--open {
+			display: inline-block;
+		}
+	}
+}
+
+// Order-history change rows: keep technical status values quiet.
+.order-history-changes {
+	color: $text-muted;
+	font-variant-numeric: tabular-nums;
+}
+
 .order-discussion-scroll-frame {
 	position: relative;
 	border: 1px solid $gray-300;

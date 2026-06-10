@@ -4,6 +4,7 @@
 {{- label == key ? (value|replace({'_': ' '})|capitalize) : label -}}
 {% endmacro %}
 {% import _self as h %}
+{% set history_expanded = history_expanded|default(false) %}
 {% set latest_history = history_entries|default([])|first %}
 {% set remaining_history = history_entries|default([])|slice(1) %}
 {% set history_collapse_id = 'order-history-' ~ entity.id ~ '-details' %}
@@ -46,7 +47,7 @@
             {% endif %}
 
             {% if remaining_history|length > 0 %}
-                <div class="collapse order-history-compact__collapse" id="{{ history_collapse_id }}">
+                <div class="collapse order-history-compact__collapse{% if history_expanded %} show{% endif %}" id="{{ history_collapse_id }}">
                     {{ include('admin/_components/document_history/_timeline.html.twig', {history_entries: remaining_history}) }}
                 </div>
             {% endif %}
@@ -59,7 +60,7 @@
                 type="button"
                 data-bs-toggle="collapse"
                 data-bs-target="#{{ history_collapse_id }}"
-                aria-expanded="false"
+                aria-expanded="{{ history_expanded ? 'true' : 'false' }}"
                 aria-controls="{{ history_collapse_id }}"
                 aria-label="{{ 'admin.order.history.toggle'|trans }}"
         >

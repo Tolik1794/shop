@@ -10,6 +10,8 @@ use App\Entity\Order;
 use App\Entity\OrderComment;
 use App\Entity\OrderEntry;
 use App\Entity\OrderEntryFulfillmentSource;
+use App\Entity\OrderHistory;
+use App\Entity\OrderHistorySource;
 use App\Entity\OrderStatus;
 use App\Entity\Payment;
 use App\Entity\Product;
@@ -1647,13 +1649,44 @@ class OrderBuilderControllerTest extends WebTestCase
 		self::assertSelectorTextContains('body', 'Visible on edit page');
 		self::assertSelectorTextContains('body', 'History');
 		self::assertSelectorTextContains('body', 'Order created');
+		self::assertSelectorExists('.order-discussion > .order-history-card');
+		self::assertSelectorNotExists('.order-history-card > .card-header');
 		self::assertSelectorExists(sprintf('.order-history-compact [data-bs-target="#order-history-%d-details"]', $order->getId()));
 		self::assertSelectorExists('.order-history-compact__scroll-frame > .order-history-compact__scroll > .order-history-compact__entry');
 		self::assertSelectorExists(sprintf('.order-history-compact__scroll-frame > .order-history-compact__scroll > #order-history-%d-details', $order->getId()));
+		self::assertSelectorNotExists(sprintf('#order-history-%d-details.show', $order->getId()));
+		self::assertSelectorExists(sprintf('.order-history-compact__toggle[aria-expanded="false"][aria-controls="order-history-%d-details"]', $order->getId()));
 		self::assertSelectorNotExists(sprintf('#order-history-%d-details .order-history-compact__scroll-frame', $order->getId()));
 		self::assertSelectorExists('.order-history-compact__toggle-icon--closed.fa-chevron-down');
 		self::assertSelectorExists('.order-history-compact__toggle-icon--open.fa-chevron-up');
 		self::assertSelectorNotExists('.order-history-compact a');
+	}
+
+	public function testHistoryCardEndpointUsesSharedCardForAjaxRefresh(): void
+	{
+		$user = $this->createUser('order-builder-index-history-admin-' . uniqid() . '@example.com');
+		$this->client->loginUser($user);
+		$store = $this->createStore('order-builder-index-history-store-' . uniqid());
+		$order = $this->createOrder($store, 'ORDER-HISTORY-' . uniqid());
+		foreach (['Order created', 'Order updated'] as $title) {
+			$this->entityManager->persist(
+				(new OrderHistory())
+					->setOrder($order)
+					->setEventKey('order.test')
+					->setSource(OrderHistorySource::SYSTEM)
+					->setTitle($title),
+			);
+		}
+		$this->entityManager->flush();
+
+		$this->client->request('GET', sprintf('/admin/store/%d/order/%d/history', $store->getId(), $order->getId()));
+
+		self::assertResponseIsSuccessful();
+		self::assertSelectorExists('.order-history-card[data-reload-card-target~="historyCard"]');
+		self::assertSelectorExists('.order-history-card > .card-body > .order-history-compact');
+		self::assertSelectorNotExists('.order-history-card > .card-header');
+		self::assertSelectorExists(sprintf('#order-history-%d-details.show', $order->getId()));
+		self::assertSelectorExists(sprintf('.order-history-compact__toggle[aria-expanded="true"][aria-controls="order-history-%d-details"]', $order->getId()));
 	}
 
 	public function testCommentsCardOnIndexPageIsPreparedForAjaxRefresh(): void
