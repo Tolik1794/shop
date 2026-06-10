@@ -1,56 +1,63 @@
-{% set entryData = entry.vars.data|default(null) %}
-{% set product = entryData ? entryData.product|default(null) : null %}
 {% set currencyCode = currency ? currency.code|default('') : '' %}
-{% set hasEntryErrors =
-	entry.vars.errors|length > 0
-	or entry.product.vars.errors|length > 0
-	or entry.warehouse.vars.errors|length > 0
-	or entry.quantity.vars.errors|length > 0
-	or entry.unitCost.vars.errors|length > 0
-	or entry.salePrice.vars.errors|length > 0
-%}
 
-<div class="border rounded p-3 mb-3 position-relative {{ not entry.vars.valid ? 'border-danger' : '' }}" data-purchase-form-target="row">
-	<button type="button" class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 mt-2 me-2" data-action="purchase-form#removeEntry">
+<div class="purchase-entry border rounded mb-2 {{ not entry.vars.valid ? 'border-danger' : '' }}" data-purchase-form-target="row">
+	<button type="button" class="btn btn-sm purchase-entry__remove" data-action="purchase-form#removeEntry"
+			title="{{ 'admin.common.delete'|trans }}" aria-label="{{ 'admin.common.delete'|trans }}">
 		<i class="fa-solid fa-trash"></i>
 	</button>
 
-	<div class="row g-3 pe-5">
-		<div class="col-12 col-lg-4">
-			{{ form_row(entry.product) }}
-		</div>
-		<div class="col-12 col-lg-3">
-			{{ form_row(entry.warehouse) }}
-		</div>
-		<div class="col-6 col-lg-2">
-			{{ form_row(entry.quantity) }}
-		</div>
-		<div class="col-6 col-lg-3">
-			{{ form_row(entry.unitCost, {help: currencyCode}) }}
-		</div>
-		<div class="col-6 col-lg-3">
-			{{ form_row(entry.salePrice, {help: currencyCode}) }}
-		</div>
-		{% if entryData and entryData.id %}
-			<div class="col-6 col-lg-3">
-				<label class="form-label">{{ 'Allocated delivery'|trans }}</label>
-				<div class="form-control-plaintext">{{ entryData.deliveryCost|money }} {{ currencyCode }}</div>
+	<div class="purchase-entry__fields">
+		<div class="purchase-entry__top-row">
+			<div class="purchase-entry__field purchase-entry__field--product">
+				{{ form_row(entry.product, {attr: {
+					'data-purchase-form-target': 'product',
+					'data-action': 'change->purchase-form#recalculate'
+				}}) }}
 			</div>
-			<div class="col-6 col-lg-3">
-				<label class="form-label">{{ 'Total cost'|trans }}</label>
-				<div class="form-control-plaintext fw-bold">{{ entryData.totalCost|money }} {{ currencyCode }}</div>
+			<div class="purchase-entry__field purchase-entry__field--warehouse">
+				{{ form_row(entry.warehouse, {attr: {
+					'data-purchase-form-target': 'warehouse',
+					'data-action': 'change->purchase-form#recalculate'
+				}}) }}
 			</div>
-		{% endif %}
+		</div>
+		<div class="purchase-entry__numbers-row">
+			<div class="purchase-entry__field purchase-entry__field--number purchase-entry__field--quantity">
+				{{ form_row(entry.quantity, {attr: {
+					class: 'form-control-sm',
+					'data-purchase-form-target': 'quantity',
+					'data-action': 'input->purchase-form#recalculate'
+				}}) }}
+			</div>
+			<div class="purchase-entry__field purchase-entry__field--number purchase-entry__field--unit-cost">
+				{{ form_row(entry.unitCost, {label: 'admin.purchase.fields.unit_cost_short', help: currencyCode ~ ' / ' ~ 'admin.purchase.fields.per_unit'|trans, attr: {
+					class: 'form-control-sm',
+					'data-purchase-form-target': 'unitCost',
+					'data-action': 'input->purchase-form#recalculate'
+				}}) }}
+			</div>
+			<div class="purchase-entry__field purchase-entry__field--number purchase-entry__field--sale-price">
+				{{ form_row(entry.salePrice, {help: currencyCode ~ ' / ' ~ 'admin.purchase.fields.per_unit'|trans, attr: {
+					class: 'form-control-sm',
+					'data-purchase-form-target': 'salePrice',
+					'data-action': 'input->purchase-form#recalculate'
+				}}) }}
+			</div>
+		</div>
 	</div>
 
-	{% if hasEntryErrors %}
-		<div class="form-error mt-3 mb-0">
+	<div class="purchase-entry__summary" data-purchase-form-target="rowSummary">
+		<span>{{ 'admin.purchase.summary.purchase_total'|trans }}: <strong data-purchase-form-target="rowPurchaseTotal">0.00</strong> <span data-purchase-currency-label>{{ currencyCode }}</span></span>
+		<span>{{ 'admin.purchase.summary.potential_sale'|trans }}: <strong data-purchase-form-target="rowSaleTotal">-</strong> <span data-purchase-currency-label>{{ currencyCode }}</span></span>
+		<span>{{ 'admin.purchase.summary.margin'|trans }}: <strong data-purchase-form-target="rowMargin">-</strong> <span data-purchase-currency-label>{{ currencyCode }}</span> <span data-purchase-form-target="rowMarginPercent"></span></span>
+		<span class="text-warning d-none" data-purchase-form-target="belowCostWarning">
+			<i class="fa-solid fa-triangle-exclamation me-1"></i>{{ 'admin.purchase.validation.sale_below_cost'|trans }}
+		</span>
+	</div>
+
+	{% if entry.vars.errors|length > 0 %}
+		<div class="form-error purchase-entry__errors">
 			{{ form_errors(entry) }}
-			{{ form_errors(entry.product) }}
-			{{ form_errors(entry.warehouse) }}
-			{{ form_errors(entry.quantity) }}
-			{{ form_errors(entry.unitCost) }}
-			{{ form_errors(entry.salePrice) }}
 		</div>
 	{% endif %}
 </div>

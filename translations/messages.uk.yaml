@@ -406,10 +406,13 @@ admin:
       amount_to_pay: 'До сплати'
       delivery_cost: 'Вартість доставки'
       exchange_rate: 'Курс обміну'
+      invoice_number: 'Номер рахунку / інвойсу'
       paid_amount: 'Сплачено'
+      per_unit: 'од.'
       unit: 'Одиниця'
+      unit_cost_short: 'Собівартість'
     actions:
-      add_entry: 'Додати позицію'
+      add_entry: 'Додати товар'
     empty:
       products: 'Товари відсутні.'
     summary:
@@ -417,6 +420,20 @@ admin:
       supplier: 'Постачальник'
       statuses: 'Статуси'
       total: 'Загальна сума'
+      entry_count: 'Позиції'
+      total_quantity: 'Загальна кількість'
+      purchase_total: 'Сума закупівлі'
+      delivery: 'Доставка'
+      purchase_with_delivery: 'Закупівля з доставкою'
+      potential_sale: 'Потенційний продаж'
+      margin: 'Маржа'
+      expected_margin: 'Очікувана маржа'
+      operations: 'Операційні показники'
+      financial: 'Фінансові показники'
+      empty: 'Додайте перший товар, щоб побачити підсумок закупівлі.'
+    validation:
+      sale_below_cost: 'Ціна продажу нижча за собівартість.'
+      incomplete_sale_prices: 'Потенційний продаж і маржа неповні, оскільки для частини позицій не вказана ціна продажу.'
   discount:
     title:
       index: 'Знижки'

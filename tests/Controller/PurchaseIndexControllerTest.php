@@ -68,6 +68,14 @@ class PurchaseIndexControllerTest extends WebTestCase
 		self::assertSelectorTextContains('.form-actions', 'Save');
 		self::assertSelectorTextContains('.form-actions', 'Save and continue');
 		self::assertSelectorTextContains('.form-actions', 'Cancel');
+		self::assertSelectorTextContains('button[data-action="purchase-form#addEntry"]', 'Add product');
+		self::assertSelectorExists('.purchase-form-summary');
+		self::assertSelectorExists('.purchase-form-summary__empty[data-purchase-form-target~="summaryEmpty"]');
+		self::assertSelectorExists('.purchase-form-summary__content[data-purchase-form-target~="summaryContent"]');
+		self::assertSelectorTextContains('.purchase-form-summary__group--operations', 'Operational');
+		self::assertSelectorTextContains('.purchase-form-summary__group--financial', 'Financial');
+		self::assertSelectorExists('[data-purchase-form-target~="summaryPurchaseWithDelivery"]');
+		self::assertSelectorExists('[data-purchase-form-target~="summaryMargin"]');
 
 		$purchase = $this->createPurchase($store, 'PO-form-layout-' . uniqid(), 'Form Layout Supplier');
 
@@ -79,6 +87,52 @@ class PurchaseIndexControllerTest extends WebTestCase
 		self::assertSelectorTextContains('.navbar-page-header__breadcrumb', $purchase->getNumber());
 		self::assertSelectorNotExists('main.content h1');
 		self::assertSelectorExists('#purchase-form > .form-actions');
+		self::assertSelectorExists('.purchase-entry');
+		self::assertSelectorExists('.purchase-entry-list');
+		self::assertSelectorExists('.purchase-entry__fields');
+		self::assertSelectorExists('.purchase-entry > .purchase-entry__remove[data-action="purchase-form#removeEntry"]');
+		self::assertSelectorExists('.purchase-entry__top-row > .purchase-entry__field--product');
+		self::assertSelectorExists('.purchase-entry__top-row > .purchase-entry__field--warehouse');
+		self::assertSelectorExists('.purchase-entry__numbers-row > .purchase-entry__field--quantity');
+		self::assertSelectorExists('.purchase-entry__numbers-row > .purchase-entry__field--unit-cost');
+		self::assertSelectorExists('.purchase-entry__numbers-row > .purchase-entry__field--sale-price');
+		self::assertSelectorExists('.purchase-entry__field--product');
+		self::assertSelectorExists('.purchase-entry__field--warehouse');
+		self::assertSelectorExists('.purchase-entry__field--quantity');
+		self::assertSelectorExists('.purchase-entry__field--unit-cost');
+		self::assertSelectorExists('.purchase-entry__field--sale-price');
+		self::assertSelectorExists('.purchase-entry select.select2[data-purchase-form-target~="product"]');
+		self::assertSelectorExists('.purchase-entry select.select2[data-purchase-form-target~="warehouse"]');
+		self::assertSelectorExists('[data-purchase-form-target~="quantity"][data-action="input->purchase-form#recalculate"]');
+		self::assertSelectorExists('[data-purchase-form-target~="unitCost"][data-action="input->purchase-form#recalculate"]');
+		self::assertSelectorExists('[data-purchase-form-target~="salePrice"][data-action="input->purchase-form#recalculate"]');
+		self::assertSelectorTextContains('.purchase-entry__field--unit-cost', 'Unit cost');
+		self::assertSelectorTextContains('.purchase-entry__field--unit-cost', 'UAH / unit');
+		self::assertSelectorTextContains('.purchase-entry__field--sale-price', 'UAH / unit');
+		self::assertSelectorExists('[data-purchase-form-target~="rowSummary"]');
+		self::assertSelectorExists('[data-purchase-form-target~="rowMarginPercent"]');
+		self::assertSelectorTextContains('label[for="purchase_invoiceNumber"]', 'Invoice number');
+		self::assertSelectorTextContains('label[for="purchase_deliveryCost"]', 'Delivery cost');
+		self::assertSelectorTextNotContains('.col-12.col-xl-8', 'Total base');
+	}
+
+	public function testPurchaseFormShowsEntryValidationErrorsInline(): void
+	{
+		$this->client->loginUser($this->createUser('purchase-form-validation-admin-' . uniqid() . '@example.com'));
+		$store = $this->createStore('purchase-form-validation-store-' . uniqid());
+		$purchase = $this->createPurchase($store, 'PO-form-validation-' . uniqid(), 'Validation Supplier');
+
+		$crawler = $this->client->request('GET', sprintf('/admin/store/%d/purchase/%d/edit', $store->getId(), $purchase->getId()));
+		$form = $crawler->selectButton('Save')->form();
+		$form['purchase[purchaseEntries][0][quantity]'] = '0';
+		$form['purchase[purchaseEntries][0][unitCost]'] = '-1';
+
+		$this->client->submit($form);
+
+		self::assertResponseStatusCodeSame(422);
+		self::assertSelectorExists('.purchase-entry.border-danger');
+		self::assertSelectorTextContains('.purchase-entry', 'Quantity must be greater than zero.');
+		self::assertSelectorTextContains('.purchase-entry', 'Unit cost cannot be negative.');
 	}
 
 	public function testPurchaseIndexQuickUnpaidFilterIncludesUnpaidAndPartiallyPaidPurchases(): void

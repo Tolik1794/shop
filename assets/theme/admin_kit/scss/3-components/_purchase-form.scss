@@ -1,0 +1,339 @@
+.purchase-form {
+	.purchase-entry-list {
+		container: purchase-entries / inline-size;
+	}
+
+	.purchase-entry {
+		position: relative;
+		padding: .75rem;
+		padding-right: 3.5rem;
+		background: mix($primary, $white, 3%);
+		border-left: 3px solid rgba($primary, .35) !important;
+
+		.form-label {
+			margin-bottom: .15rem;
+			color: $gray-600;
+			font-size: .72rem;
+			letter-spacing: .02em;
+			text-transform: uppercase;
+			white-space: nowrap;
+		}
+
+		.form-text {
+			margin-top: .1rem;
+			font-size: .7rem;
+		}
+
+		&.is-empty {
+			padding-block: .4rem;
+			background: $white;
+			border-left-color: $gray-300 !important;
+
+			.form-label {
+				margin-bottom: .1rem;
+			}
+
+			.form-text {
+				display: none;
+			}
+
+			.purchase-entry__fields,
+			.purchase-entry__top-row,
+			.purchase-entry__numbers-row {
+				gap: .35rem;
+			}
+
+			.purchase-entry__summary {
+				display: none;
+			}
+		}
+	}
+
+	.purchase-entry__fields {
+		display: grid;
+		gap: .5rem;
+	}
+
+	.purchase-entry__top-row {
+		display: grid;
+		grid-template-columns: minmax(14rem, 2fr) minmax(11rem, 1fr);
+		gap: .5rem;
+		min-width: 0;
+	}
+
+	.purchase-entry__numbers-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: .5rem;
+		align-items: start;
+	}
+
+	.purchase-entry__field--quantity {
+		flex: 0 1 10rem;
+		width: clamp(8.75rem, 16cqi, 11.25rem);
+	}
+
+	.purchase-entry__field--unit-cost,
+	.purchase-entry__field--sale-price {
+		flex: 0 1 14rem;
+		width: clamp(12.5rem, 22cqi, 16.25rem);
+	}
+
+	.purchase-entry__field {
+		min-width: 0;
+		max-width: 100%;
+
+		> .mb-3 {
+			margin-bottom: 0 !important;
+		}
+
+		.select2-container {
+			width: 100% !important;
+			min-width: 0;
+			max-width: 100%;
+		}
+
+		.select2-selection,
+		.select2-selection__rendered {
+			min-width: 0;
+			max-width: 100%;
+		}
+
+		.select2-selection__rendered {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+	}
+
+	.purchase-entry__remove {
+		position: absolute;
+		top: .65rem;
+		right: .65rem;
+		z-index: 2;
+		display: inline-flex;
+		width: 2.25rem;
+		height: 2.25rem;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		color: $gray-500;
+		background: transparent;
+		border: 1px solid transparent;
+
+		&:hover,
+		&:focus {
+			color: $gray-700;
+			background: $gray-100;
+			border-color: $gray-300;
+		}
+	}
+
+	.purchase-entry.is-filled .purchase-entry__remove:hover,
+	.purchase-entry.is-filled .purchase-entry__remove:focus {
+		color: $danger;
+		background: rgba($danger, .08);
+		border-color: rgba($danger, .25);
+	}
+
+	.purchase-entry__summary {
+		display: flex;
+		flex-wrap: wrap;
+		gap: .25rem 1rem;
+		margin-top: .5rem;
+		padding-top: .45rem;
+		border-top: 1px solid $gray-200;
+		color: $text-muted;
+		font-size: $font-size-sm;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.purchase-entry__errors {
+		margin-top: .5rem;
+		margin-bottom: 0;
+	}
+
+	.purchase-form-summary {
+		container: purchase-summary / inline-size;
+		margin-top: 1rem;
+		border: 1px solid $gray-200;
+		border-radius: $border-radius;
+		background: mix($gray-100, $white, 50%);
+	}
+
+	.purchase-form-summary__empty {
+		display: flex;
+		align-items: center;
+		gap: .5rem;
+		padding: .65rem .8rem;
+		color: $text-muted;
+		font-size: $font-size-sm;
+
+		i {
+			color: $gray-500;
+		}
+	}
+
+	.purchase-form-summary__content {
+		display: grid;
+		grid-template-columns: minmax(10rem, .7fr) minmax(0, 2fr);
+		gap: 0;
+	}
+
+	.purchase-form-summary__group {
+		min-width: 0;
+		padding: .75rem;
+
+		h6 {
+			margin-bottom: .5rem;
+			color: $gray-600;
+			font-size: .72rem;
+			letter-spacing: .02em;
+			text-transform: uppercase;
+		}
+	}
+
+	.purchase-form-summary__group--operations {
+		border-right: 1px solid $gray-200;
+	}
+
+	.purchase-form-summary__operations,
+	.purchase-form-summary__financial {
+		display: grid;
+		gap: .5rem;
+	}
+
+	.purchase-form-summary__operations {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.purchase-form-summary__financial {
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+	}
+
+	.purchase-form-summary__metric {
+		min-width: 0;
+
+		> span {
+			display: block;
+			margin-bottom: .15rem;
+			color: $text-muted;
+			font-size: .72rem;
+			line-height: 1.2;
+		}
+
+		strong {
+			display: block;
+			font-variant-numeric: tabular-nums;
+			line-height: 1.2;
+			white-space: nowrap;
+		}
+
+		small {
+			color: $text-muted;
+			font-weight: 400;
+		}
+	}
+
+	.purchase-form-summary__metric--total strong,
+	.purchase-form-summary__metric--margin strong {
+		color: $primary;
+	}
+
+	.purchase-form-summary__warning {
+		grid-column: 1 / -1;
+		padding: 0 .75rem .75rem;
+	}
+
+	@container purchase-entries (max-width: 760px) {
+		.purchase-entry__top-row {
+			grid-template-columns: minmax(0, 1.6fr) minmax(10rem, 1fr);
+		}
+
+		.purchase-entry__field--quantity {
+			width: 8.75rem;
+		}
+
+		.purchase-entry__field--unit-cost,
+		.purchase-entry__field--sale-price {
+			width: 12.5rem;
+		}
+	}
+
+	@container purchase-entries (max-width: 650px) {
+		.purchase-entry__top-row {
+			grid-template-columns: 1fr;
+		}
+
+		.purchase-entry__field--quantity {
+			flex: 0 1 10rem;
+			width: auto;
+		}
+
+		.purchase-entry__field--unit-cost,
+		.purchase-entry__field--sale-price {
+			flex: 0 1 13rem;
+			width: auto;
+		}
+	}
+
+	@container purchase-entries (max-width: 440px) {
+		.purchase-entry {
+			padding-right: .75rem;
+			padding-top: 3rem;
+		}
+
+		.purchase-entry__remove {
+			top: .45rem;
+			right: .45rem;
+		}
+
+		.purchase-entry__numbers-row {
+			display: grid;
+		}
+
+		.purchase-entry__field--quantity,
+		.purchase-entry__field--unit-cost,
+		.purchase-entry__field--sale-price {
+			width: 100%;
+		}
+
+		.purchase-entry__summary {
+			display: grid;
+			gap: .2rem;
+		}
+	}
+
+	@container purchase-summary (max-width: 850px) {
+		.purchase-form-summary__content {
+			grid-template-columns: 1fr;
+		}
+
+		.purchase-form-summary__group--operations {
+			border-right: 0;
+			border-bottom: 1px solid $gray-200;
+		}
+
+		.purchase-form-summary__financial {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+
+	@container purchase-summary (max-width: 520px) {
+		.purchase-form-summary__financial {
+			grid-template-columns: 1fr;
+			gap: .35rem;
+		}
+
+		.purchase-form-summary__metric {
+			display: flex;
+			align-items: baseline;
+			justify-content: space-between;
+			gap: .75rem;
+
+			> span {
+				margin-bottom: 0;
+			}
+		}
+	}
+}

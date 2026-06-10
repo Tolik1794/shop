@@ -383,10 +383,13 @@ admin:
       amount_to_pay: 'Amount to pay'
       delivery_cost: 'Delivery cost'
       exchange_rate: 'Exchange rate'
+      invoice_number: 'Invoice number'
       paid_amount: 'Paid'
+      per_unit: 'unit'
       unit: 'Unit'
+      unit_cost_short: 'Unit cost'
     actions:
-      add_entry: 'Add entry'
+      add_entry: 'Add product'
     empty:
       products: 'No products.'
     summary:
@@ -394,6 +397,20 @@ admin:
       supplier: 'Supplier'
       statuses: 'Statuses'
       total: 'Total amount'
+      entry_count: 'Positions'
+      total_quantity: 'Total quantity'
+      purchase_total: 'Purchase total'
+      delivery: 'Delivery'
+      purchase_with_delivery: 'Purchase with delivery'
+      potential_sale: 'Potential sale'
+      margin: 'Margin'
+      expected_margin: 'Expected margin'
+      operations: 'Operational'
+      financial: 'Financial'
+      empty: 'Add the first product to see the purchase summary.'
+    validation:
+      sale_below_cost: 'Sale price is below unit cost.'
+      incomplete_sale_prices: 'Potential sale and margin are incomplete because some sale prices are missing.'
   discount:
     title:
       index: 'Discounts'

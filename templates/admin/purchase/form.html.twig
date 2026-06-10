@@ -20,7 +20,7 @@
 {% endblock %}
 
 {% block main_content %}
-	<main class="content" {{ stimulus_controller('purchase-form select-two') }}>
+	<main class="content purchase-form" {{ stimulus_controller('purchase-form select-two') }}>
 		<div class="container-fluid p-0">
 			{% if form.vars.errors|length > 0 %}
 				<div class="form-error mb-3">
@@ -37,10 +37,16 @@
 							</div>
 							<div class="card-body">
 								{{ form_row(form.supplier) }}
-								{{ form_row(form.currency) }}
-								{{ form_row(form.invoiceNumber) }}
+								{{ form_row(form.currency, {attr: {
+									'data-purchase-form-target': 'currency',
+									'data-action': 'change->purchase-form#recalculate'
+								}}) }}
+								{{ form_row(form.invoiceNumber, {label: 'admin.purchase.fields.invoice_number'}) }}
 								{{ form_row(form.documentDate) }}
-								{{ form_row(form.deliveryCost) }}
+								{{ form_row(form.deliveryCost, {label: 'admin.purchase.fields.delivery_cost', attr: {
+									'data-purchase-form-target': 'deliveryCost',
+									'data-action': 'input->purchase-form#recalculate'
+								}}) }}
 								{{ form_row(form.comment) }}
 							</div>
 						</div>
@@ -48,7 +54,7 @@
 
 					<div class="col-12 col-xl-8">
 						<div class="card">
-							<div class="card-header d-flex justify-content-between align-items-center">
+							<div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
 								<h5 class="card-title mb-0">{{ 'admin.purchase.sections.entries'|trans }}</h5>
 								<button type="button" class="btn btn-light btn-sm" data-action="purchase-form#addEntry">
 									<i class="fa-solid fa-plus me-1"></i>{{ 'admin.purchase.actions.add_entry'|trans }}
@@ -61,7 +67,7 @@
 									</div>
 								{% endif %}
 
-								<div data-purchase-form-target="entries">
+								<div class="purchase-entry-list" data-purchase-form-target="entries">
 									{% for entry in form.purchaseEntries %}
 										{{ include('admin/purchase/_entry_row.html.twig', {entry: entry, currency: form.currency.vars.data|default(null)}) }}
 									{% endfor %}
@@ -71,24 +77,61 @@
 									{{ 'admin.order.empty.entries'|trans }}
 								</div>
 
+								<div class="purchase-form-summary" data-purchase-form-target="summary">
+									<div class="purchase-form-summary__empty d-none" data-purchase-form-target="summaryEmpty">
+										<i class="fa-solid fa-chart-simple"></i>
+										<span>{{ 'admin.purchase.summary.empty'|trans }}</span>
+									</div>
+									<div class="purchase-form-summary__content" data-purchase-form-target="summaryContent">
+										<section class="purchase-form-summary__group purchase-form-summary__group--operations">
+											<h6>{{ 'admin.purchase.summary.operations'|trans }}</h6>
+											<div class="purchase-form-summary__operations">
+												<div class="purchase-form-summary__metric">
+													<span>{{ 'admin.purchase.summary.entry_count'|trans }}</span>
+													<strong data-purchase-form-target="summaryEntryCount">0</strong>
+												</div>
+												<div class="purchase-form-summary__metric">
+													<span>{{ 'admin.purchase.summary.total_quantity'|trans }}</span>
+													<strong data-purchase-form-target="summaryQuantity">0</strong>
+												</div>
+											</div>
+										</section>
+										<section class="purchase-form-summary__group purchase-form-summary__group--financial">
+											<h6>{{ 'admin.purchase.summary.financial'|trans }}</h6>
+											<div class="purchase-form-summary__financial">
+												<div class="purchase-form-summary__metric">
+													<span>{{ 'admin.purchase.summary.purchase_total'|trans }}</span>
+													<strong><span data-purchase-form-target="summaryPurchaseTotal">0.00</span> <small data-purchase-currency-label></small></strong>
+												</div>
+												<div class="purchase-form-summary__metric">
+													<span>{{ 'admin.purchase.summary.delivery'|trans }}</span>
+													<strong><span data-purchase-form-target="summaryDelivery">0.00</span> <small data-purchase-currency-label></small></strong>
+												</div>
+												<div class="purchase-form-summary__metric purchase-form-summary__metric--total">
+													<span>{{ 'admin.purchase.summary.purchase_with_delivery'|trans }}</span>
+													<strong><span data-purchase-form-target="summaryPurchaseWithDelivery">0.00</span> <small data-purchase-currency-label></small></strong>
+												</div>
+												<div class="purchase-form-summary__metric">
+													<span>{{ 'admin.purchase.summary.potential_sale'|trans }}</span>
+													<strong><span data-purchase-form-target="summarySaleTotal">0.00</span> <small data-purchase-currency-label></small></strong>
+												</div>
+												<div class="purchase-form-summary__metric purchase-form-summary__metric--margin">
+													<span>{{ 'admin.purchase.summary.expected_margin'|trans }}</span>
+													<strong><span data-purchase-form-target="summaryMargin">0.00</span> <small data-purchase-currency-label></small></strong>
+												</div>
+											</div>
+										</section>
+										<div class="text-warning small d-none purchase-form-summary__warning" data-purchase-form-target="incompleteSaleWarning">
+											<i class="fa-solid fa-triangle-exclamation me-1"></i>{{ 'admin.purchase.validation.incomplete_sale_prices'|trans }}
+										</div>
+									</div>
+								</div>
+
 								<template data-purchase-form-target="prototype">
 									{{ include('admin/purchase/_entry_row.html.twig', {entry: form.purchaseEntries.vars.prototype, currency: form.currency.vars.data|default(null)}) }}
 								</template>
 							</div>
 						</div>
-
-						{% if entity.id %}
-							<div class="card mt-3">
-								<div class="card-header">
-									<h5 class="card-title mb-0">{{ 'admin.purchase.sections.summary'|trans }}</h5>
-								</div>
-								<div class="card-body">
-									<div>{{ 'Total'|trans }}: <strong>{{ entity.totalAmount|money }} {{ entity.currency.code }}</strong></div>
-									<div>{{ 'Total base'|trans }}: <strong>{{ entity.totalAmountBase|money }}</strong></div>
-									<div>{{ 'Delivery'|trans }}: <strong>{{ entity.deliveryCost|money }} {{ entity.currency.code }}</strong></div>
-								</div>
-							</div>
-						{% endif %}
 					</div>
 				</div>
 
