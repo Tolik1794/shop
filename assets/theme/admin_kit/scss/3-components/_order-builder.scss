@@ -77,46 +77,6 @@
 		border-color: rgba($primary, .25);
 	}
 
-	.order-discussion-scroll-frame {
-		position: relative;
-		border: 1px solid $gray-300;
-		border-radius: $border-radius;
-		background: mix($gray-100, $white, 45%);
-		overflow: hidden;
-
-		&::after {
-			content: "";
-			position: absolute;
-			right: 0;
-			bottom: 0;
-			left: 0;
-			height: 2rem;
-			background: linear-gradient(180deg, rgba($white, 0), rgba($white, .95));
-			pointer-events: none;
-		}
-	}
-
-	.order-discussion-scroll {
-		height: 260px;
-		overflow-y: scroll;
-		padding: .75rem 1rem .75rem .75rem;
-		scrollbar-color: rgba($primary, .45) rgba($gray-200, .75);
-		scrollbar-width: thin;
-
-		&::-webkit-scrollbar {
-			width: .5rem;
-		}
-
-		&::-webkit-scrollbar-track {
-			background: rgba($gray-200, .75);
-		}
-
-		&::-webkit-scrollbar-thumb {
-			background: rgba($primary, .45);
-			border-radius: 999px;
-		}
-	}
-
 	.order-product-search,
 	.order-customer-search {
 		position: relative;
@@ -649,26 +609,74 @@
 		font-variant-numeric: tabular-nums;
 	}
 
-	// --- Quick comment templates as compact chips ---
-	.order-comment-template-chip {
-		display: inline-flex;
-		align-items: center;
-		min-height: 1.9rem;
-		padding: .3rem .7rem;
-		color: $body-color;
-		background: $white;
-		border: 1px solid $gray-200;
-		border-radius: 999px;
-		font-size: $font-size-sm;
-		line-height: 1.2;
-		white-space: nowrap;
+}
 
-		&:hover,
-		&:focus {
-			color: $primary;
-			background: mix($primary, $white, 8%);
-			border-color: rgba($primary, .35);
-		}
+// --- Order discussion / comments (shared: order form, order list, history timelines) ---
+.order-discussion-scroll-frame {
+	position: relative;
+	border: 1px solid $gray-300;
+	border-radius: $border-radius;
+	background: mix($gray-100, $white, 45%);
+	overflow: hidden;
+
+	&::after {
+		content: "";
+		position: absolute;
+		right: 0;
+		bottom: 0;
+		left: 0;
+		height: 2rem;
+		background: linear-gradient(180deg, rgba($white, 0), rgba($white, .95));
+		pointer-events: none;
+	}
+}
+
+.order-discussion-scroll {
+	height: 260px;
+	overflow-y: scroll;
+	padding: .75rem 1rem .75rem .75rem;
+	scrollbar-color: rgba($primary, .45) rgba($gray-200, .75);
+	scrollbar-width: thin;
+
+	&::-webkit-scrollbar {
+		width: .5rem;
+	}
+
+	&::-webkit-scrollbar-track {
+		background: rgba($gray-200, .75);
+	}
+
+	&::-webkit-scrollbar-thumb {
+		background: rgba($primary, .45);
+		border-radius: 999px;
+	}
+
+	&.order-discussion-comments {
+		height: auto;
+		max-height: 260px;
+		overflow-y: auto;
+	}
+}
+
+// --- Quick comment templates as compact chips ---
+.order-comment-template-chip {
+	display: inline-flex;
+	align-items: center;
+	min-height: 1.9rem;
+	padding: .3rem .7rem;
+	color: $body-color;
+	background: $white;
+	border: 1px solid $gray-200;
+	border-radius: 999px;
+	font-size: $font-size-sm;
+	line-height: 1.2;
+	white-space: nowrap;
+
+	&:hover,
+	&:focus {
+		color: $primary;
+		background: mix($primary, $white, 8%);
+		border-color: rgba($primary, .35);
 	}
 }
 
