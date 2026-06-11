@@ -60,6 +60,30 @@ class IncomeRecordRepository extends ServiceEntityRepository
 	}
 
 	/**
+	 * Net income (income - refund) in UAH for an arbitrary date range.
+	 */
+	public function getNetIncomeForPeriod(LegalEntity $entity, DateTimeImmutable $from, DateTimeImmutable $to): string
+	{
+		$income = IncomeClassificationEnum::INCOME->value;
+		$refund = IncomeClassificationEnum::REFUND->value;
+
+		$result = $this->getEntityManager()->getConnection()->fetchOne(
+			"SELECT COALESCE(
+                SUM(CASE WHEN classification = ? THEN amount_uah ELSE 0 END)
+                - SUM(CASE WHEN classification = ? THEN amount_uah ELSE 0 END),
+                0
+            )
+            FROM income_record
+            WHERE legal_entity_id = ?
+              AND recognized_at BETWEEN ? AND ?
+              AND classification IN (?, ?)",
+			[$income, $refund, $entity->getId(), $from->format('Y-m-d'), $to->format('Y-m-d'), $income, $refund],
+		);
+
+		return number_format((float) ($result ?? 0), 4, '.', '');
+	}
+
+	/**
 	 * Net income (income - refund) in UAH for a calendar year.
 	 */
 	public function getNetIncomeForYear(LegalEntity $entity, int $year): string

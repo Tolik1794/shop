@@ -17,6 +17,7 @@ class WorkflowStatusDriftTest extends TestCase
 			'src/DataFixtures/ProductFixtures.php',
 			'src/DataFixtures/StoreFixtures.php',
 			'src/DataFixtures/UnitFixtures.php',
+			'src/Manager/TaxAccrualManager.php',
 			'src/Service/BusinessDocumentStatusSynchronizer.php',
 			'src/Service/InventoryPostingService.php',
 			'src/Service/Lifecycle/ReferenceArchivePolicy.php',

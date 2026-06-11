@@ -31,6 +31,7 @@ admin:
     discounts: 'Discounts'
     legal_entities: 'Legal entities'
     tax_control: 'Tax control'
+    tax_accruals: 'Tax calendar'
     tax_income: 'Tax income'
     profile: 'Profile'
     logout: 'Log out'
@@ -327,6 +328,36 @@ admin:
       2: 'Q2 (Apr–Jun)'
       3: 'Q3 (Jul–Sep)'
       4: 'Q4 (Oct–Dec)'
+  tax_accrual:
+    title:
+      list: 'Tax payment calendar'
+    filters:
+      all_entities: 'All legal entities'
+    fields:
+      period: 'Period'
+      tax_type: 'Tax type'
+      accrued: 'Accrued'
+      paid: 'Paid'
+      due_date: 'Due date'
+      status: 'Status'
+      paid_at: 'Payment date'
+      paid_amount: 'Amount paid'
+    tax_type:
+      ep: 'EP'
+      esv: 'ESV'
+      vz: 'VZ'
+    status:
+      accrued: 'Pending'
+      paid: 'Paid'
+      overdue: 'Overdue'
+    actions:
+      generate: 'Regenerate'
+      mark_paid: 'Mark paid'
+      reopen: 'Reopen'
+    generate_confirm: 'Regenerate tax accruals for the selected year? Existing unpaid accruals will be updated.'
+    no_accruals: 'No tax accruals found. Use "Regenerate" to create them.'
+    generate_hint: 'Click "Regenerate" above to create accruals for this legal entity and year.'
+    overdue: 'Overdue'
   category:
     index:
       subtitle: 'Browse the catalog structure and manage subcategories'
