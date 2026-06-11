@@ -1,0 +1,109 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}{{ 'admin.tax_income.title.list'|trans }}{% endblock %}
+
+{% block navbar_breadcrumb %}
+    {% set page_breadcrumb %}
+    {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+        section_label: 'admin.tax_income.title.list'|trans
+    }) }}
+    {% endset %}
+    {{ include('admin/_components/_navbar_header.html.twig', {title: 'admin.tax_income.title.list'|trans, breadcrumb: page_breadcrumb}) }}
+{% endblock %}
+
+{% block main_content %}
+    <main class="content">
+        <div class="container-fluid p-0">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body py-3">
+                            {{ form_start(filter_form) }}
+                            <div class="row g-2 align-items-end">
+                                <div class="col-12 col-md-3">{{ form_row(filter_form.legalEntity) }}</div>
+                                <div class="col-6 col-md-2">{{ form_row(filter_form.dateFrom) }}</div>
+                                <div class="col-6 col-md-2">{{ form_row(filter_form.dateTo) }}</div>
+                                <div class="col-6 col-md-2">{{ form_row(filter_form.classification) }}</div>
+                                <div class="col-6 col-md-2">{{ form_row(filter_form.sourceType) }}</div>
+                                <div class="col-6 col-md-2">{{ form_row(filter_form.store) }}</div>
+                                <div class="col-6 col-md-1">
+                                    <button type="submit" class="btn btn-primary w-100 mb-3">{{ 'admin.common.filter'|trans }}</button>
+                                </div>
+                            </div>
+                            {{ form_end(filter_form) }}
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <h5 class="card-title mb-0">{{ 'admin.tax_income.title.list'|trans }}</h5>
+                            <a class="btn btn-light btn-sm" href="{{ path('admin_tax_income_new') }}"><i class="fa-solid fa-plus me-1"></i>{{ 'admin.tax_income.actions.add_manual'|trans }}</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                <tr>
+                                    <th>{{ 'admin.tax_income.fields.recognized_at'|trans }}</th>
+                                    <th>{{ 'admin.tax_income.fields.legal_entity'|trans }}</th>
+                                    <th>{{ 'admin.tax_income.fields.classification'|trans }}</th>
+                                    <th>{{ 'admin.tax_income.fields.source'|trans }}</th>
+                                    <th>{{ 'admin.tax_income.fields.counterparty'|trans }}</th>
+                                    <th class="text-end">{{ 'admin.tax_income.fields.amount'|trans }}</th>
+                                    <th class="text-end">{{ 'admin.tax_income.fields.amount_uah'|trans }}</th>
+                                    <th></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for record in pagination %}
+                                    <tr>
+                                        <td>{{ record.recognizedAt|date('Y-m-d') }}</td>
+                                        <td>{{ record.legalEntity }}</td>
+                                        <td>
+                                            <span class="badge {{ record.classification.value == 'income' ? 'bg-success' : (record.classification.value == 'refund' ? 'bg-danger' : 'bg-light text-dark') }}">
+                                                {{ ('admin.tax_income.classification.' ~ record.classification.value)|trans }}
+                                            </span>
+                                        </td>
+                                        <td>{{ ('admin.tax_income.source.' ~ record.sourceType.value)|trans }}</td>
+                                        <td>{{ record.counterparty }}</td>
+                                        <td class="text-end">{{ record.amount|money }} {{ record.currency.code }}</td>
+                                        <td class="text-end">{{ record.amountUah|money }}</td>
+                                        <td class="text-end">
+                                            <a class="btn btn-light btn-sm" href="{{ path('admin_tax_income_reclassify', {id: record.id}) }}">{{ 'admin.tax_income.actions.reclassify'|trans }}</a>
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="8">{{ 'Nothing to show...'|trans }}</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                                <tfoot>
+                                <tr>
+                                    <th colspan="6" class="text-end">{{ 'admin.tax_income.totals.income'|trans }}</th>
+                                    <th class="text-end">{{ (sums['income'] ?? '0')|money }}</th>
+                                    <th></th>
+                                </tr>
+                                <tr>
+                                    <th colspan="6" class="text-end">{{ 'admin.tax_income.totals.refund'|trans }}</th>
+                                    <th class="text-end">-{{ (sums['refund'] ?? '0')|money }}</th>
+                                    <th></th>
+                                </tr>
+                                <tr>
+                                    <th colspan="6" class="text-end">{{ 'admin.tax_income.totals.net'|trans }}</th>
+                                    <th class="text-end">{{ net_income|money }}</th>
+                                    <th></th>
+                                </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div class="card-footer">
+                            {{ include('admin/_components/pagination.html.twig') }}
+                        </div>
+                    </div>
+
+                    <p class="text-muted small">{{ 'admin.tax_income.disclaimer'|trans }}</p>
+                </div>
+            </div>
+        </div>
+    </main>
+{% endblock %}

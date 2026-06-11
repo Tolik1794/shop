@@ -30,6 +30,7 @@ admin:
     exchange_rates: 'Exchange rates'
     discounts: 'Discounts'
     legal_entities: 'Legal entities'
+    tax_income: 'Tax income'
     profile: 'Profile'
     logout: 'Log out'
   common:
@@ -228,6 +229,50 @@ admin:
       store_placeholder: 'Not assigned'
     delete_confirm: 'Delete legal entity?'
     disclaimer: 'This module is an accounting tool, not tax advice. Verify all values before relying on them.'
+  tax_income:
+    title:
+      list: 'Tax income'
+      new: 'New manual income record'
+      reclassify: 'Reclassify income record'
+    classification:
+      income: 'Income'
+      refund: 'Refund'
+      non_income_transfer: 'Transfer (not income)'
+      non_income_own_funds: 'Own funds (not income)'
+      non_income_other: 'Other (not income)'
+    source:
+      payment: 'Payment'
+      bank_statement_row: 'Bank statement'
+      manual: 'Manual'
+    filters:
+      legal_entity: 'Legal entity'
+      date_from: 'From'
+      date_to: 'To'
+      classification: 'Classification'
+      source: 'Source'
+      store: 'Store'
+    fields:
+      recognized_at: 'Recognized at'
+      legal_entity: 'Legal entity'
+      classification: 'Classification'
+      source: 'Source'
+      counterparty: 'Counterparty'
+      amount: 'Amount'
+      amount_uah: 'Amount, UAH'
+      currency: 'Currency'
+      store: 'Store'
+      store_placeholder: 'Not selected'
+      payment_purpose: 'Payment purpose'
+      comment: 'Comment'
+    totals:
+      income: 'Income total (UAH)'
+      refund: 'Refunds total (UAH)'
+      net: 'Net income (UAH)'
+    actions:
+      add_manual: 'Add manual record'
+      reclassify: 'Reclassify'
+    manual_hint: 'The UAH amount is calculated automatically using the NBU rate on the recognition date.'
+    disclaimer: 'Figures are for reference and are not tax advice. Verify amounts before filing.'
   category:
     index:
       subtitle: 'Browse the catalog structure and manage subcategories'

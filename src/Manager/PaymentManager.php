@@ -16,6 +16,7 @@ use App\Service\Payment\OrderPaymentEligibilityService;
 use App\Service\Payment\PaymentAmountLimitService;
 use App\Service\Payment\PaymentHistoryRecorder;
 use App\Service\Payment\PaymentRecalculationService;
+use App\Service\Tax\IncomeRecognitionService;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
@@ -31,6 +32,7 @@ class PaymentManager extends AbstractManager
 		private readonly OrderPaymentEligibilityService $orderPaymentEligibilityService,
 		private readonly UserManager $userManager,
 		private readonly ConcurrencyGuard $concurrencyGuard,
+		private readonly IncomeRecognitionService $incomeRecognitionService,
 	)
 	{
 	}
@@ -115,6 +117,12 @@ class PaymentManager extends AbstractManager
 			$this->paymentHistoryRecorder->recordPaymentCreated($payment, $actor);
 
 			$this->entityManager->flush();
+
+			// Tax income projection runs after the flush (payment id is required)
+			// and never blocks the payment: skipped outcomes are silent.
+			if ($this->incomeRecognitionService->recognizePayment($payment, $actor)->isCreated()) {
+				$this->entityManager->flush();
+			}
 		});
 	}
 
@@ -170,6 +178,12 @@ class PaymentManager extends AbstractManager
 			$this->paymentHistoryRecorder->recordPaymentReversed($payment, $reversal, $actor);
 
 			$this->entityManager->flush();
+
+			// Tax income projection: the reversal becomes a refund record that
+			// reduces income in the reversal period. Never blocks the payment flow.
+			if ($this->incomeRecognitionService->recognizePayment($reversal, $actor)->isCreated()) {
+				$this->entityManager->flush();
+			}
 
 			return $reversal;
 		});

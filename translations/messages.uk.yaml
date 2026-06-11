@@ -30,6 +30,7 @@ admin:
     exchange_rates: 'Курси валют'
     discounts: 'Знижки'
     legal_entities: 'Юридичні особи'
+    tax_income: 'Податковий дохід'
     profile: 'Профіль'
     logout: 'Вийти'
   common:
@@ -235,6 +236,50 @@ admin:
       store_placeholder: 'Не призначено'
     delete_confirm: 'Видалити юридичну особу?'
     disclaimer: 'Модуль — інструмент обліку, а не податкова консультація. Перевіряйте всі значення перед використанням.'
+  tax_income:
+    title:
+      list: 'Податковий дохід'
+      new: 'Новий ручний запис доходу'
+      reclassify: 'Перекласифікація запису'
+    classification:
+      income: 'Дохід'
+      refund: 'Повернення'
+      non_income_transfer: 'Переказ (не дохід)'
+      non_income_own_funds: 'Власні кошти (не дохід)'
+      non_income_other: 'Інше (не дохід)'
+    source:
+      payment: 'Оплата'
+      bank_statement_row: 'Банківська виписка'
+      manual: 'Вручну'
+    filters:
+      legal_entity: 'Юридична особа'
+      date_from: 'З'
+      date_to: 'По'
+      classification: 'Класифікація'
+      source: 'Джерело'
+      store: 'Магазин'
+    fields:
+      recognized_at: 'Дата визнання'
+      legal_entity: 'Юридична особа'
+      classification: 'Класифікація'
+      source: 'Джерело'
+      counterparty: 'Контрагент'
+      amount: 'Сума'
+      amount_uah: 'Сума, грн'
+      currency: 'Валюта'
+      store: 'Магазин'
+      store_placeholder: 'Не обрано'
+      payment_purpose: 'Призначення платежу'
+      comment: 'Коментар'
+    totals:
+      income: 'Разом дохід (грн)'
+      refund: 'Разом повернення (грн)'
+      net: 'Чистий дохід (грн)'
+    actions:
+      add_manual: 'Додати ручний запис'
+      reclassify: 'Перекласифікувати'
+    manual_hint: 'Сума в гривні рахується автоматично за курсом НБУ на дату визнання.'
+    disclaimer: 'Розрахунки довідкові і не є податковою консультацією. Перевіряйте суми перед поданням звітності.'
   category:
     index:
       subtitle: 'Перегляд структури каталогу та керування підкатегоріями'

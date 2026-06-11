@@ -31,6 +31,7 @@ final class MenuBuilder
 		$this->addSidebarLink($menu, 'user.view', 'admin.menu.managers', 'admin_user_index', $this->routeParameters(), 'fa-users');
 		$this->addSidebarLink($menu, 'rbac.view', 'admin.menu.access_groups', 'admin_user_group_index', $this->routeParameters(), 'fa-user-shield');
 		$this->addSidebarLink($menu, 'dashboard.financial', 'admin.menu.legal_entities', 'admin_legal_entity_index', $this->routeParameters(), 'fa-building');
+		$this->addSidebarLink($menu, 'dashboard.financial', 'admin.menu.tax_income', 'admin_tax_income_index', $this->routeParameters(), 'fa-coins');
 
 		return $menu;
 	}

@@ -1,0 +1,61 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}{{ 'admin.tax_income.title.reclassify'|trans }}{% endblock %}
+
+{% block navbar_breadcrumb %}
+    {% set page_breadcrumb %}
+        {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+            section_label: 'admin.tax_income.title.list'|trans,
+            section_url: path('admin_tax_income_index'),
+            current_label: 'admin.tax_income.title.reclassify'|trans
+        }) }}
+    {% endset %}
+    {{ include('admin/_components/_navbar_header.html.twig', {
+        title: 'admin.tax_income.title.reclassify'|trans,
+        breadcrumb: page_breadcrumb
+    }) }}
+{% endblock %}
+
+{% block main_content %}
+    <main class="content">
+        <div class="container-fluid p-0">
+            {{ form_start(form) }}
+            <div class="row">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">{{ 'admin.tax_income.title.reclassify'|trans }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm mb-3">
+                            <tbody>
+                            <tr>
+                                <th>{{ 'admin.tax_income.fields.recognized_at'|trans }}</th>
+                                <td>{{ entity.recognizedAt|date('Y-m-d') }}</td>
+                            </tr>
+                            <tr>
+                                <th>{{ 'admin.tax_income.fields.legal_entity'|trans }}</th>
+                                <td>{{ entity.legalEntity }}</td>
+                            </tr>
+                            <tr>
+                                <th>{{ 'admin.tax_income.fields.amount_uah'|trans }}</th>
+                                <td>{{ entity.amountUah|money }}</td>
+                            </tr>
+                            <tr>
+                                <th>{{ 'admin.tax_income.fields.source'|trans }}</th>
+                                <td>{{ ('admin.tax_income.source.' ~ entity.sourceType.value)|trans }}{% if entity.sourceId %} #{{ entity.sourceId }}{% endif %}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+
+                        {{ form_errors(form) }}
+                        {{ include('admin/_components/_form_widgets.html.twig', {form: form}) }}
+                    </div>
+                </div>
+                {{ include('admin/_components/_form_actions.html.twig', {
+                    cancel_url: path('admin_tax_income_index')
+                }) }}
+            </div>
+            {{ form_end(form, {'render_rest': false}) }}
+        </div>
+    </main>
+{% endblock %}
