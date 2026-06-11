@@ -113,7 +113,6 @@ Frontend is located in `assets/` and Twig templates:
 ### UML
 
 - `src/Uml/database/Database.puml` — модель бази даних.
-- `src/Uml/implementation/` — етапи реалізації системи.
 - `src/Uml/services/` — архітектура окремих сервісів.
 - `src/Uml/features/` — місце для майбутніх описів окремого функціоналу.
 
