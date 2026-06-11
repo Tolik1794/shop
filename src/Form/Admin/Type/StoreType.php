@@ -3,10 +3,12 @@
 namespace App\Form\Admin\Type;
 
 use App\Entity\Currency;
+use App\Entity\LegalEntity;
 use App\Entity\Store;
 use App\Enum\ActiveStatusEnum;
 use App\Enum\CostingMethodEnum;
 use App\Manager\StoreManager;
+use App\Repository\LegalEntityRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
@@ -53,6 +55,18 @@ class StoreType extends AbstractType
 				'class' => Currency::class,
 				'choice_label' => 'code',
 				'required' => true,
+				'attr' => ['class' => 'select2'],
+			])
+			->add('legalEntity', EntityType::class, [
+				'class' => LegalEntity::class,
+				'query_builder' => static fn (LegalEntityRepository $repository)
+					=> $repository->createQueryBuilder('legal_entity')
+						->andWhere('legal_entity.deletedAt IS NULL')
+						->orderBy('legal_entity.name', 'ASC'),
+				'choice_label' => static fn (LegalEntity $legalEntity): string => (string) $legalEntity,
+				'required' => false,
+				'placeholder' => 'admin.legal_entity.fields.store_placeholder',
+				'label' => 'admin.legal_entity.fields.legal_entity',
 				'attr' => ['class' => 'select2'],
 			])
 			->setMethod($options['method']);

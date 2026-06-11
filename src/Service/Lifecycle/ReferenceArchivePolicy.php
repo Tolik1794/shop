@@ -6,6 +6,7 @@ use App\Entity\Category;
 use App\Entity\Customer;
 use App\Entity\CustomerLabel;
 use App\Entity\InventoryReason;
+use App\Entity\LegalEntity;
 use App\Entity\Product;
 use App\Entity\ProductPrice;
 use App\Entity\Supplier;
@@ -47,6 +48,7 @@ class ReferenceArchivePolicy
 			|| $reference instanceof CustomerLabel
 			|| $reference instanceof Supplier
 			|| $reference instanceof InventoryReason
+			|| $reference instanceof LegalEntity
 			|| $reference instanceof ProductPrice;
 	}
 }

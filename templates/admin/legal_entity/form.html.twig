@@ -1,0 +1,42 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}{{ entity.id ? 'admin.legal_entity.title.edit'|trans : 'admin.legal_entity.title.new'|trans }}{% endblock %}
+
+{% block navbar_breadcrumb %}
+    {% set page_breadcrumb %}
+        {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+            section_label: 'admin.legal_entity.title.list'|trans,
+            section_url: path('admin_legal_entity_index'),
+            current_label: entity.id ? (entity.shortName ?: entity.name) : 'admin.common.new'|trans
+        }) }}
+    {% endset %}
+    {{ include('admin/_components/_navbar_header.html.twig', {
+        title: entity.id ? 'admin.legal_entity.title.edit'|trans : 'admin.legal_entity.title.new'|trans,
+        subtitle: entity.id ? entity.name : '',
+        breadcrumb: page_breadcrumb
+    }) }}
+{% endblock %}
+
+{% block main_content %}
+    <main class="content">
+        <div class="container-fluid p-0">
+            {{ form_start(form) }}
+            <div class="row">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">{{ entity.id ? entity.name : 'admin.legal_entity.title.new'|trans }}</h5>
+                    </div>
+                    <div class="card-body">
+                        {{ form_errors(form) }}
+                        {{ include('admin/_components/_form_widgets.html.twig', {form: form}) }}
+                        <p class="text-muted small mb-0">{{ 'admin.legal_entity.disclaimer'|trans }}</p>
+                    </div>
+                </div>
+                {{ include('admin/_components/_form_actions.html.twig', {
+                    cancel_url: path('admin_legal_entity_index')
+                }) }}
+            </div>
+            {{ form_end(form, {'render_rest': false}) }}
+        </div>
+    </main>
+{% endblock %}

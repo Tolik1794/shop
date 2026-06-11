@@ -29,6 +29,7 @@ admin:
     inventory_reasons: 'Inventory reasons'
     exchange_rates: 'Exchange rates'
     discounts: 'Discounts'
+    legal_entities: 'Legal entities'
     profile: 'Profile'
     logout: 'Log out'
   common:
@@ -190,6 +191,43 @@ admin:
     no_important_notes: 'No important notes.'
     no_returns: 'No returns.'
     no_customer: 'No customer linked to this order.'
+  legal_entity:
+    title:
+      list: 'Legal entities'
+      new: 'New legal entity'
+      edit: 'Edit legal entity'
+    type:
+      fop: 'Sole proprietor (FOP)'
+      tov: 'Limited liability company (TOV)'
+    tax_system:
+      simplified: 'Simplified'
+      general: 'General'
+    fields:
+      name: 'Full name'
+      short_name: 'Short name'
+      type: 'Type'
+      tax_number: 'Tax number'
+      tax_number_help: 'RNOKPP for FOP or EDRPOU for TOV.'
+      tax_system: 'Tax system'
+      ep_group: 'Single tax group'
+      ep_group_placeholder: 'Not on single tax'
+      ep_rate: 'Single tax rate (group 3)'
+      ep_rate_placeholder: 'Not applicable'
+      ep_rate_help: '5% without VAT or 3% with VAT.'
+      vat_payer: 'VAT payer'
+      esv_exempt: 'Exempt from unified social contribution (ESV)'
+      esv_exempt_help: 'For example, the entrepreneur is also an employee or has an exemption.'
+      registered_at: 'Registration date'
+      simplified_since: 'On simplified system since'
+      address: 'Address'
+      kveds: 'KVED codes'
+      kveds_help: 'Comma-separated list, e.g.: 47.91, 46.90.'
+      status: 'Status'
+      stores: 'Stores'
+      legal_entity: 'Legal entity'
+      store_placeholder: 'Not assigned'
+    delete_confirm: 'Delete legal entity?'
+    disclaimer: 'This module is an accounting tool, not tax advice. Verify all values before relying on them.'
   category:
     index:
       subtitle: 'Browse the catalog structure and manage subcategories'

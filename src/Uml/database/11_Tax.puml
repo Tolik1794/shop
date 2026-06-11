@@ -1,0 +1,251 @@
+@startuml
+
+title Shop database - Tax
+
+!include ./_common.puml
+
+enum LegalEntityTypeEnum {
+    fop
+    tov
+}
+
+enum TaxSystemEnum {
+    simplified
+    general
+}
+
+enum IncomeSourceTypeEnum {
+    payment
+    bank_statement_row
+    manual
+}
+
+enum IncomeClassificationEnum {
+    income
+    refund
+    non_income_transfer
+    non_income_own_funds
+    non_income_other
+}
+
+enum TaxPeriodTypeEnum {
+    month
+    quarter
+    year
+}
+
+enum TaxPeriodStatusEnum {
+    open
+    closed
+    declared
+}
+
+enum TaxTypeEnum {
+    ep
+    esv
+    vz
+}
+
+enum TaxAccrualStatusEnum {
+    accrued
+    paid
+    overdue
+}
+
+enum TaxReportDraftStatusEnum {
+    draft
+    exported
+}
+
+entity LegalEntity {
+    * id: int
+    --
+    * name: string(255)
+    shortName: string(255)?
+    * type: LegalEntityTypeEnum
+    * taxNumber: string(32)
+    * taxSystem: TaxSystemEnum
+    epGroup: int?
+    epRate: decimal(5, 2)?
+    * vatPayer: bool
+    * esvExempt: bool
+    registeredAt: date?
+    simplifiedSince: date?
+    address: text?
+    kveds: json?
+    * status: ActiveStatusEnum
+    deletedAt: DateTimeImmutable?
+    createdBy: User?
+    updatedBy: User?
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+}
+
+entity TaxRateSet {
+    * id: int
+    --
+    * year: int
+    * minimumWage: decimal(14, 4)
+    * subsistenceMinimum: decimal(14, 4)
+    * group1IncomeLimit: decimal(14, 4)
+    * group2IncomeLimit: decimal(14, 4)
+    * group3IncomeLimit: decimal(14, 4)
+    * group1EpMonthly: decimal(14, 4)
+    * group2EpMonthly: decimal(14, 4)
+    * group3EpRatePct: decimal(5, 2)
+    * group3EpRateVatPct: decimal(5, 2)
+    * esvRatePct: decimal(5, 2)
+    * esvMonthlyMin: decimal(14, 4)
+    * vzGroup12Monthly: decimal(14, 4)
+    * vzGroup3RatePct: decimal(5, 2)
+    comment: text?
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+}
+
+entity IncomeRecord {
+    * id: int
+    --
+    * legalEntity: LegalEntity
+    store: Store?
+    * recognizedAt: date
+    * amount: decimal(14, 4)
+    * currency: Currency
+    * amountUah: decimal(14, 4)
+    * nbuExchangeRate: decimal(18, 8)
+    * sourceType: IncomeSourceTypeEnum
+    sourceId: int?
+    payment: Payment?
+    * classification: IncomeClassificationEnum
+    refundOfIncomeRecord: IncomeRecord?
+    counterparty: string(255)?
+    paymentPurpose: text?
+    comment: text?
+    createdBy: User?
+    updatedBy: User?
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+}
+
+entity IncomeRecordHistory {
+    * id: int
+    --
+    * incomeRecord: IncomeRecord
+    * eventKey: string(100)
+    payload: json?
+    * occurredAt: DateTimeImmutable
+    actorNameSnapshot: string(255)?
+    actor: User?
+}
+
+entity NbuExchangeRate {
+    * id: int
+    --
+    * currency: Currency
+    * date: date
+    * rate: decimal(18, 8)
+    * source: string(32)
+    * createdAt: DateTimeImmutable
+}
+
+entity TaxReportingPeriod {
+    * id: int
+    --
+    * legalEntity: LegalEntity
+    * type: TaxPeriodTypeEnum
+    * dateFrom: date
+    * dateTo: date
+    * status: TaxPeriodStatusEnum
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+}
+
+entity TaxAccrual {
+    * id: int
+    --
+    * legalEntity: LegalEntity
+    * period: TaxReportingPeriod
+    * taxType: TaxTypeEnum
+    * accruedAmount: decimal(14, 4)
+    * paidAmount: decimal(14, 4)
+    * dueDate: date
+    paidAt: DateTimeImmutable?
+    * status: TaxAccrualStatusEnum
+    bankStatementRowId: int?
+    * createdAt: DateTimeImmutable
+    * updatedAt: DateTimeImmutable
+}
+
+entity TaxReportDraft {
+    * id: int
+    --
+    * legalEntity: LegalEntity
+    * period: TaxReportingPeriod
+    * reportType: string(64)
+    * formVersion: string(255)
+    payload: json?
+    * generatedAt: DateTimeImmutable
+    * status: TaxReportDraftStatusEnum
+    createdBy: User?
+}
+
+LegalEntity |o--o{ Store : operates stores
+LegalEntity ||--o{ IncomeRecord : recognized income
+LegalEntity ||--o{ TaxReportingPeriod : reporting periods
+LegalEntity ||--o{ TaxAccrual : tax accruals
+LegalEntity ||--o{ TaxReportDraft : report drafts
+Store |o--o{ IncomeRecord : reference only
+Currency ||--o{ IncomeRecord : source currency
+Currency ||--o{ NbuExchangeRate : NBU rate currency
+Payment |o--o{ IncomeRecord : income source
+IncomeRecord |o--o| IncomeRecord : refund of
+IncomeRecord ||--o{ IncomeRecordHistory : audit events
+TaxReportingPeriod ||--o{ TaxAccrual : accrued in period
+TaxReportingPeriod ||--o{ TaxReportDraft : report for period
+User |o--o{ LegalEntity : creates/updates
+User |o--o{ IncomeRecord : creates/updates
+
+note right of LegalEntity
+  Legal entities (FOP / TOV) the business operates under.
+
+  Store.legalEntity is a nullable FK and is the mapping source
+  "Payment.store -> legal entity" for NEW income recognition only.
+  IncomeRecord stores its own legalEntity snapshot taken at
+  recognition time, so reassigning a store to another legal
+  entity never rewrites already recognized income.
+
+  taxNumber is unique among non-deleted entities
+  (partial unique index WHERE deleted_at IS NULL).
+end note
+
+note right of IncomeRecord
+  Append-only projection of recognized income (cash method).
+
+  Mapping rules from Payment:
+  - direction = incoming -> candidate income, recognizedAt = paidAt.
+  - reversal (reversesPayment filled) -> refund record that reduces
+    income in the reversal period, linked via refundOfIncomeRecord.
+  - direction = outgoing with purchase -> ignored (not income).
+  - PaymentHistory is a display/audit feed, never a data source.
+
+  Deduplication: unique (sourceType, sourceId)
+  (partial: WHERE source_id IS NOT NULL) makes recognition idempotent.
+
+  amountUah uses the NBU rate on recognition date (UAH: rate = 1).
+  Payment.amountBase uses a commercial rate snapshot and is NOT
+  suitable for tax purposes unless the payment is already in UAH.
+end note
+
+note right of TaxRateSet
+  Year-versioned reference values: minimum wage, subsistence minimum,
+  single tax group limits and rates, ESV, military levy.
+  No rates or limits are ever hardcoded in services.
+  Seeded values are marked "verify before relying".
+end note
+
+note right of TaxAccrual
+  bankStatementRowId is a reserved link for the future bank
+  statement module (tax payment matching). No FK yet.
+end note
+
+@enduml

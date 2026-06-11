@@ -47,7 +47,7 @@ class ProductTypeTest extends KernelTestCase
 	{
 		$store = $this->persistStore('edit-product-store-' . uniqid());
 		$category = $this->persistCategory($store, 'Shoes');
-		$this->persistCategoryProductParameterName($category, 'Size');
+		$size = $this->persistCategoryProductParameterName($category, 'Size');
 		$product = (new Product())
 			->setStore($store)
 			->setCategory($category)
@@ -58,7 +58,7 @@ class ProductTypeTest extends KernelTestCase
 		$form = $this->formFactory->create(ProductType::class, $product);
 
 		self::assertTrue($form->has('productParameters'));
-		self::assertTrue($form->get('productParameters')->has('Size'));
+		self::assertTrue($form->get('productParameters')->has((string) $size->getId()));
 	}
 
 	public function testProductFormSubmitsRelatedProductsCollection(): void

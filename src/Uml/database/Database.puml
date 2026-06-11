@@ -67,6 +67,17 @@ package "09 Status and audit" as Audit {
     entity StatusHistory
 }
 
+package "11 Tax" as Tax {
+    entity LegalEntity
+    entity TaxRateSet
+    entity IncomeRecord
+    entity IncomeRecordHistory
+    entity NbuExchangeRate
+    entity TaxReportingPeriod
+    entity TaxAccrual
+    entity TaxReportDraft
+}
+
 Store ||--o{ Product
 Store ||--o{ Warehouse
 Store ||--o{ Order
@@ -121,6 +132,17 @@ Purchase ||--o{ InventoryDocument
 
 Payment ||--o{ PaymentHistory
 
+LegalEntity |o--o{ Store
+LegalEntity ||--o{ IncomeRecord
+LegalEntity ||--o{ TaxReportingPeriod
+LegalEntity ||--o{ TaxAccrual
+LegalEntity ||--o{ TaxReportDraft
+Payment |o--o{ IncomeRecord
+IncomeRecord ||--o{ IncomeRecordHistory
+Currency ||--o{ NbuExchangeRate
+TaxReportingPeriod ||--o{ TaxAccrual
+TaxReportingPeriod ||--o{ TaxReportDraft
+
 InventoryDocument ||--o{ InventoryDocumentLine
 InventoryDocumentLine ||--o{ StockMovement
 WarehouseStock ||--o{ StockMovement
@@ -147,6 +169,7 @@ note bottom
   08_Production.puml
   09_Status_And_Audit.puml
   10_Database_Invariants_And_Indexes.puml
+  11_Tax.puml
 end note
 
 @enduml

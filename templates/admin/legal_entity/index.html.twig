@@ -1,0 +1,77 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}{{ 'admin.legal_entity.title.list'|trans }}{% endblock %}
+
+{% block navbar_breadcrumb %}
+    {% set page_breadcrumb %}
+    {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+        section_label: 'admin.legal_entity.title.list'|trans
+    }) }}
+    {% endset %}
+    {{ include('admin/_components/_navbar_header.html.twig', {title: 'admin.legal_entity.title.list'|trans, breadcrumb: page_breadcrumb}) }}
+{% endblock %}
+
+{% block main_content %}
+    <main class="content">
+        <div class="container-fluid p-0">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">{{ 'admin.legal_entity.title.list'|trans }}</h5>
+                            <a class="btn btn-light btn-sm" href="{{ path('admin_legal_entity_new') }}"><i class="fa-solid fa-plus me-1"></i>{{ 'New'|trans }}</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                <tr>
+                                    <th>{{ 'Name'|trans }}</th>
+                                    <th>{{ 'admin.legal_entity.fields.type'|trans }}</th>
+                                    <th>{{ 'admin.legal_entity.fields.tax_number'|trans }}</th>
+                                    <th>{{ 'admin.legal_entity.fields.tax_system'|trans }}</th>
+                                    <th>{{ 'admin.legal_entity.fields.stores'|trans }}</th>
+                                    <th>{{ 'Status'|trans }}</th>
+                                    <th></th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for legalEntity in legalEntities %}
+                                    <tr>
+                                        <td>
+                                            {{ legalEntity.name }}
+                                            {% if legalEntity.shortName %}
+                                                <div class="text-muted small">{{ legalEntity.shortName }}</div>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ ('admin.legal_entity.type.' ~ legalEntity.type.value)|trans }}</td>
+                                        <td><code>{{ legalEntity.taxNumber }}</code></td>
+                                        <td>
+                                            {{ ('admin.legal_entity.tax_system.' ~ legalEntity.taxSystem.value)|trans }}
+                                            {% if legalEntity.epGroup %}
+                                                <span class="badge bg-light text-dark ms-1">{{ 'admin.legal_entity.fields.ep_group'|trans }} {{ legalEntity.epGroup }}{% if legalEntity.epRate %} / {{ legalEntity.epRate|number_format(0) }}%{% endif %}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ legalEntity.stores|length }}</td>
+                                        <td>{{ legalEntity.status.value }}</td>
+                                        <td class="text-end">
+                                            <a class="btn btn-light btn-sm" href="{{ path('admin_legal_entity_edit', {id: legalEntity.id}) }}">{{ 'Edit'|trans }}</a>
+                                            <form method="post" class="d-inline" action="{{ path('admin_legal_entity_delete', {id: legalEntity.id}) }}" onsubmit="return confirm('{{ 'admin.legal_entity.delete_confirm'|trans|e('js') }}');">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('delete_legal_entity_' ~ legalEntity.id) }}">
+                                                <button class="btn btn-light btn-sm text-danger" type="submit">{{ 'Delete'|trans }}</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="7">{{ 'Nothing to show...'|trans }}</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+{% endblock %}

@@ -58,6 +58,9 @@ class Store implements AvatarEntityInterface
 	#[ORM\JoinColumn(name: 'base_currency_code', referencedColumnName: 'code', nullable: false)]
 	private ?Currency $baseCurrency = null;
 
+	#[ORM\ManyToOne(inversedBy: 'stores')]
+	private ?LegalEntity $legalEntity = null;
+
 	#[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'managerStores')]
 	private Collection $managers;
 
@@ -510,6 +513,18 @@ class Store implements AvatarEntityInterface
 	public function setBaseCurrency(?Currency $baseCurrency): self
 	{
 		$this->baseCurrency = $baseCurrency;
+
+		return $this;
+	}
+
+	public function getLegalEntity(): ?LegalEntity
+	{
+		return $this->legalEntity;
+	}
+
+	public function setLegalEntity(?LegalEntity $legalEntity): self
+	{
+		$this->legalEntity = $legalEntity;
 
 		return $this;
 	}

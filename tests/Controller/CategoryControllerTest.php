@@ -40,7 +40,7 @@ class CategoryControllerTest extends WebTestCase
 		$this->client->request('GET', sprintf('/admin/store/%d/category/%d/edit', $store->getId(), $category->getId()));
 
 		self::assertResponseIsSuccessful();
-		self::assertSelectorTextContains('h1', 'Edit category');
+		self::assertSelectorTextContains('.navbar-page-header__title', 'Edit category');
 		self::assertSelectorExists('.category-form .card');
 		self::assertSelectorExists('[data-category-parameters-target~="row"]');
 		self::assertSelectorTextContains('.category-parameter-readonly-list', 'Material');
