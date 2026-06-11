@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ 'admin.tax_report.print.title'|trans }} — {{ draft.legalEntity }}</title>
+    <style>
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 13px;
+            color: #111;
+            margin: 32px auto;
+            max-width: 800px;
+            position: relative;
+        }
+        .watermark {
+            position: fixed;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-30deg);
+            font-size: 84px;
+            font-weight: 700;
+            color: rgba(200, 30, 30, 0.13);
+            letter-spacing: 8px;
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 0;
+        }
+        .sheet { position: relative; z-index: 1; }
+        h1 { font-size: 18px; margin-bottom: 4px; }
+        h2 { font-size: 14px; margin: 18px 0 6px; }
+        .muted { color: #555; font-size: 12px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+        th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; }
+        th { background: #f2f2f2; font-weight: 600; }
+        td.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .manual-flag { color: #b36b00; font-size: 11px; }
+        .disclaimer {
+            margin-top: 24px;
+            padding: 10px;
+            border: 1px dashed #b00;
+            color: #b00;
+            font-size: 12px;
+        }
+        .toolbar { margin-bottom: 16px; }
+        @media print {
+            .toolbar { display: none; }
+            body { margin: 0; }
+        }
+    </style>
+</head>
+<body>
+<div class="watermark">{{ 'admin.tax_report.print.watermark'|trans }}</div>
+
+<div class="sheet">
+    <div class="toolbar">
+        <button onclick="window.print()">{{ 'admin.tax_report.print.print_button'|trans }}</button>
+    </div>
+
+    <h1>{{ 'admin.tax_report.print.title'|trans }}</h1>
+    <div class="muted">{{ draft.formVersion }}</div>
+
+    <h2>{{ draft.legalEntity.name }}</h2>
+    <div class="muted">
+        {{ 'admin.legal_entity.fields.tax_number'|trans }}: {{ draft.legalEntity.taxNumber }}
+        &middot; {{ 'admin.legal_entity.fields.ep_group'|trans }}: {{ draft.payload.meta.ep_group|default('—') }}
+        &middot; {{ draft.payload.meta.period_label|default('') }}
+    </div>
+
+    <table>
+        <thead>
+        <tr>
+            <th style="width:55%">{{ 'admin.tax_report.fields.field'|trans }}</th>
+            <th>{{ 'admin.tax_report.fields.value'|trans }}</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for key, field in draft.payload.fields %}
+            <tr>
+                <td>
+                    {{ ('admin.tax_report.field.' ~ key)|trans }}
+                    {% if field.source == 'manual' %}
+                        <div class="manual-flag">{{ 'admin.tax_report.print.manual_note'|trans }} ({{ 'admin.tax_report.fields.calculated'|trans|lower }}: {{ field.calculated }})</div>
+                    {% endif %}
+                </td>
+                <td class="num">{{ field.value }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="muted" style="margin-top: 10px;">
+        {{ 'admin.tax_report.fields.generated_at'|trans }}: {{ draft.generatedAt|date('d.m.Y H:i') }}
+    </div>
+
+    <div class="disclaimer">
+        {{ 'admin.tax_report.print.disclaimer'|trans }}
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,226 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}{{ 'admin.tax_report.title.list'|trans }}{% endblock %}
+
+{% block navbar_breadcrumb %}
+    {% set page_breadcrumb %}
+        {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+            section_label: 'admin.tax_report.title.list'|trans
+        }) }}
+    {% endset %}
+    {{ include('admin/_components/_navbar_header.html.twig', {
+        title: 'admin.tax_report.title.list'|trans,
+        breadcrumb: page_breadcrumb
+    }) }}
+{% endblock %}
+
+{% block main_content %}
+    <main class="content">
+        <div class="container-fluid p-0">
+
+            {% for message in app.flashes('error') %}
+                <div class="alert alert-danger">{{ message }}</div>
+            {% endfor %}
+
+            <div class="d-flex flex-wrap align-items-end gap-2 mb-3">
+                <form method="get" class="d-flex align-items-end gap-2 flex-wrap">
+                    <div>
+                        <label class="form-label mb-1" for="tr-entity">{{ 'admin.tax_income.fields.legal_entity'|trans }}</label>
+                        <select id="tr-entity" class="form-select form-select-sm" name="entity" style="min-width:220px">
+                            {% for le in legal_entities %}
+                                <option value="{{ le.id }}"{{ current_entity and current_entity.id == le.id ? ' selected' : '' }}>{{ le }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label mb-1" for="tr-year">{{ 'admin.tax_control.filters.year'|trans }}</label>
+                        <input id="tr-year" class="form-control form-control-sm" type="number" name="year"
+                               value="{{ year }}" min="2020" max="2030" style="width:90px">
+                    </div>
+                    <button class="btn btn-primary btn-sm" type="submit">
+                        <i class="fa-solid fa-filter me-1"></i>{{ 'admin.common.filter'|trans }}
+                    </button>
+                </form>
+            </div>
+
+            {% if current_entity is null %}
+                <div class="alert alert-info">
+                    {{ 'admin.tax_control.no_entities'|trans }}
+                    <a href="{{ path('admin_legal_entity_new') }}">{{ 'admin.tax_control.add_entity'|trans }}</a>
+                </div>
+            {% else %}
+                {# Generate draft #}
+                <div class="card mb-3">
+                    <div class="card-header pb-0">
+                        <h5 class="card-title mb-0">{{ 'admin.tax_report.title.generate'|trans }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{{ path('admin_tax_report_generate') }}" class="d-flex flex-wrap align-items-end gap-2">
+                            <input type="hidden" name="_token" value="{{ csrf_token('generate_tax_report') }}">
+                            <input type="hidden" name="entity_id" value="{{ current_entity.id }}">
+                            <input type="hidden" name="year" value="{{ year }}">
+                            {% if current_entity.epGroup == 3 %}
+                                <div>
+                                    <label class="form-label mb-1" for="tr-quarter">{{ 'admin.tax_control.fields.quarter'|trans }}</label>
+                                    <select id="tr-quarter" class="form-select form-select-sm" name="quarter" style="width:170px">
+                                        {% for q in 1..4 %}
+                                            <option value="{{ q }}">{{ ('admin.tax_control.quarter.' ~ q)|trans }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            {% else %}
+                                <div class="text-muted small align-self-center">
+                                    {{ 'admin.tax_report.annual_hint'|trans }}
+                                </div>
+                            {% endif %}
+                            <button class="btn btn-primary btn-sm" type="submit">
+                                <i class="fa-solid fa-file-circle-plus me-1"></i>{{ 'admin.tax_report.actions.generate'|trans }}
+                            </button>
+                        </form>
+                        <div class="text-muted small mt-2">{{ 'admin.tax_report.form_version_hint'|trans }}</div>
+                    </div>
+                </div>
+
+                {# Drafts #}
+                <div class="card mb-3">
+                    <div class="card-header pb-0">
+                        <h5 class="card-title mb-0">{{ 'admin.tax_report.title.drafts'|trans }} — {{ year }}</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                            <tr>
+                                <th>{{ 'admin.tax_accrual.fields.period'|trans }}</th>
+                                <th>{{ 'admin.tax_report.fields.form_version'|trans }}</th>
+                                <th>{{ 'admin.tax_report.fields.generated_at'|trans }}</th>
+                                <th>{{ 'admin.tax_accrual.fields.status'|trans }}</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for draft in drafts %}
+                                <tr>
+                                    <td>{{ draft.payload.meta.period_label|default(draft.period.dateFrom|date('d.m.Y') ~ ' – ' ~ draft.period.dateTo|date('d.m.Y')) }}</td>
+                                    <td class="small text-muted">{{ draft.formVersion }}</td>
+                                    <td>{{ draft.generatedAt|date('d.m.Y H:i') }}</td>
+                                    <td>
+                                        {% if draft.status.value == 'exported' %}
+                                            <span class="badge bg-info text-dark">{{ 'admin.tax_report.status.exported'|trans }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ 'admin.tax_report.status.draft'|trans }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <a class="btn btn-light btn-sm" href="{{ path('admin_tax_report_show', {id: draft.id}) }}">{{ 'admin.tax_report.actions.open'|trans }}</a>
+                                        <a class="btn btn-light btn-sm" href="{{ path('admin_tax_report_print', {id: draft.id}) }}" target="_blank">
+                                            <i class="fa-solid fa-print me-1"></i>{{ 'admin.tax_report.actions.print'|trans }}
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="5" class="text-muted">{{ 'admin.tax_report.no_drafts'|trans }}</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {# Periods #}
+                <div class="card">
+                    <div class="card-header pb-0">
+                        <h5 class="card-title mb-0">{{ 'admin.tax_report.title.periods'|trans }} — {{ year }}</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                            <tr>
+                                <th>{{ 'admin.tax_accrual.fields.period'|trans }}</th>
+                                <th>{{ 'admin.common.type'|trans }}</th>
+                                <th>{{ 'admin.tax_accrual.fields.status'|trans }}</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for period in periods %}
+                                <tr>
+                                    <td>{{ period.dateFrom|date('d.m.Y') }} – {{ period.dateTo|date('d.m.Y') }}</td>
+                                    <td>{{ ('admin.tax_report.period_type.' ~ period.type.value)|trans }}</td>
+                                    <td>
+                                        {% if period.status.value == 'open' %}
+                                            <span class="badge bg-success">{{ 'admin.tax_report.period_status.open'|trans }}</span>
+                                        {% elseif period.status.value == 'closed' %}
+                                            <span class="badge bg-warning text-dark">{{ 'admin.tax_report.period_status.closed'|trans }}</span>
+                                        {% else %}
+                                            <span class="badge bg-info text-dark">{{ 'admin.tax_report.period_status.declared'|trans }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        {% if period.status.value == 'open' %}
+                                            <form method="post" class="d-inline" action="{{ path('admin_tax_report_period_close', {id: period.id}) }}"
+                                                  onsubmit="return confirm('{{ 'admin.tax_report.close_confirm'|trans|e('js') }}');">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('tax_period_close_' ~ period.id) }}">
+                                                <button class="btn btn-light btn-sm" type="submit">
+                                                    <i class="fa-solid fa-lock me-1"></i>{{ 'admin.tax_report.actions.close_period'|trans }}
+                                                </button>
+                                            </form>
+                                        {% else %}
+                                            {% if period.status.value == 'closed' %}
+                                                <form method="post" class="d-inline" action="{{ path('admin_tax_report_period_declare', {id: period.id}) }}">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('tax_period_declare_' ~ period.id) }}">
+                                                    <button class="btn btn-light btn-sm" type="submit">
+                                                        <i class="fa-solid fa-file-circle-check me-1"></i>{{ 'admin.tax_report.actions.declare_period'|trans }}
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                            <button class="btn btn-light btn-sm" type="button"
+                                                    data-bs-toggle="modal" data-bs-target="#modal-reopen-{{ period.id }}">
+                                                <i class="fa-solid fa-lock-open me-1"></i>{{ 'admin.tax_report.actions.reopen_period'|trans }}
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="4" class="text-muted">{{ 'admin.tax_report.no_periods'|trans }}</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="mt-3 text-muted small">
+                <i class="fa-solid fa-circle-info me-1"></i>{{ 'admin.legal_entity.disclaimer'|trans }}
+            </div>
+        </div>
+    </main>
+
+    {# Reopen modals #}
+    {% for period in periods %}
+        {% if period.status.value != 'open' %}
+            <div class="modal fade" id="modal-reopen-{{ period.id }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">{{ 'admin.tax_report.actions.reopen_period'|trans }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form method="post" action="{{ path('admin_tax_report_period_reopen', {id: period.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('tax_period_reopen_' ~ period.id) }}">
+                            <div class="modal-body">
+                                <p class="text-muted small">{{ 'admin.tax_report.reopen_hint'|trans }}</p>
+                                <div class="mb-3">
+                                    <label class="form-label">{{ 'admin.common.comment'|trans }}</label>
+                                    <textarea name="comment" class="form-control" rows="2" required></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ 'admin.common.cancel'|trans }}</button>
+                                <button type="submit" class="btn btn-warning">{{ 'admin.tax_report.actions.reopen_period'|trans }}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+{% endblock %}

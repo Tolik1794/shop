@@ -28,6 +28,7 @@ class IncomeRecognitionService
 		private readonly IncomeRecordRepository $incomeRecordRepository,
 		private readonly NbuExchangeRateProvider $nbuExchangeRateProvider,
 		private readonly IncomeRecordHistoryRecorder $incomeRecordHistoryRecorder,
+		private readonly TaxPeriodGuard $taxPeriodGuard,
 	)
 	{
 	}
@@ -54,6 +55,13 @@ class IncomeRecognitionService
 
 		$currency = $payment->getCurrency();
 		$recognizedAt = $payment->getPaidAt()->setTime(0, 0);
+
+		if ($this->taxPeriodGuard->isClosed($legalEntity, $recognizedAt)) {
+			// Closed/declared reporting period: never block the payment itself,
+			// the backfill report surfaces these for manual resolution.
+			return RecognitionOutcome::skipped(RecognitionOutcome::REASON_PERIOD_CLOSED);
+		}
+
 		$rate = $currency instanceof Currency
 			? $this->nbuExchangeRateProvider->getRate($currency, $recognizedAt)
 			: null;

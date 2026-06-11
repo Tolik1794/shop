@@ -34,6 +34,9 @@ class TaxReportingPeriod
 	#[ORM\Column(length: 32, enumType: TaxPeriodStatusEnum::class)]
 	private TaxPeriodStatusEnum $status;
 
+	#[ORM\Column(type: Types::JSON, nullable: true)]
+	private ?array $statusLog = null;
+
 	#[ORM\Column]
 	private DateTimeImmutable $createdAt;
 
@@ -109,6 +112,18 @@ class TaxReportingPeriod
 	public function setStatus(TaxPeriodStatusEnum $status): self
 	{
 		$this->status = $status;
+
+		return $this;
+	}
+
+	public function getStatusLog(): ?array
+	{
+		return $this->statusLog;
+	}
+
+	public function setStatusLog(?array $statusLog): self
+	{
+		$this->statusLog = $statusLog;
 
 		return $this;
 	}

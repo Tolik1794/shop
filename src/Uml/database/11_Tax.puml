@@ -156,6 +156,7 @@ entity TaxReportingPeriod {
     * dateFrom: date
     * dateTo: date
     * status: TaxPeriodStatusEnum
+    statusLog: json?
     * createdAt: DateTimeImmutable
     * updatedAt: DateTimeImmutable
 }

@@ -33,6 +33,7 @@ final class MenuBuilder
 		$this->addSidebarLink($menu, 'dashboard.financial', 'admin.menu.legal_entities', 'admin_legal_entity_index', $this->routeParameters(), 'fa-building');
 		$this->addSidebarLink($menu, 'dashboard.financial', 'admin.menu.tax_control', 'admin_tax_control_index', $this->routeParameters(), 'fa-chart-pie');
 		$this->addSidebarLink($menu, 'dashboard.financial', 'admin.menu.tax_accruals', 'admin_tax_accrual_index', $this->routeParameters(), 'fa-calendar-check');
+		$this->addSidebarLink($menu, 'dashboard.financial', 'admin.menu.tax_reports', 'admin_tax_report_index', $this->routeParameters(), 'fa-file-lines');
 		$this->addSidebarLink($menu, 'dashboard.financial', 'admin.menu.tax_income', 'admin_tax_income_index', $this->routeParameters(), 'fa-coins');
 
 		return $menu;

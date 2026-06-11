@@ -14,6 +14,7 @@ final readonly class RecognitionOutcome
 	public const string REASON_MISSING_NBU_RATE = 'missing_nbu_rate';
 	public const string REASON_NOT_INCOME_RELEVANT = 'not_income_relevant';
 	public const string REASON_UNSAVED_PAYMENT = 'unsaved_payment';
+	public const string REASON_PERIOD_CLOSED = 'period_closed';
 
 	private function __construct(
 		public string $status,

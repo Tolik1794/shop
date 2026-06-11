@@ -191,6 +191,38 @@ class IncomeRecognitionServiceTest extends KernelTestCase
 		self::assertSame('4155.5500', $record->getAmountUah());
 	}
 
+	public function testPaymentInClosedPeriodIsSavedButRecognitionSkipped(): void
+	{
+		$uah = $this->persistUah();
+		$legalEntity = $this->persistLegalEntity();
+		$store = $this->persistStore('income-closed-period-' . uniqid(), $uah, $legalEntity);
+		$order = $this->persistOrder($store, $uah, '100.0000');
+
+		$period = (new \App\Entity\TaxReportingPeriod())
+			->setLegalEntity($legalEntity)
+			->setType(\App\Enum\TaxPeriodTypeEnum::QUARTER)
+			->setDateFrom(new DateTimeImmutable('2026-01-01'))
+			->setDateTo(new DateTimeImmutable('2026-03-31'))
+			->setStatus(\App\Enum\TaxPeriodStatusEnum::CLOSED);
+		$this->entityManager->persist($period);
+		$this->entityManager->flush();
+
+		$payment = $this->paymentManager->createForStore($store)
+			->setCurrency($uah)
+			->setOrder($order)
+			->setDirection(PaymentDirectionEnum::INCOMING)
+			->setAmount('100.0000')
+			->setPaidAt(new DateTimeImmutable('2026-02-15 10:00:00'));
+
+		$this->paymentManager->savePayment($payment);
+
+		self::assertNotNull($payment->getId());
+		self::assertNull($this->findRecordForPayment($payment));
+
+		$outcome = $this->incomeRecognitionService->recognizePayment($payment, persist: false);
+		self::assertSame(RecognitionOutcome::REASON_PERIOD_CLOSED, $outcome->reason);
+	}
+
 	private function findRecordForPayment(Payment $payment): ?IncomeRecord
 	{
 		return $this->entityManager->getRepository(IncomeRecord::class)->findOneBy([

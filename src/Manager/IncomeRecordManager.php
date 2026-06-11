@@ -9,6 +9,7 @@ use App\Enum\IncomeClassificationEnum;
 use App\Enum\IncomeSourceTypeEnum;
 use App\Service\Tax\IncomeRecordHistoryRecorder;
 use App\Service\Tax\NbuExchangeRateProvider;
+use App\Service\Tax\TaxPeriodGuard;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
@@ -20,6 +21,7 @@ class IncomeRecordManager
 		private readonly NbuExchangeRateProvider $nbuExchangeRateProvider,
 		private readonly IncomeRecordHistoryRecorder $incomeRecordHistoryRecorder,
 		private readonly UserManager $userManager,
+		private readonly TaxPeriodGuard $taxPeriodGuard,
 	)
 	{
 	}
@@ -32,6 +34,11 @@ class IncomeRecordManager
 
 		if (!$currency instanceof Currency || !$recognizedAt instanceof DateTimeImmutable) {
 			throw new RuntimeException('Manual income record requires currency and recognition date.');
+		}
+
+		$legalEntity = $record->getLegalEntity();
+		if ($legalEntity !== null) {
+			$this->taxPeriodGuard->assertOpen($legalEntity, $recognizedAt);
 		}
 
 		$rate = $this->nbuExchangeRateProvider->getRate($currency, $recognizedAt);
@@ -62,6 +69,12 @@ class IncomeRecordManager
 
 		if ($oldClassification === $classification) {
 			return;
+		}
+
+		$legalEntity = $record->getLegalEntity();
+		$recognizedAt = $record->getRecognizedAt();
+		if ($legalEntity !== null && $recognizedAt instanceof DateTimeImmutable) {
+			$this->taxPeriodGuard->assertOpen($legalEntity, $recognizedAt);
 		}
 
 		$actor = $this->currentActor();

@@ -102,13 +102,17 @@ class TaxIncomeController extends AbstractAdvancedController
 		$form->handleRequest($request);
 
 		if ($form->isSubmitted() && $form->isValid()) {
-			$this->incomeRecordManager->reclassify(
-				$record,
-				$form->get('classification')->getData(),
-				$form->get('comment')->getData()
-			);
+			try {
+				$this->incomeRecordManager->reclassify(
+					$record,
+					$form->get('classification')->getData(),
+					$form->get('comment')->getData()
+				);
 
-			return $this->redirectToRoute('admin_tax_income_index');
+				return $this->redirectToRoute('admin_tax_income_index');
+			} catch (RuntimeException $exception) {
+				$form->addError(new FormError($exception->getMessage()));
+			}
 		}
 
 		return $this->render('admin/tax_income/reclassify.html.twig', [

@@ -18,10 +18,13 @@ class WorkflowStatusDriftTest extends TestCase
 			'src/DataFixtures/StoreFixtures.php',
 			'src/DataFixtures/UnitFixtures.php',
 			'src/Manager/TaxAccrualManager.php',
+			'src/Manager/TaxPeriodManager.php',
+			'src/Manager/TaxReportDraftManager.php',
 			'src/Service/BusinessDocumentStatusSynchronizer.php',
 			'src/Service/InventoryPostingService.php',
 			'src/Service/Lifecycle/ReferenceArchivePolicy.php',
 			'src/Service/StockReservationService.php',
+			'src/Service/Tax/TaxReportGeneratorService.php',
 		];
 		$violations = [];
 		$sourceDir = __DIR__ . '/../../src/';
