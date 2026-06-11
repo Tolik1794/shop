@@ -1,0 +1,217 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}{{ 'admin.tax_control.title.show'|trans ~ ' — ' ~ entity }}{% endblock %}
+
+{% block navbar_breadcrumb %}
+    {% set page_breadcrumb %}
+        {{ include('admin/_components/_resource_breadcrumb.html.twig', {
+            section_label: 'admin.tax_control.title.list'|trans,
+            section_url: path('admin_tax_control_index'),
+            current_label: entity|e
+        }) }}
+    {% endset %}
+    {{ include('admin/_components/_navbar_header.html.twig', {
+        title: entity|e,
+        breadcrumb: page_breadcrumb
+    }) }}
+{% endblock %}
+
+{% macro money(val) %}{{ val|money }}{% endmacro %}
+{% import _self as ui %}
+
+{% block main_content %}
+    <main class="content">
+        <div class="container-fluid p-0">
+
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <form method="get" class="d-flex align-items-end gap-2">
+                    <div>
+                        <label class="form-label mb-1" for="tc-year">{{ 'admin.tax_control.filters.year'|trans }}</label>
+                        <input id="tc-year" class="form-control form-control-sm" type="number" name="year"
+                               value="{{ year }}" min="2020" max="2030" style="width:90px">
+                    </div>
+                    <button class="btn btn-primary btn-sm" type="submit">
+                        <i class="fa-solid fa-filter me-1"></i>{{ 'admin.common.filter'|trans }}
+                    </button>
+                </form>
+                <div class="ms-auto">
+                    <a href="{{ path('admin_tax_income_index', {'income_record_filter[legalEntity]': entity.id}) }}"
+                       class="btn btn-light btn-sm me-1">
+                        <i class="fa-solid fa-list me-1"></i>{{ 'admin.tax_control.actions.income_list'|trans }}
+                    </a>
+                    <a href="{{ path('admin_tax_control_index', {year: year}) }}"
+                       class="btn btn-light btn-sm">
+                        <i class="fa-solid fa-arrow-left me-1"></i>{{ 'admin.common.back'|trans }}
+                    </a>
+                </div>
+            </div>
+
+            {# Limit status card #}
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center pb-2">
+                            <h5 class="card-title mb-0">{{ 'admin.tax_control.title.limit_status'|trans }} {{ year }}</h5>
+                            {% set alert = status.alertLevel %}
+                            {% if alert == 'exceeded' %}
+                                <span class="badge bg-danger fs-6">{{ 'admin.tax_control.alert.exceeded'|trans }}</span>
+                            {% elseif alert == 'critical' %}
+                                <span class="badge bg-danger fs-6">{{ 'admin.tax_control.alert.critical'|trans }}</span>
+                            {% elseif alert == 'warning' %}
+                                <span class="badge bg-warning text-dark fs-6">{{ 'admin.tax_control.alert.warning'|trans }}</span>
+                            {% elseif alert == 'notice' %}
+                                <span class="badge bg-info text-dark fs-6">{{ 'admin.tax_control.alert.notice'|trans }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            {% if status.limit %}
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span>{{ status.incomeTotal|money }} {{ 'admin.tax_control.of'|trans }} {{ status.limit|money }}</span>
+                                        <strong>{{ status.percent|number_format(2) }}%</strong>
+                                    </div>
+                                    <div class="progress" style="height:16px">
+                                        <div class="progress-bar {{ status.progressBarClass }} progress-bar-striped"
+                                             style="width:{{ status.percentClamped|number_format(2) }}%"
+                                             role="progressbar"
+                                             aria-valuenow="{{ status.percentClamped|number_format(2) }}"
+                                             aria-valuemin="0" aria-valuemax="100">
+                                            {% if status.percentClamped >= 15 %}{{ status.percent|number_format(1) }}%{% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row text-center">
+                                    <div class="col-md-3 col-6 border-end mb-2">
+                                        <div class="text-muted small">{{ 'admin.tax_control.fields.used'|trans }}</div>
+                                        <strong>{{ status.incomeTotal|money }}</strong>
+                                    </div>
+                                    <div class="col-md-3 col-6 border-end mb-2">
+                                        <div class="text-muted small">{{ 'admin.tax_control.fields.remaining'|trans }}</div>
+                                        <strong class="{{ (status.remaining|default('0'))|number_format(4, '.', '') < 0 ? 'text-danger' : '' }}">
+                                            {{ status.remaining|money }}
+                                        </strong>
+                                    </div>
+                                    <div class="col-md-3 col-6 border-end mb-2">
+                                        <div class="text-muted small">{{ 'admin.tax_control.fields.limit'|trans }}</div>
+                                        <strong>{{ status.limit|money }}</strong>
+                                    </div>
+                                    <div class="col-md-3 col-6 mb-2">
+                                        <div class="text-muted small">{{ 'admin.tax_control.fields.avg_daily_90'|trans }}</div>
+                                        <strong>{{ status.avgDaily90|money }}</strong>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="row">
+                                    <div class="col-md-3 col-6 mb-2">
+                                        <div class="text-muted small">{{ 'admin.tax_control.fields.income_total'|trans }}</div>
+                                        <strong>{{ status.incomeTotal|money }}</strong>
+                                    </div>
+                                    <div class="col-md-3 col-6 mb-2">
+                                        <div class="text-muted small">{{ 'admin.tax_control.fields.avg_daily_90'|trans }}</div>
+                                        <strong>{{ status.avgDaily90|money }}</strong>
+                                    </div>
+                                </div>
+                                <div class="text-muted small mt-2">{{ 'admin.tax_control.no_limit'|trans }}</div>
+                            {% endif %}
+
+                            {% if status.forecastAnnual %}
+                                <div class="mt-3 p-3 bg-light rounded">
+                                    <div class="row">
+                                        <div class="col-md-4 col-6 mb-1">
+                                            <div class="text-muted small">{{ 'admin.tax_control.forecast.annual'|trans }}</div>
+                                            <strong>{{ status.forecastAnnual|money }}</strong>
+                                        </div>
+                                        {% if status.forecastLimitDate %}
+                                            <div class="col-md-4 col-6 mb-1">
+                                                <div class="text-muted small">{{ 'admin.tax_control.forecast.limit_date'|trans }}</div>
+                                                <strong>{{ status.forecastLimitDate|date('d.m.Y') }}</strong>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-muted small mt-1">
+                                        <i class="fa-solid fa-circle-info me-1"></i>{{ 'admin.tax_control.forecast.hint'|trans }}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Monthly & quarterly breakdown #}
+            <div class="row">
+                <div class="col-xl-8">
+                    <div class="card">
+                        <div class="card-header pb-0">
+                            <h5 class="card-title mb-0">{{ 'admin.tax_control.title.monthly'|trans }}</h5>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                <tr>
+                                    <th>{{ 'admin.tax_control.fields.month'|trans }}</th>
+                                    <th class="text-end">{{ 'admin.tax_income.classification.income'|trans }}</th>
+                                    <th class="text-end">{{ 'admin.tax_income.classification.refund'|trans }}</th>
+                                    <th class="text-end">{{ 'admin.tax_control.fields.net'|trans }}</th>
+                                    <th class="text-end">{{ 'admin.tax_control.fields.cumulative'|trans }}</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% set cumulative = 0 %}
+                                {% for m in 1..12 %}
+                                    {% set row = by_month[m] ?? {income: '0.0000', refund: '0.0000', net: '0.0000'} %}
+                                    {% set cumulative = cumulative + row.net %}
+                                    <tr class="{{ row.net != '0.0000' ? '' : 'text-muted' }}">
+                                        <td>{{ ('admin.tax_control.month.' ~ m)|trans }}</td>
+                                        <td class="text-end">{{ row.income != '0.0000' ? row.income|money : '—' }}</td>
+                                        <td class="text-end">{{ row.refund != '0.0000' ? row.refund|money : '—' }}</td>
+                                        <td class="text-end {% if row.net|number_format(4, '.', '') < 0 %}text-danger{% endif %}">
+                                            {{ row.net != '0.0000' ? row.net|money : '—' }}
+                                        </td>
+                                        <td class="text-end {% if cumulative < 0 %}text-danger{% endif %}">
+                                            {{ cumulative != 0 ? cumulative|money : '—' }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-4">
+                    <div class="card">
+                        <div class="card-header pb-0">
+                            <h5 class="card-title mb-0">{{ 'admin.tax_control.title.quarterly'|trans }}</h5>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table mb-0">
+                                <thead>
+                                <tr>
+                                    <th>{{ 'admin.tax_control.fields.quarter'|trans }}</th>
+                                    <th class="text-end">{{ 'admin.tax_income.classification.income'|trans }}</th>
+                                    <th class="text-end">{{ 'admin.tax_control.fields.net'|trans }}</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for q, row in by_quarter %}
+                                    <tr>
+                                        <td>{{ ('admin.tax_control.quarter.' ~ q)|trans }}</td>
+                                        <td class="text-end">{{ row.income != '0.0000' ? row.income|money : '—' }}</td>
+                                        <td class="text-end {% if row.net|number_format(4, '.', '') < 0 %}text-danger{% endif %}">
+                                            {{ row.net != '0.0000' ? row.net|money : '—' }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3 text-muted small">
+                <i class="fa-solid fa-circle-info me-1"></i>{{ 'admin.legal_entity.disclaimer'|trans }}
+            </div>
+        </div>
+    </main>
+{% endblock %}

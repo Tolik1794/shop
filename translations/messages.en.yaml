@@ -30,6 +30,7 @@ admin:
     exchange_rates: 'Exchange rates'
     discounts: 'Discounts'
     legal_entities: 'Legal entities'
+    tax_control: 'Tax control'
     tax_income: 'Tax income'
     profile: 'Profile'
     logout: 'Log out'
@@ -273,6 +274,59 @@ admin:
       reclassify: 'Reclassify'
     manual_hint: 'The UAH amount is calculated automatically using the NBU rate on the recognition date.'
     disclaimer: 'Figures are for reference and are not tax advice. Verify amounts before filing.'
+  tax_control:
+    title:
+      list: 'Tax control'
+      show: 'Tax control'
+      limit_status: 'Income limit status'
+      monthly: 'Monthly breakdown'
+      quarterly: 'Quarterly breakdown'
+    filters:
+      year: 'Year'
+    fields:
+      used: 'Used'
+      remaining: 'Remaining'
+      limit: 'Annual limit'
+      income_total: 'Net income'
+      avg_daily_90: 'Daily avg (90 d)'
+      net: 'Net'
+      cumulative: 'Cumulative'
+      month: 'Month'
+      quarter: 'Quarter'
+    alert:
+      exceeded: 'Limit exceeded'
+      critical: '≥ 95% limit'
+      warning: '≥ 85% limit'
+      notice: '≥ 70% limit'
+    forecast:
+      annual: 'Projected annual income'
+      limit_date: 'Est. limit date'
+      hint: 'Forecast based on 90-day daily average × days remaining in year.'
+    actions:
+      details: 'Details'
+      income_list: 'Income records'
+    of: 'of'
+    no_entities: 'No legal entities yet. '
+    add_entity: 'Add legal entity'
+    no_limit: 'No income limit configured (no EP group or no rate set for this year).'
+    month:
+      1: 'January'
+      2: 'February'
+      3: 'March'
+      4: 'April'
+      5: 'May'
+      6: 'June'
+      7: 'July'
+      8: 'August'
+      9: 'September'
+      10: 'October'
+      11: 'November'
+      12: 'December'
+    quarter:
+      1: 'Q1 (Jan–Mar)'
+      2: 'Q2 (Apr–Jun)'
+      3: 'Q3 (Jul–Sep)'
+      4: 'Q4 (Oct–Dec)'
   category:
     index:
       subtitle: 'Browse the catalog structure and manage subcategories'
