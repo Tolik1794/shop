@@ -64,7 +64,10 @@ final class MenuBuilder
 		$this->addSidebarLink($procurement, 'supplier.view', 'admin.menu.suppliers', 'app_admin_supplier_index', $routeParameters, 'fa-truck');
 		$this->addSidebarGroup($menu, $procurement);
 
-		$this->addSidebarLink($menu, 'production_order.view', 'admin.menu.production', 'app_admin_production_order_index', $routeParameters, 'fa-industry');
+		$production = $this->createSidebarGroup('admin.menu.production', 'fa-industry', 'menu-production');
+		$this->addSidebarLink($production, 'production_order.view', 'admin.menu.production_orders', 'app_admin_production_order_index', $routeParameters, 'fa-industry');
+		$this->addSidebarLink($production, 'production_recipe.view', 'admin.menu.production_recipes', 'app_admin_production_recipe_index', $routeParameters, 'fa-list-check');
+		$this->addSidebarGroup($menu, $production);
 
 		$warehouse = $this->createSidebarGroup('admin.menu.warehouse', 'fa-boxes-stacked', 'menu-warehouse');
 		$this->addSidebarLink($warehouse, 'inventory_document.view', 'admin.menu.inventory_documents', 'app_admin_inventory_document_index', $routeParameters, 'fa-clipboard-list');

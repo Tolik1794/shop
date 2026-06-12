@@ -11,6 +11,8 @@ admin:
     orders: 'Замовлення'
     purchases: 'Закупівлі'
     production: 'Виробництво'
+    production_orders: 'Виробничі замовлення'
+    production_recipes: 'Виробничі рецепти'
     payments: 'Платежі'
     inventory_documents: 'Складські документи'
     customers: 'Клієнти'

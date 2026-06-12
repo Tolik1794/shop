@@ -11,6 +11,8 @@ admin:
     orders: 'Orders'
     purchases: 'Purchases'
     production: 'Production'
+    production_orders: 'Production orders'
+    production_recipes: 'Production recipes'
     payments: 'Payments'
     inventory_documents: 'Inventory documents'
     customers: 'Customers'

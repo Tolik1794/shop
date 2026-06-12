@@ -15,7 +15,6 @@
 
 {% set table_actions %}
 	<a class="btn btn-light btn-sm" href="{{ path('app_admin_production_recipe_new', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-plus me-1"></i>{{ 'New'|trans }}</a>
-	<a class="btn btn-light btn-sm" href="{{ path('app_admin_production_order_index', {store_id: app.request.attributes.get('store_id')}) }}"><i class="fa-solid fa-industry me-1"></i>{{ 'Orders'|trans }}</a>
 {% endset %}
 
 {% set table_head %}
