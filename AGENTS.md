@@ -190,7 +190,7 @@ For complex flows such as order status changes, procurement, stock corrections, 
 ### RBAC and permission rules
 
 - Authorization is permission-based. Do not add new business decisions based on `ROLE_*`, `RoleEnum`, role hierarchy, or `UserManager::hasRole()`.
-- Permission codes are stable strings such as `dashboard.view`, `dashboard.financial`, `order.edit`, `warehouse_stock.manage`, and `rbac.manage`.
+- Permission codes are stable strings such as `dashboard.view`, `dashboard.financial`, `order.edit`, `warehouse_stock.manage`, `rbac.manage`, `tax.view`, `tax.income.manage`, `tax.reports.manage`, and `tax.settings.manage`.
 - Main RBAC files to inspect before access changes: `src/Security/PermissionCatalog.php`, `src/Security/PermissionChecker.php`, `src/Security/Voter/PermissionVoter.php`, `src/Security/Voter/StoreVoter.php`, `src/Security/Voter/UserVoter.php`, and `src/EventSubscriber/AdminStoreAccessSubscriber.php`.
 - Resolution order is fixed: individual deny, individual allow, group permissions, then `system.all`; an exact individual deny still blocks `system.all`.
 - Groups are global. Concrete store access still depends on store assignment unless the user has an all-store permission such as `store.view_all`.

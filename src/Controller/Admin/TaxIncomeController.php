@@ -19,9 +19,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-// TODO tax-module phase 6: replace the temporary `dashboard.financial` gate with
-// dedicated `tax.*` permissions once they are added to the PermissionCatalog.
-#[Route('/admin/tax/income', name: 'admin_tax_income_'), IsGranted('dashboard.financial')]
+#[Route('/admin/tax/income', name: 'admin_tax_income_'), IsGranted('tax.view')]
 class TaxIncomeController extends AbstractAdvancedController
 {
 	public function __construct(
@@ -71,6 +69,7 @@ class TaxIncomeController extends AbstractAdvancedController
 	}
 
 	#[Route('/new', name: 'new', methods: ['GET', 'POST'])]
+	#[IsGranted('tax.income.manage')]
 	public function new(Request $request): Response
 	{
 		$record = new IncomeRecord();
@@ -94,6 +93,7 @@ class TaxIncomeController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/reclassify', name: 'reclassify', methods: ['GET', 'POST'])]
+	#[IsGranted('tax.income.manage')]
 	public function reclassify(Request $request, IncomeRecord $record): Response
 	{
 		$form = $this->createForm(IncomeReclassifyType::class, [

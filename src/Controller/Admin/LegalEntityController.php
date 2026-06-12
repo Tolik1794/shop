@@ -12,9 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-// TODO tax-module phase 6: replace the temporary `dashboard.financial` gate with
-// dedicated `tax.*` permissions once they are added to the PermissionCatalog.
-#[Route('/admin/legal-entity', name: 'admin_legal_entity_'), IsGranted('dashboard.financial')]
+#[Route('/admin/legal-entity', name: 'admin_legal_entity_'), IsGranted('tax.settings.manage')]
 class LegalEntityController extends AbstractAdvancedController
 {
 	public function __construct(

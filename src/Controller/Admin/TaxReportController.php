@@ -20,9 +20,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-// TODO tax-module phase 6: replace the temporary `dashboard.financial` gate with
-// dedicated `tax.*` permissions once they are added to the PermissionCatalog.
-#[Route('/admin/tax/reports', name: 'admin_tax_report_'), IsGranted('dashboard.financial')]
+#[Route('/admin/tax/reports', name: 'admin_tax_report_'), IsGranted('tax.view')]
 class TaxReportController extends AbstractAdvancedController
 {
 	public function __construct(
@@ -61,6 +59,7 @@ class TaxReportController extends AbstractAdvancedController
 	}
 
 	#[Route('/generate', name: 'generate', methods: ['POST'])]
+	#[IsGranted('tax.reports.manage')]
 	public function generate(Request $request): Response
 	{
 		if (!$this->isCsrfTokenValid('generate_tax_report', (string) $request->request->get('_token'))) {
@@ -97,6 +96,7 @@ class TaxReportController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/update', name: 'update', requirements: ['id' => '\d+'], methods: ['POST'])]
+	#[IsGranted('tax.reports.manage')]
 	public function update(Request $request, TaxReportDraft $draft): Response
 	{
 		if (!$this->isCsrfTokenValid('update_tax_report_' . $draft->getId(), (string) $request->request->get('_token'))) {
@@ -120,6 +120,7 @@ class TaxReportController extends AbstractAdvancedController
 	}
 
 	#[Route('/period/{id}/close', name: 'period_close', requirements: ['id' => '\d+'], methods: ['POST'])]
+	#[IsGranted('tax.reports.manage')]
 	public function closePeriod(Request $request, TaxReportingPeriod $period): Response
 	{
 		if ($this->isCsrfTokenValid('tax_period_close_' . $period->getId(), (string) $request->request->get('_token'))) {
@@ -134,6 +135,7 @@ class TaxReportController extends AbstractAdvancedController
 	}
 
 	#[Route('/period/{id}/declare', name: 'period_declare', requirements: ['id' => '\d+'], methods: ['POST'])]
+	#[IsGranted('tax.reports.manage')]
 	public function declarePeriod(Request $request, TaxReportingPeriod $period): Response
 	{
 		if ($this->isCsrfTokenValid('tax_period_declare_' . $period->getId(), (string) $request->request->get('_token'))) {
@@ -148,6 +150,7 @@ class TaxReportController extends AbstractAdvancedController
 	}
 
 	#[Route('/period/{id}/reopen', name: 'period_reopen', requirements: ['id' => '\d+'], methods: ['POST'])]
+	#[IsGranted('tax.reports.manage')]
 	public function reopenPeriod(Request $request, TaxReportingPeriod $period): Response
 	{
 		if ($this->isCsrfTokenValid('tax_period_reopen_' . $period->getId(), (string) $request->request->get('_token'))) {

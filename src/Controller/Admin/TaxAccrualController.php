@@ -16,9 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-// TODO tax-module phase 6: replace the temporary `dashboard.financial` gate with
-// dedicated `tax.*` permissions once they are added to the PermissionCatalog.
-#[Route('/admin/tax/accruals', name: 'admin_tax_accrual_'), IsGranted('dashboard.financial')]
+#[Route('/admin/tax/accruals', name: 'admin_tax_accrual_'), IsGranted('tax.view')]
 class TaxAccrualController extends AbstractAdvancedController
 {
 	public function __construct(
@@ -55,6 +53,7 @@ class TaxAccrualController extends AbstractAdvancedController
 	}
 
 	#[Route('/generate', name: 'generate', methods: ['POST'])]
+	#[IsGranted('tax.income.manage')]
 	public function generate(Request $request): Response
 	{
 		if (!$this->isCsrfTokenValid('generate_accruals', (string) $request->request->get('_token'))) {
@@ -77,6 +76,7 @@ class TaxAccrualController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/mark-paid', name: 'mark_paid', methods: ['POST'])]
+	#[IsGranted('tax.income.manage')]
 	public function markPaid(Request $request, TaxAccrual $accrual): Response
 	{
 		if (!$this->isCsrfTokenValid('mark_paid_' . $accrual->getId(), (string) $request->request->get('_token'))) {
@@ -100,6 +100,7 @@ class TaxAccrualController extends AbstractAdvancedController
 	}
 
 	#[Route('/{id}/reopen', name: 'reopen', methods: ['POST'])]
+	#[IsGranted('tax.income.manage')]
 	public function reopen(Request $request, TaxAccrual $accrual): Response
 	{
 		if (!$this->isCsrfTokenValid('reopen_accrual_' . $accrual->getId(), (string) $request->request->get('_token'))) {

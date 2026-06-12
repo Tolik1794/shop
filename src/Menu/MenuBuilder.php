@@ -30,11 +30,11 @@ final class MenuBuilder
 		$this->addSidebarLink($menu, 'store.view', 'admin.menu.stores', 'admin_store_index', $this->routeParameters(), 'fa-store');
 		$this->addSidebarLink($menu, 'user.view', 'admin.menu.managers', 'admin_user_index', $this->routeParameters(), 'fa-users');
 		$this->addSidebarLink($menu, 'rbac.view', 'admin.menu.access_groups', 'admin_user_group_index', $this->routeParameters(), 'fa-user-shield');
-		$this->addSidebarLink($menu, 'dashboard.financial', 'admin.menu.legal_entities', 'admin_legal_entity_index', $this->routeParameters(), 'fa-building');
-		$this->addSidebarLink($menu, 'dashboard.financial', 'admin.menu.tax_control', 'admin_tax_control_index', $this->routeParameters(), 'fa-chart-pie');
-		$this->addSidebarLink($menu, 'dashboard.financial', 'admin.menu.tax_accruals', 'admin_tax_accrual_index', $this->routeParameters(), 'fa-calendar-check');
-		$this->addSidebarLink($menu, 'dashboard.financial', 'admin.menu.tax_reports', 'admin_tax_report_index', $this->routeParameters(), 'fa-file-lines');
-		$this->addSidebarLink($menu, 'dashboard.financial', 'admin.menu.tax_income', 'admin_tax_income_index', $this->routeParameters(), 'fa-coins');
+		$this->addSidebarLink($menu, 'tax.settings.manage', 'admin.menu.legal_entities', 'admin_legal_entity_index', $this->routeParameters(), 'fa-building');
+		$this->addSidebarLink($menu, 'tax.view', 'admin.menu.tax_control', 'admin_tax_control_index', $this->routeParameters(), 'fa-chart-pie');
+		$this->addSidebarLink($menu, 'tax.view', 'admin.menu.tax_accruals', 'admin_tax_accrual_index', $this->routeParameters(), 'fa-calendar-check');
+		$this->addSidebarLink($menu, 'tax.view', 'admin.menu.tax_reports', 'admin_tax_report_index', $this->routeParameters(), 'fa-file-lines');
+		$this->addSidebarLink($menu, 'tax.view', 'admin.menu.tax_income', 'admin_tax_income_index', $this->routeParameters(), 'fa-coins');
 
 		return $menu;
 	}

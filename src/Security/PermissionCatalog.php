@@ -75,6 +75,10 @@ final class PermissionCatalog
 		'production_order.start' => ['Production', 'Start production', 'Can start production orders.'],
 		'production_order.complete' => ['Production', 'Complete production', 'Can complete production orders.'],
 		'production_order.cancel' => ['Production', 'Cancel production', 'Can cancel production orders.'],
+		'tax.view' => ['Tax', 'View tax module', 'Can view the tax control dashboard, income records, accruals and declaration drafts.'],
+		'tax.income.manage' => ['Tax', 'Manage tax income', 'Can create manual income records, reclassify records, generate accruals and mark accruals paid.'],
+		'tax.reports.manage' => ['Tax', 'Manage tax reports', 'Can generate declaration drafts, apply manual corrections and manage period lifecycle (close, declare, reopen).'],
+		'tax.settings.manage' => ['Tax', 'Manage tax settings', 'Can manage legal entities and tax rate sets.'],
 	];
 
 	private const array GROUP_PERMISSIONS = [
@@ -91,6 +95,7 @@ final class PermissionCatalog
 			'category.manage', 'category_parameter.manage', 'product.view', 'product.manage', 'product_price.manage', 'product_discount.view', 'product_discount.manage', 'unit.manage', 'exchange_rate.manage',
 			'customer.view', 'customer.manage', 'customer_label.view', 'customer_label.manage', 'supplier.view', 'supplier.manage',
 			'production_recipe.view', 'production_recipe.manage', 'production_order.view', 'production_order.create', 'production_order.edit', 'production_order.plan', 'production_order.reserve_materials', 'production_order.start', 'production_order.complete', 'production_order.cancel',
+			'tax.view', 'tax.income.manage', 'tax.reports.manage', 'tax.settings.manage',
 		],
 		'store_admin' => [
 			'user.view', 'user.edit',
@@ -104,6 +109,7 @@ final class PermissionCatalog
 			'category.manage', 'category_parameter.manage', 'product.view', 'product.manage', 'product_price.manage', 'product_discount.view', 'product_discount.manage', 'unit.manage', 'exchange_rate.manage',
 			'customer.view', 'customer.manage', 'customer_label.view', 'customer_label.manage', 'supplier.view', 'supplier.manage',
 			'production_recipe.view', 'production_recipe.manage', 'production_order.view', 'production_order.create', 'production_order.edit', 'production_order.plan', 'production_order.reserve_materials', 'production_order.start', 'production_order.complete', 'production_order.cancel',
+			'tax.view', 'tax.income.manage', 'tax.reports.manage', 'tax.settings.manage',
 		],
 		'manager' => [
 			'store.view', 'dashboard.view',

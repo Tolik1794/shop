@@ -26,5 +26,6 @@ Symfony integration:
 - Services should use `PermissionChecker` when a business action needs a permission check outside HTTP controllers.
 - Product discount settings are protected by `product_discount.view` and `product_discount.manage`.
 - Manual order discounts and below-cost discounted order lines require `order.discount.override`; normal order editors can only use configured product/category discount rules.
+- Tax module pages (income control, accruals, declaration drafts) require `tax.view` to read. Write actions are split: `tax.income.manage` for manual income entry, reclassification and accrual payment; `tax.reports.manage` for generating declarations and managing period lifecycle; `tax.settings.manage` for legal entities and rate sets.
 
 The legacy `users.roles` JSON column remains only for compatibility with existing data and tests. New authorization decisions should use permission codes and groups.
